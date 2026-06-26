@@ -60,23 +60,154 @@ export default function LoginPage() {
 }
 
 const styles = {
-  bg: { minHeight:"100vh", background:"#0f172a", display:"flex", alignItems:"center", justifyContent:"center", padding:"20px" },
-  card: { background:"#1e293b", borderRadius:"16px", padding:"40px", width:"100%", maxWidth:"480px", boxShadow:"0 25px 50px rgba(0,0,0,0.4)" },
-  brand: { display:"flex", alignItems:"center", gap:"12px", marginBottom:"28px" },
-  brandMark: { width:"44px", height:"44px", background:"linear-gradient(135deg,#6366f1,#8b5cf6)", borderRadius:"10px", display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontWeight:"800", fontSize:"14px" },
-  brandName: { color:"#f1f5f9", fontWeight:"700", fontSize:"18px" },
-  brandSub: { color:"#64748b", fontSize:"12px" },
-  heading: { color:"#f1f5f9", fontSize:"22px", fontWeight:"700", margin:"0 0 6px" },
-  subtext: { color:"#64748b", fontSize:"14px", margin:"0 0 20px" },
-  error: { background:"#450a0a", color:"#fca5a5", padding:"10px 14px", borderRadius:"8px", fontSize:"13px", marginBottom:"16px" },
-  form: { display:"flex", flexDirection:"column", gap:"10px", marginBottom:"24px" },
-  label: { color:"#94a3b8", fontSize:"13px", fontWeight:"500" },
-  input: { background:"#0f172a", border:"1px solid #334155", borderRadius:"8px", padding:"10px 14px", color:"#f1f5f9", fontSize:"14px", outline:"none" },
-  btn: { background:"linear-gradient(135deg,#6366f1,#8b5cf6)", color:"#fff", border:"none", borderRadius:"8px", padding:"12px", fontSize:"15px", fontWeight:"600", cursor:"pointer", marginTop:"4px" },
-  demoSection: { borderTop:"1px solid #334155", paddingTop:"20px" },
-  demoLabel: { color:"#64748b", fontSize:"12px", fontWeight:"600", marginBottom:"12px", textTransform:"uppercase", letterSpacing:"0.05em" },
-  demoGrid: { display:"grid", gridTemplateColumns:"1fr 1fr", gap:"8px" },
-  demoBtn: { background:"#0f172a", border:"1px solid #334155", borderRadius:"8px", padding:"10px 12px", cursor:"pointer", textAlign:"left", display:"flex", flexDirection:"column", gap:"2px" },
-  demoRole: { color:"#6366f1", fontSize:"11px", fontWeight:"600" },
-  demoName: { color:"#94a3b8", fontSize:"12px" },
+  bg: {
+    minHeight: "100vh",
+    background: "#F6F8FC",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "40px",
+  },
+
+  card: {
+    width: "100%",
+    maxWidth: "520px",
+    background: "#FFFFFF",
+    borderRadius: "24px",
+    padding: "42px",
+    border: "1px solid #E5E7EB",
+    boxShadow: "0 20px 60px rgba(15,23,42,.08)",
+  },
+
+  brand: {
+    display: "flex",
+    alignItems: "center",
+    gap: "14px",
+    marginBottom: "30px",
+  },
+
+  brandMark: {
+    width: "52px",
+    height: "52px",
+    borderRadius: "14px",
+    background: "#2563EB",
+    color: "#fff",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: "700",
+    fontSize: "16px",
+  },
+
+  brandName: {
+    color: "#111827",
+    fontSize: "24px",
+    fontWeight: "700",
+  },
+
+  brandSub: {
+    color: "#6B7280",
+    fontSize: "13px",
+    marginTop: "2px",
+  },
+
+  heading: {
+    color: "#111827",
+    fontSize: "28px",
+    fontWeight: "700",
+    marginBottom: "8px",
+  },
+
+  subtext: {
+    color: "#6B7280",
+    marginBottom: "24px",
+    lineHeight: 1.5,
+  },
+
+  error: {
+    background: "#FEF2F2",
+    color: "#DC2626",
+    border: "1px solid #FECACA",
+    borderRadius: "10px",
+    padding: "12px",
+    marginBottom: "18px",
+    fontSize: "14px",
+  },
+
+  form: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+    marginBottom: "28px",
+  },
+
+  label: {
+    color: "#374151",
+    fontSize: "14px",
+    fontWeight: "600",
+  },
+
+  input: {
+    height: "48px",
+    borderRadius: "12px",
+    border: "1px solid #D1D5DB",
+    background: "#FFFFFF",
+    padding: "0 16px",
+    fontSize: "15px",
+    color: "#111827",
+    outline: "none",
+  },
+
+  btn: {
+    marginTop: "8px",
+    height: "50px",
+    border: "none",
+    borderRadius: "12px",
+    background: "#2563EB",
+    color: "#FFFFFF",
+    fontWeight: "700",
+    fontSize: "15px",
+    cursor: "pointer",
+  },
+
+  demoSection: {
+    borderTop: "1px solid #E5E7EB",
+    paddingTop: "22px",
+  },
+
+  demoLabel: {
+    color: "#6B7280",
+    fontSize: "12px",
+    fontWeight: "700",
+    textTransform: "uppercase",
+    marginBottom: "14px",
+  },
+
+  demoGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "12px",
+  },
+
+  demoBtn: {
+    background: "#FFFFFF",
+    border: "1px solid #E5E7EB",
+    borderRadius: "12px",
+    padding: "14px",
+    cursor: "pointer",
+    textAlign: "left",
+    transition: ".2s",
+  },
+
+  demoRole: {
+    color: "#2563EB",
+    fontSize: "12px",
+    fontWeight: "700",
+  },
+
+  demoName: {
+    color: "#374151",
+    fontSize: "13px",
+    marginTop: "4px",
+  },
 };
