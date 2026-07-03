@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useApp } from "../context/AppContext";
+﻿import { useState } from "react";
+import { useApp } from "../context/appContextCore";
 import { demoUsers } from "../data/appData";
 
 export default function LoginPage() {
@@ -11,7 +11,7 @@ export default function LoginPage() {
   async function handleSubmit(e) {
     e.preventDefault();
     const success = await login(email, password);
-    if (!success) setError("Invalid credentials. Use password: demo123");
+    if (!success) setError("Invalid email or password. Please try again.");
   }
 
   async function demoLogin(demoEmail) {
@@ -20,34 +20,65 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={styles.bg}>
-      <div style={styles.card}>
-        <div style={styles.brand}>
-          <div style={styles.brandMark}>S1</div>
-          <div>
-            <div style={styles.brandName}>SetuOne</div>
-            <div style={styles.brandSub}>Facility Management Platform</div>
+    <div style={styles.authContainer}>
+      {/* Left Hero Pane */}
+      <div style={styles.heroPane}>
+        <div style={styles.heroBg} />
+        <div style={styles.heroOverlay} />
+        <div style={styles.heroContent}>
+          <header style={styles.logo}>
+            <span style={styles.logoBox} />
+            <span style={styles.logoText}>SETUONE</span>
+          </header>
+
+          <div style={styles.heroMessage}>
+            <span style={styles.heroTag}>FACILITY MANAGEMENT PLATFORM</span>
+            <h1 style={styles.heroTitle}>
+              Run the building.<br />Manage every record.<br />Without spreadsheets.
+            </h1>
+            <p style={styles.heroDesc}>
+              A single dashboard for tickets, maintenance, vendors, security and energy — built for the people who keep the lights on.
+            </p>
           </div>
+
+          <footer style={styles.heroFooter}>V1 // MULTI-TENANT PREVIEW</footer>
         </div>
+      </div>
 
-        <h2 style={styles.heading}>Sign in to your workspace</h2>
-        <p style={styles.subtext}>Use a demo account to explore the platform.</p>
+      {/* Right Form Pane */}
+      <div style={styles.formPane}>
+        <div style={styles.formWrapper}>
+          <span style={styles.formTag}>SIGN IN</span>
+          <h2 style={styles.formTitle}>Welcome back.</h2>
+          <p style={styles.formSubtitle}>Use your work email and password to continue.</p>
 
-        {error && <div style={styles.error}>{error}</div>}
+          {error && (
+            <div style={styles.errorBanner}>
+              <span>⚠️</span>
+              <span>{error}</span>
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} style={styles.form}>
-          <label style={styles.label}>Email</label>
-          <input style={styles.input} type="email" value={email} onChange={e => setEmail(e.target.value)} required />
-          <label style={styles.label}>Password</label>
-          <input style={styles.input} type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-          <button style={styles.btn} type="submit">Sign In →</button>
-        </form>
+          <form onSubmit={handleSubmit} style={styles.form}>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>EMAIL</label>
+              <input style={styles.input} type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+            </div>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>PASSWORD</label>
+              <input style={styles.input} type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+            </div>
+            <button style={styles.btnLogin} type="submit">
+              Sign in <span>→</span>
+            </button>
+          </form>
 
-        <div style={styles.demoSection}>
-          <div style={styles.demoLabel}>Quick demo login</div>
+          <div style={styles.helperInfo}>
+            Quick demo login:
+          </div>
           <div style={styles.demoGrid}>
-            {Object.entries(demoUsers).map(([email, user]) => (
-              <button key={email} style={styles.demoBtn} onClick={() => demoLogin(email)}>
+            {Object.entries(demoUsers).map(([demoEmail, user]) => (
+              <button key={demoEmail} style={styles.demoBtn} onClick={() => demoLogin(demoEmail)}>
                 <span style={styles.demoRole}>{user.role}</span>
                 <span style={styles.demoName}>{user.name}</span>
               </button>
@@ -60,154 +91,41 @@ export default function LoginPage() {
 }
 
 const styles = {
-  bg: {
-    minHeight: "100vh",
-    background: "#F6F8FC",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "40px",
-  },
+  authContainer: { width: "100%", height: "100vh", display: "flex", background: "#ffffff", fontFamily: "'Plus Jakarta Sans', sans-serif" },
 
-  card: {
-    width: "100%",
-    maxWidth: "520px",
-    background: "#FFFFFF",
-    borderRadius: "24px",
-    padding: "42px",
-    border: "1px solid #E5E7EB",
-    boxShadow: "0 20px 60px rgba(15,23,42,.08)",
-  },
+  heroPane: { flex: 1.1, position: "relative", background: "#0c1220", color: "#fff", overflow: "hidden" },
+  heroBg: { position: "absolute", inset: 0, backgroundImage: "url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=1200')", backgroundSize: "cover", backgroundPosition: "center", filter: "brightness(0.45) contrast(1.05)", transform: "scale(1.02)" },
+  heroOverlay: { position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(12,18,32,0.5) 0%, rgba(12,18,32,0.85) 100%)" },
+  heroContent: { position: "relative", zIndex: 5, height: "100%", padding: "60px", display: "flex", flexDirection: "column", justifyContent: "space-between" },
 
-  brand: {
-    display: "flex",
-    alignItems: "center",
-    gap: "14px",
-    marginBottom: "30px",
-  },
+  logo: { display: "flex", alignItems: "center", gap: "10px" },
+  logoBox: { width: "16px", height: "16px", background: "#3b82f6", display: "inline-block" },
+  logoText: { fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: "0.95rem", letterSpacing: "1px", color: "#fff" },
 
-  brandMark: {
-    width: "52px",
-    height: "52px",
-    borderRadius: "14px",
-    background: "#2563EB",
-    color: "#fff",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: "700",
-    fontSize: "16px",
-  },
+  heroMessage: { maxWidth: "580px", margin: "auto 0" },
+  heroTag: { fontFamily: "'JetBrains Mono', monospace", fontSize: "0.65rem", fontWeight: 600, letterSpacing: "3px", color: "#94a3b8", display: "block", marginBottom: "24px", opacity: 0.85 },
+  heroTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: "2.7rem", fontWeight: 700, lineHeight: 1.15, letterSpacing: "-1px", color: "#fff", marginBottom: "24px" },
+  heroDesc: { fontSize: "0.9rem", lineHeight: 1.6, color: "#94a3b8", opacity: 0.9 },
+  heroFooter: { fontFamily: "'JetBrains Mono', monospace", fontSize: "0.65rem", letterSpacing: "2px", color: "#94a3b8", opacity: 0.5 },
 
-  brandName: {
-    color: "#111827",
-    fontSize: "24px",
-    fontWeight: "700",
-  },
+  formPane: { width: "45%", minWidth: "480px", background: "#fff", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", padding: "60px" },
+  formWrapper: { width: "100%", maxWidth: "360px" },
+  formTag: { fontFamily: "'JetBrains Mono', monospace", fontSize: "0.65rem", letterSpacing: "2px", color: "#64748b", fontWeight: 600, display: "block", marginBottom: "12px" },
+  formTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: "1.85rem", fontWeight: 700, color: "#111625", marginBottom: "8px", letterSpacing: "-0.5px" },
+  formSubtitle: { fontSize: "0.85rem", color: "#64748b", marginBottom: "28px" },
 
-  brandSub: {
-    color: "#6B7280",
-    fontSize: "13px",
-    marginTop: "2px",
-  },
+  errorBanner: { display: "flex", alignItems: "center", gap: "8px", background: "rgba(239,68,68,0.1)", color: "#ef4444", padding: "10px 14px", borderRadius: "4px", fontSize: "0.78rem", marginBottom: "16px" },
 
-  heading: {
-    color: "#111827",
-    fontSize: "28px",
-    fontWeight: "700",
-    marginBottom: "8px",
-  },
+  form: { display: "flex", flexDirection: "column", gap: "20px" },
+  formGroup: { display: "flex", flexDirection: "column", gap: "6px" },
+  label: { fontSize: "0.65rem", fontWeight: 700, letterSpacing: "1.5px", color: "#111625" },
+  input: { width: "100%", padding: "10px 14px", fontSize: "0.85rem", color: "#111625", border: "1px solid #e2e8f0", borderRadius: "4px", background: "#fff", outline: "none" },
 
-  subtext: {
-    color: "#6B7280",
-    marginBottom: "24px",
-    lineHeight: 1.5,
-  },
+  btnLogin: { width: "100%", marginTop: "10px", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px 20px", fontSize: "0.9rem", fontWeight: 600, borderRadius: "4px", border: "none", cursor: "pointer", background: "#0038a8", color: "#fff" },
 
-  error: {
-    background: "#FEF2F2",
-    color: "#DC2626",
-    border: "1px solid #FECACA",
-    borderRadius: "10px",
-    padding: "12px",
-    marginBottom: "18px",
-    fontSize: "14px",
-  },
-
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-    marginBottom: "28px",
-  },
-
-  label: {
-    color: "#374151",
-    fontSize: "14px",
-    fontWeight: "600",
-  },
-
-  input: {
-    height: "48px",
-    borderRadius: "12px",
-    border: "1px solid #D1D5DB",
-    background: "#FFFFFF",
-    padding: "0 16px",
-    fontSize: "15px",
-    color: "#111827",
-    outline: "none",
-  },
-
-  btn: {
-    marginTop: "8px",
-    height: "50px",
-    border: "none",
-    borderRadius: "12px",
-    background: "#2563EB",
-    color: "#FFFFFF",
-    fontWeight: "700",
-    fontSize: "15px",
-    cursor: "pointer",
-  },
-
-  demoSection: {
-    borderTop: "1px solid #E5E7EB",
-    paddingTop: "22px",
-  },
-
-  demoLabel: {
-    color: "#6B7280",
-    fontSize: "12px",
-    fontWeight: "700",
-    textTransform: "uppercase",
-    marginBottom: "14px",
-  },
-
-  demoGrid: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "12px",
-  },
-
-  demoBtn: {
-    background: "#FFFFFF",
-    border: "1px solid #E5E7EB",
-    borderRadius: "12px",
-    padding: "14px",
-    cursor: "pointer",
-    textAlign: "left",
-    transition: ".2s",
-  },
-
-  demoRole: {
-    color: "#2563EB",
-    fontSize: "12px",
-    fontWeight: "700",
-  },
-
-  demoName: {
-    color: "#374151",
-    fontSize: "13px",
-    marginTop: "4px",
-  },
+  helperInfo: { marginTop: "28px", fontSize: "0.68rem", fontWeight: 700, letterSpacing: "1px", color: "#64748b" },
+  demoGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "10px" },
+  demoBtn: { background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "4px", padding: "9px 10px", cursor: "pointer", textAlign: "left", display: "flex", flexDirection: "column", gap: "2px" },
+  demoRole: { color: "#0038a8", fontSize: "0.68rem", fontWeight: 700 },
+  demoName: { color: "#64748b", fontSize: "0.72rem" },
 };

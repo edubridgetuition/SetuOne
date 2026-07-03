@@ -1,50 +1,55 @@
-import { createContext, useContext, useState, useEffect } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { demoUsers, defaultTickets, tenants, rolePermissions } from "../data/appData";
+import { fetchTickets, normalizeTicket, persistTicket, saveTicketsToLocal } from "../lib/ticketsRepository";
+import { AppContext } from "./appContextCore";
 
-const AppContext = createContext(null);
 
 export function AppProvider({ children }) {
   const [session, setSession] = useState(null);
   const [activeTenant, setActiveTenant] = useState("orion");
   const [activeRole, setActiveRole] = useState("Super Admin");
   const [activeView, setActiveView] = useState("dashboard");
-  const [tickets, setTickets] = useState(defaultTickets);
+  const [tickets, setTickets] = useState(defaultTickets.map((ticket) => normalizeTicket(ticket, "orion")));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        const user = demoUsers[session.user.email];
-        if (user) {
-          setSession({ email: session.user.email, name: user.name });
-          setActiveTenant(user.tenant);
-          setActiveRole(user.role);
-        }
-      }
+      if (session) applyUserSession(session);
       setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        const user = demoUsers[session.user.email];
-        if (user) {
-          setSession({ email: session.user.email, name: user.name });
-          setActiveTenant(user.tenant);
-          setActiveRole(user.role);
-        }
+        applyUserSession(session);
       } else {
         setSession(null);
+        setActiveView("dashboard");
       }
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (!session) return;
+
+    const fallback = defaultTickets.filter((ticket) => ticket.tenant === activeTenant);
+    fetchTickets(activeTenant, fallback).then(setTickets);
+  }, [session, activeTenant]);
+
+  function applyUserSession(authSession) {
+    const user = demoUsers[authSession.user.email];
+    if (!user) return;
+
+    setSession({ email: authSession.user.email, name: user.name });
+    setActiveTenant(user.tenant);
+    setActiveRole(user.role);
+  }
+
   async function login(email, password) {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return false;
-    return true;
+    return !error;
   }
 
   async function logout() {
@@ -57,21 +62,71 @@ export function AppProvider({ children }) {
     return (rolePermissions[activeRole] || []).includes(view);
   }
 
+  function syncTickets(nextTickets) {
+    setTickets(nextTickets);
+    saveTicketsToLocal(activeTenant, nextTickets);
+  }
+
   function createTicket(ticket) {
-    const newTicket = {
+    const now = new Date().toLocaleString();
+    const newTicket = normalizeTicket({
       no: `TKT-${1000 + tickets.length + 1}`,
       tenant: activeTenant,
-      createdAt: new Date().toLocaleString(),
-      updatedAt: new Date().toLocaleString(),
+      createdAt: now,
+      updatedAt: now,
       completion: "Pending",
-      beforePhoto: "Pending",
+      beforePhoto: ticket.beforePhoto || "Pending",
       afterPhoto: "Pending",
-      timeline: [{ at: new Date().toLocaleString(), by: session?.name || activeRole, action: "Ticket created", remarks: ticket.description || "" }],
+      timeline: [{
+        at: now,
+        by: session?.name || activeRole,
+        action: "Ticket created",
+        remarks: ticket.description || "Complaint raised.",
+      }],
       ...ticket,
-      status: "Open",
-    };
-    setTickets((prev) => [newTicket, ...prev]);
+      raisedBy: ticket.raisedBy || session?.name || activeRole,
+      status: ticket.assignedTo && ticket.assignedTo !== "Unassigned" ? "Assigned" : "Open",
+    }, activeTenant);
+
+    const nextTickets = [newTicket, ...tickets];
+    syncTickets(nextTickets);
+    persistTicket(newTicket);
+    return newTicket;
   }
+
+  function updateTicket(ticketNo, updates, remarks = "") {
+    const now = new Date().toLocaleString();
+    let updatedTicket = null;
+
+    const nextTickets = tickets.map((ticket) => {
+      if (ticket.no !== ticketNo) return ticket;
+
+      const action = updates.status && updates.status !== ticket.status
+        ? `Status changed to ${updates.status}`
+        : updates.assignedTo && updates.assignedTo !== ticket.assignedTo
+          ? `Assigned to ${updates.assignedTo}`
+          : "Ticket updated";
+
+      updatedTicket = normalizeTicket({
+        ...ticket,
+        ...updates,
+        updatedAt: now,
+        completion: updates.status === "Closed" ? "Closed" : updates.status === "Completed" ? "Awaiting approval" : ticket.completion,
+        timeline: [
+          ...(ticket.timeline || []),
+          { at: now, by: session?.name || activeRole, action, remarks: remarks || "No remarks added." },
+        ],
+      }, activeTenant);
+
+      return updatedTicket;
+    });
+
+    syncTickets(nextTickets);
+    if (updatedTicket) persistTicket(updatedTicket);
+    return updatedTicket;
+  }
+
+  const tenantData = useMemo(() => tenants[activeTenant], [activeTenant]);
 
   if (loading) return (
     <div style={{ minHeight:"100vh", background:"#0f172a", display:"flex", alignItems:"center", justifyContent:"center", color:"#6366f1", fontSize:"16px" }}>
@@ -80,12 +135,12 @@ export function AppProvider({ children }) {
   );
 
   return (
-    <AppContext.Provider value={{ session, activeTenant, setActiveTenant, activeRole, setActiveRole, activeView, setActiveView, tickets, tenantData: tenants[activeTenant], login, logout, canAccess, createTicket }}>
+    <AppContext.Provider value={{ session, activeTenant, setActiveTenant, activeRole, setActiveRole, activeView, setActiveView, tickets, tenantData, login, logout, canAccess, createTicket, updateTicket }}>
       {children}
     </AppContext.Provider>
   );
 }
 
-export function useApp() {
-  return useContext(AppContext);
-}
+
+
+

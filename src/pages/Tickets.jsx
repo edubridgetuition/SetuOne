@@ -1,47 +1,78 @@
-import { useState } from "react";
-import { useApp } from "../context/AppContext";
+﻿import { useEffect, useMemo, useState } from "react";
+import { useApp } from "../context/appContextCore";
 
 const priorityColors = { High:"#f59e0b", Critical:"#ef4444", Medium:"#6366f1", Low:"#22c55e" };
 const statusColors = { Open:"#6366f1", "In Progress":"#f59e0b", Completed:"#22c55e", Escalated:"#ef4444", Closed:"#475569", Assigned:"#06b6d4", Reopened:"#f97316" };
+const assignees = ["Unassigned", "Facility Electrician", "Plumbing Vendor", "HVAC Vendor", "Housekeeping Supervisor", "IT Support"];
+const statuses = ["Open", "Assigned", "In Progress", "Completed", "Escalated", "Reopened", "Closed"];
 
 export default function Tickets() {
-  const { tickets, createTicket, session, activeRole } = useApp();
+  const { tickets, createTicket, updateTicket, session, activeRole } = useApp();
   const [showForm, setShowForm] = useState(false);
   const [statusFilter, setStatusFilter] = useState("All");
   const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState(null);
-  const [form, setForm] = useState({ category:"Electrical Complaint", location:"", priority:"Medium", raisedBy:"", assignedTo:"Unassigned", description:"" });
+  const [selectedNo, setSelectedNo] = useState(null);
+  const [actionForm, setActionForm] = useState({ assignedTo:"Unassigned", status:"Assigned", remarks:"", afterPhoto:"" });
+  const [form, setForm] = useState({ category:"Electrical Complaint", location:"", priority:"Medium", raisedBy:"", assignedTo:"Unassigned", description:"", beforePhoto:"" });
 
-  const visibleTickets = tickets.filter(t => {
+  const visibleTickets = useMemo(() => tickets.filter(t => {
     if (activeRole === "Vendor") return t.assignedTo.includes("Vendor") || t.assignedTo.includes("HVAC");
     if (activeRole === "Employee") return t.raisedBy === session?.name;
     return true;
   }).filter(t => statusFilter === "All" || t.status === statusFilter)
-    .filter(t => !search || t.no.toLowerCase().includes(search.toLowerCase()) || t.location.toLowerCase().includes(search.toLowerCase()) || t.category.toLowerCase().includes(search.toLowerCase()));
+    .filter(t => !search || t.no.toLowerCase().includes(search.toLowerCase()) || t.location.toLowerCase().includes(search.toLowerCase()) || t.category.toLowerCase().includes(search.toLowerCase())), [tickets, activeRole, session?.name, statusFilter, search]);
+
+  const selected = tickets.find((ticket) => ticket.no === selectedNo) || visibleTickets[0] || null;
+  const selectedTicketNo = selected?.no;
+  const selectedAssignedTo = selected?.assignedTo;
+  const selectedStatus = selected?.status;
+
+  useEffect(() => {
+    if (!selectedTicketNo) return;
+    setSelectedNo(selectedTicketNo);
+    setActionForm({ assignedTo:selectedAssignedTo, status:selectedStatus === "Open" ? "Assigned" : selectedStatus, remarks:"", afterPhoto:"" });
+  }, [selectedTicketNo, selectedAssignedTo, selectedStatus]);
 
   function handleSubmit(e) {
     e.preventDefault();
-    createTicket(form);
-    setForm({ category:"Electrical Complaint", location:"", priority:"Medium", raisedBy:"", assignedTo:"Unassigned", description:"" });
+    const created = createTicket({
+      ...form,
+      raisedBy: form.raisedBy || session?.name,
+      beforePhoto: form.beforePhoto || "Pending",
+    });
+    setSelectedNo(created.no);
+    setForm({ category:"Electrical Complaint", location:"", priority:"Medium", raisedBy:"", assignedTo:"Unassigned", description:"", beforePhoto:"" });
     setShowForm(false);
+  }
+
+  function handleWorkflowSubmit(e) {
+    e.preventDefault();
+    if (!selected) return;
+
+    const updated = updateTicket(selected.no, {
+      assignedTo: actionForm.assignedTo,
+      status: actionForm.status,
+      afterPhoto: actionForm.afterPhoto || selected.afterPhoto,
+    }, actionForm.remarks);
+
+    if (updated) setSelectedNo(updated.no);
+    setActionForm((prev) => ({ ...prev, remarks:"", afterPhoto:"" }));
   }
 
   return (
     <div style={styles.page}>
       <div style={styles.left}>
         <div style={styles.panel}>
-          {/* Header */}
           <div style={styles.panelHeader}>
             <div>
               <div style={styles.panelTitle}>Complaint / Ticket Management</div>
-              <div style={styles.panelSub}>Raise, assign, and track facility complaints.</div>
+              <div style={styles.panelSub}>Raise, assign, complete, approve, reopen, and close facility complaints.</div>
             </div>
             <button style={styles.primaryBtn} onClick={() => setShowForm(!showForm)}>
               {showForm ? "Cancel" : "+ New Ticket"}
             </button>
           </div>
 
-          {/* New Ticket Form */}
           {showForm && (
             <form onSubmit={handleSubmit} style={styles.form}>
               <div style={styles.formGrid}>
@@ -63,13 +94,17 @@ export default function Tickets() {
                 </div>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Raised By</label>
-                  <input style={styles.input} value={form.raisedBy} onChange={e => setForm({...form, raisedBy:e.target.value})} required placeholder="Your name" />
+                  <input style={styles.input} value={form.raisedBy} onChange={e => setForm({...form, raisedBy:e.target.value})} placeholder={session?.name || "Your name"} />
                 </div>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Assign To</label>
                   <select style={styles.input} value={form.assignedTo} onChange={e => setForm({...form, assignedTo:e.target.value})}>
-                    {["Unassigned","Facility Electrician","Plumbing Vendor","HVAC Vendor","Housekeeping Supervisor","IT Support"].map(a => <option key={a}>{a}</option>)}
+                    {assignees.map(a => <option key={a}>{a}</option>)}
                   </select>
+                </div>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Before Photo</label>
+                  <input style={styles.input} type="file" accept="image/*" onChange={e => setForm({...form, beforePhoto:e.target.files?.[0]?.name || "Pending"})} />
                 </div>
               </div>
               <div style={styles.formGroup}>
@@ -80,15 +115,13 @@ export default function Tickets() {
             </form>
           )}
 
-          {/* Filters */}
           <div style={styles.toolbar}>
             <select style={styles.filterSelect} value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-              {["All","Open","Assigned","In Progress","Completed","Escalated","Closed"].map(s => <option key={s}>{s}</option>)}
+              {["All", ...statuses].map(s => <option key={s}>{s}</option>)}
             </select>
             <input style={styles.filterSelect} placeholder="Search ticket, location..." value={search} onChange={e => setSearch(e.target.value)} />
           </div>
 
-          {/* Table */}
           <div style={styles.tableWrap}>
             <table style={styles.table}>
               <thead>
@@ -100,14 +133,14 @@ export default function Tickets() {
               </thead>
               <tbody>
                 {visibleTickets.map(ticket => (
-                  <tr key={ticket.no} style={{ ...styles.tr, ...(selected?.no === ticket.no ? styles.trActive : {}) }} onClick={() => setSelected(ticket)}>
+                  <tr key={ticket.no} style={{ ...styles.tr, ...(selected?.no === ticket.no ? styles.trActive : {}) }} onClick={() => setSelectedNo(ticket.no)}>
                     <td style={styles.td}>{ticket.no}</td>
                     <td style={styles.td}>{ticket.category}</td>
                     <td style={styles.td}>{ticket.location}</td>
-                    <td style={styles.td}><span style={{ ...styles.badge, background: priorityColors[ticket.priority]+"22", color: priorityColors[ticket.priority] }}>{ticket.priority}</span></td>
+                    <td style={styles.td}><span style={{ ...styles.badge, background: (priorityColors[ticket.priority] || "#64748b")+"22", color: priorityColors[ticket.priority] || "#94a3b8" }}>{ticket.priority}</span></td>
                     <td style={styles.td}>{ticket.raisedBy}</td>
                     <td style={styles.td}>{ticket.assignedTo}</td>
-                    <td style={styles.td}><span style={{ ...styles.badge, background: statusColors[ticket.status]+"22", color: statusColors[ticket.status] }}>{ticket.status}</span></td>
+                    <td style={styles.td}><span style={{ ...styles.badge, background: (statusColors[ticket.status] || "#64748b")+"22", color: statusColors[ticket.status] || "#94a3b8" }}>{ticket.status}</span></td>
                     <td style={styles.td}>{ticket.completion}</td>
                   </tr>
                 ))}
@@ -118,7 +151,6 @@ export default function Tickets() {
         </div>
       </div>
 
-      {/* Detail Panel */}
       <div style={styles.detailPanel}>
         {!selected ? (
           <div style={styles.emptyDetail}>Select a ticket to view details.</div>
@@ -129,10 +161,10 @@ export default function Tickets() {
                 <div style={styles.muted}>Selected ticket</div>
                 <div style={styles.detailNo}>{selected.no}</div>
               </div>
-              <span style={{ ...styles.badge, background: statusColors[selected.status]+"22", color: statusColors[selected.status] }}>{selected.status}</span>
+              <span style={{ ...styles.badge, background: (statusColors[selected.status] || "#64748b")+"22", color: statusColors[selected.status] || "#94a3b8" }}>{selected.status}</span>
             </div>
             <div style={styles.detailGrid}>
-              {[["Category",selected.category],["Priority",selected.priority],["Location",selected.location],["TAT",selected.completion],["Raised By",selected.raisedBy],["Assigned To",selected.assignedTo]].map(([k,v]) => (
+              {[["Category",selected.category],["Priority",selected.priority],["Location",selected.location],["TAT",selected.completion],["Raised By",selected.raisedBy],["Assigned To",selected.assignedTo],["Before Photo",selected.beforePhoto],["After Photo",selected.afterPhoto]].map(([k,v]) => (
                 <div key={k} style={styles.detailItem}>
                   <div style={styles.muted}>{k}</div>
                   <div style={styles.detailVal}>{v}</div>
@@ -143,10 +175,36 @@ export default function Tickets() {
               <div style={styles.muted}>Description</div>
               <div style={styles.descText}>{selected.description}</div>
             </div>
+
+            <form onSubmit={handleWorkflowSubmit} style={styles.actionForm}>
+              <div style={styles.panelTitle}>Workflow Update</div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Assign To</label>
+                <select style={styles.input} value={actionForm.assignedTo} onChange={e => setActionForm({...actionForm, assignedTo:e.target.value})}>
+                  {assignees.map(a => <option key={a}>{a}</option>)}
+                </select>
+              </div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Status</label>
+                <select style={styles.input} value={actionForm.status} onChange={e => setActionForm({...actionForm, status:e.target.value})}>
+                  {statuses.map(s => <option key={s}>{s}</option>)}
+                </select>
+              </div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>After Photo</label>
+                <input style={styles.input} type="file" accept="image/*" onChange={e => setActionForm({...actionForm, afterPhoto:e.target.files?.[0]?.name || "Pending"})} />
+              </div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Remarks</label>
+                <textarea style={{...styles.input, height:"70px", resize:"vertical"}} value={actionForm.remarks} onChange={e => setActionForm({...actionForm, remarks:e.target.value})} placeholder="Add update remarks" />
+              </div>
+              <button style={styles.primaryBtn} type="submit">Save Update</button>
+            </form>
+
             <div style={styles.timelineSection}>
               <div style={styles.panelTitle}>Activity Timeline</div>
               {selected.timeline?.map((t, i) => (
-                <div key={i} style={styles.timelineItem}>
+                <div key={`${t.at}-${i}`} style={styles.timelineItem}>
                   <div style={styles.timelineDot} />
                   <div>
                     <div style={styles.timelineAction}>{t.action} <span style={styles.muted}>by {t.by}</span></div>
@@ -167,7 +225,7 @@ const styles = {
   page: { display:"flex", gap:"16px", height:"100%" },
   left: { flex:1, minWidth:0 },
   panel: { background:"#1e293b", borderRadius:"12px", padding:"20px", border:"1px solid #334155" },
-  panelHeader: { display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"16px" },
+  panelHeader: { display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"16px", gap:"12px" },
   panelTitle: { color:"#f1f5f9", fontSize:"15px", fontWeight:"600" },
   panelSub: { color:"#64748b", fontSize:"12px", marginTop:"2px" },
   primaryBtn: { background:"linear-gradient(135deg,#6366f1,#8b5cf6)", color:"#fff", border:"none", borderRadius:"8px", padding:"8px 16px", fontSize:"13px", fontWeight:"600", cursor:"pointer" },
@@ -186,16 +244,17 @@ const styles = {
   td: { color:"#94a3b8", fontSize:"13px", padding:"10px 12px", whiteSpace:"nowrap" },
   badge: { fontSize:"11px", fontWeight:"600", padding:"3px 8px", borderRadius:"5px" },
   empty: { color:"#475569", textAlign:"center", padding:"30px", fontSize:"13px" },
-  detailPanel: { width:"300px", minWidth:"300px", background:"#1e293b", borderRadius:"12px", padding:"20px", border:"1px solid #334155", overflowY:"auto" },
+  detailPanel: { width:"340px", minWidth:"340px", background:"#1e293b", borderRadius:"12px", padding:"20px", border:"1px solid #334155", overflowY:"auto" },
   emptyDetail: { color:"#475569", fontSize:"13px", textAlign:"center", marginTop:"40px" },
   detailHeader: { display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"16px" },
   muted: { color:"#64748b", fontSize:"12px" },
   detailNo: { color:"#f1f5f9", fontSize:"16px", fontWeight:"700", marginTop:"2px" },
   detailGrid: { display:"grid", gridTemplateColumns:"1fr 1fr", gap:"12px", marginBottom:"14px" },
   detailItem: { display:"flex", flexDirection:"column", gap:"3px" },
-  detailVal: { color:"#e2e8f0", fontSize:"13px", fontWeight:"500" },
+  detailVal: { color:"#e2e8f0", fontSize:"13px", fontWeight:"500", wordBreak:"break-word" },
   descBox: { background:"#0f172a", borderRadius:"8px", padding:"12px", marginBottom:"16px" },
   descText: { color:"#94a3b8", fontSize:"13px", marginTop:"4px", lineHeight:"1.5" },
+  actionForm: { background:"#0f172a", borderRadius:"10px", padding:"14px", marginBottom:"18px", display:"flex", flexDirection:"column", gap:"10px" },
   timelineSection: { display:"flex", flexDirection:"column", gap:"12px" },
   timelineItem: { display:"flex", gap:"10px", alignItems:"flex-start" },
   timelineDot: { width:"8px", height:"8px", borderRadius:"50%", background:"#6366f1", marginTop:"4px", flexShrink:0 },
@@ -203,3 +262,6 @@ const styles = {
   timelineAt: { color:"#475569", fontSize:"11px", marginTop:"2px" },
   timelineRemarks: { color:"#64748b", fontSize:"12px", marginTop:"4px" },
 };
+
+
+

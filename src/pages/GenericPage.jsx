@@ -1,4 +1,4 @@
-import { genericViews } from "../data/appData";
+﻿import { genericViews } from "../data/appData";
 
 const statusColors = {
   Pending:"#f59e0b", "In Progress":"#6366f1", Completed:"#22c55e",

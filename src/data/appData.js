@@ -1,4 +1,4 @@
-export const tenants = {
+﻿export const tenants = {
   orion: {
     name: "Orion Corporate Park",
     stats: {
@@ -27,8 +27,8 @@ export const demoUsers = {
 };
 
 export const rolePermissions = {
-  "Super Admin": ["dashboard","checklist","tickets","ppm","assets","vendors","visitors","housekeeping","security","attendance","inventory","purchase","workorders","energy","documents","reports","roles"],
-  "Admin Manager": ["dashboard","checklist","tickets","ppm","assets","vendors","visitors","housekeeping","security","attendance","inventory","purchase","workorders","energy","documents","reports"],
+  "Super Admin": ["dashboard","checklist","tickets","ppm","assets","inventory","itasset","mobile","sim","furniture","hvac","vendors","visitors","housekeeping","security","attendance","purchase","workorders","energy","documents","reports","roles"],
+  "Admin Manager": [ "dashboard","checklist","tickets","ppm","assets","inventory","itasset","mobile","sim","furniture","hvac","vendors","visitors","housekeeping","security","attendance","purchase","workorders","energy","documents","reports"],
   Vendor: ["dashboard","tickets","ppm","workorders","documents"],
   Employee: ["dashboard","tickets","visitors","purchase"],
   "Security Supervisor": ["dashboard","tickets","visitors","security","attendance","reports"],
@@ -70,7 +70,7 @@ export const genericViews = {
   security: { title:"Security Management", subtitle:"Guard attendance, shift allocation, and incident reports.", headers:["Guard","Shift","Post","Checkpoint","Incident","Status"], rows:[["Arun Singh","Day","Main Gate","Visitor register","No","Completed"],["Javed Khan","Night","Basement","Patrolling checkpoint","No","Pending"],["Suresh Yadav","Day","Fire Exit","Exit clear","Yes","Escalated"]] },
   attendance: { title:"Attendance Management", subtitle:"Mobile attendance, GPS, shift management, and overtime.", headers:["Staff","Team","Shift","In Time","GPS","Overtime","Status"], rows:[["Kiran","Housekeeping","Morning","08:02 AM","Verified","0 hr","Present"],["Arun Singh","Security","Day","07:55 AM","Verified","1 hr","Present"],["Mahesh","Facility Team","General","09:18 AM","Verified","0 hr","Late"]] },
   inventory: { title:"Inventory Management", subtitle:"Track opening stock, issue, receive, and closing stock.", headers:["Item","Opening","Received","Issued","Closing","Reorder Level"], rows:[["Cleaning Chemicals","45 L","20 L","18 L","47 L","30 L"],["Tissue Paper","220 rolls","100 rolls","86 rolls","234 rolls","100 rolls"],["Garbage Bags","1,100 pcs","500 pcs","420 pcs","1,180 pcs","600 pcs"]] },
-  purchase: { title:"Purchase Requisition", subtitle:"Employee request flow: Employee → Manager → Purchase.", headers:["Request No.","Type","Raised By","Manager","Purchase Status","Amount"], rows:[["PR-501","Stationery Request","HR Desk","Approved","Pending PO","INR 8,500"],["PR-502","Pantry Request","Admin Desk","Pending","Not Started","INR 12,400"],["PR-503","Maintenance Material","Facility Team","Approved","Vendor Quote","INR 27,800"]] },
+  purchase: { title:"Purchase Requisition", subtitle:"Employee request flow: Employee â†’ Manager â†’ Purchase.", headers:["Request No.","Type","Raised By","Manager","Purchase Status","Amount"], rows:[["PR-501","Stationery Request","HR Desk","Approved","Pending PO","INR 8,500"],["PR-502","Pantry Request","Admin Desk","Pending","Not Started","INR 12,400"],["PR-503","Maintenance Material","Facility Team","Approved","Vendor Quote","INR 27,800"]] },
   workorders: { title:"Work Order Management", subtitle:"Generate work orders, assign vendors, and track completion.", headers:["WO No.","Vendor","Scope","Quotation","Start Date","Status"], rows:[["WO-301","CoolTech","AC gas charging","Attached","2026-06-24","In Progress"],["WO-302","SafeFire India","Hydrant valve replacement","Attached","2026-06-25","Pending"],["WO-303","CleanPro","Deep cleaning basement","Pending","2026-06-27","Pending"]] },
   energy: { title:"Energy Monitoring", subtitle:"Electricity, DG diesel, and water meter readings.", headers:["Type","Meter Location","Opening","Closing","Consumption","Cost"], rows:[["Electricity","Main Meter","128,400","166,820","38,420 kWh","INR 4.22L"],["DG Diesel","DG Tank","2,800","2,120","680 L","INR 64,600"],["Water","Main Meter","9,400","10,680","1,280 KL","INR 38,400"]] },
   documents: { title:"Document Management", subtitle:"Store AMC contracts, insurance, NOC, and certificates.", headers:["Document","Category","Vendor / Owner","Expiry Date","Status"], rows:[["Lift AMC","AMC Contract","Otis Services","2026-08-30","Active"],["Fire NOC","Compliance","Fire Department","2026-09-12","Active"],["Pollution Certificate","Compliance","Govt Authority","2026-07-18","Due Soon"]] },

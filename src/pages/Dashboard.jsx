@@ -1,4 +1,4 @@
-import { useApp } from "../context/AppContext";
+﻿import { useApp } from "../context/appContextCore";
 
 const statCards = [
   { key:"openComplaints", label:"Open Complaints", sub:"Across all departments" },
@@ -19,22 +19,20 @@ const expenses = [
   { label:"Stationery", value:19 },
 ];
 
-const priorityColors = { High:"#f59e0b", Critical:"#ef4444", Medium:"#6366f1", Low:"#22c55e" };
+const priorityColors = { High:"#f59e0b", Critical:"#ef4444", Medium:"#0038a8", Low:"#10b981" };
 
 export default function Dashboard() {
-  const { tenantData, tickets, session, activeRole, setActiveView } = useApp();
+  const { tenantData, tickets, session, setActiveView } = useApp();
   const stats = tenantData?.stats || {};
   const priorityTickets = tickets.filter(t => ["High","Critical"].includes(t.priority));
 
   return (
     <div style={styles.page}>
-      {/* Welcome */}
       <div style={styles.welcome}>
-        Welcome back, <strong style={{ color:"#818cf8" }}>{session?.name}</strong> — {activeRole}
+        Welcome back, <strong style={{ color:"#0038a8" }}>{session?.name}</strong>
       </div>
 
-      {/* Stat Cards */}
-      <div style={styles.statsGrid}>
+      <div style={styles.statsRow}>
         {statCards.map(card => (
           <div key={card.key} style={styles.statCard}>
             <div style={styles.statLabel}>{card.label}</div>
@@ -45,13 +43,9 @@ export default function Dashboard() {
       </div>
 
       <div style={styles.grid2}>
-        {/* Priority Tickets */}
-        <div style={styles.panel}>
-          <div style={styles.panelHeader}>
-            <div>
-              <div style={styles.panelTitle}>Priority Tickets</div>
-              <div style={styles.panelSub}>High priority complaints requiring action.</div>
-            </div>
+        <div style={styles.card}>
+          <div style={styles.cardHeader}>
+            <div style={styles.cardTitle}>Priority Tickets</div>
             <button style={styles.ghostBtn} onClick={() => setActiveView("tickets")}>View All</button>
           </div>
           <div style={styles.ticketList}>
@@ -62,7 +56,7 @@ export default function Dashboard() {
                   <div style={styles.ticketNo}>{ticket.no} — {ticket.category}</div>
                   <div style={styles.ticketLoc}>{ticket.location} · {ticket.assignedTo}</div>
                 </div>
-                <span style={{ ...styles.badge, background: priorityColors[ticket.priority] + "22", color: priorityColors[ticket.priority] }}>
+                <span style={{ ...styles.badge, background: priorityColors[ticket.priority]+"1a", color: priorityColors[ticket.priority] }}>
                   {ticket.priority}
                 </span>
               </div>
@@ -70,13 +64,9 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Expense Summary */}
-        <div style={styles.panel}>
-          <div style={styles.panelHeader}>
-            <div>
-              <div style={styles.panelTitle}>Monthly Expense Summary</div>
-              <div style={styles.panelSub}>Facility expenses by category.</div>
-            </div>
+        <div style={styles.card}>
+          <div style={styles.cardHeader}>
+            <div style={styles.cardTitle}>Monthly Expense Summary</div>
           </div>
           <div style={styles.barList}>
             {expenses.map(exp => (
@@ -99,29 +89,32 @@ export default function Dashboard() {
 
 const styles = {
   page: { display:"flex", flexDirection:"column", gap:"20px" },
-  welcome: { color:"#94a3b8", fontSize:"14px", background:"#1e293b", padding:"12px 16px", borderRadius:"10px" },
-  statsGrid: { display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(200px, 1fr))", gap:"14px" },
-  statCard: { background:"#1e293b", borderRadius:"12px", padding:"18px", border:"1px solid #334155" },
-  statLabel: { color:"#64748b", fontSize:"12px", fontWeight:"500", marginBottom:"8px" },
-  statValue: { color:"#f1f5f9", fontSize:"24px", fontWeight:"700", marginBottom:"4px" },
-  statSub: { color:"#475569", fontSize:"11px" },
-  grid2: { display:"grid", gridTemplateColumns:"1fr 1fr", gap:"16px" },
-  panel: { background:"#1e293b", borderRadius:"12px", padding:"20px", border:"1px solid #334155" },
-  panelHeader: { display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"16px" },
-  panelTitle: { color:"#f1f5f9", fontSize:"15px", fontWeight:"600" },
-  panelSub: { color:"#64748b", fontSize:"12px", marginTop:"2px" },
-  ghostBtn: { background:"transparent", border:"1px solid #334155", borderRadius:"7px", padding:"6px 12px", color:"#94a3b8", fontSize:"12px", cursor:"pointer" },
+  welcome: { color:"#64748b", fontSize:"0.85rem", background:"#fff", border:"1px solid #e2e8f0", padding:"12px 16px", borderRadius:"4px" },
+
+  statsRow: { display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))", gap:"20px" },
+  statCard: { background:"#fff", border:"1px solid #e2e8f0", borderRadius:"4px", padding:"20px", boxShadow:"0 1px 3px rgba(0,0,0,0.05)" },
+  statLabel: { fontSize:"0.72rem", fontWeight:600, color:"#64748b", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:"8px" },
+  statValue: { fontFamily:"'Space Grotesk', sans-serif", fontSize:"1.65rem", fontWeight:700, color:"#111625", marginBottom:"4px" },
+  statSub: { fontSize:"0.72rem", color:"#94a3b8" },
+
+  grid2: { display:"grid", gridTemplateColumns:"1fr 1fr", gap:"20px" },
+  card: { background:"#fff", border:"1px solid #e2e8f0", borderRadius:"4px", boxShadow:"0 1px 3px rgba(0,0,0,0.05)", padding:"24px", display:"flex", flexDirection:"column", gap:"16px" },
+  cardHeader: { display:"flex", justifyContent:"space-between", alignItems:"center", borderBottom:"1px solid #e2e8f0", paddingBottom:"14px" },
+  cardTitle: { fontFamily:"'Space Grotesk', sans-serif", fontSize:"0.95rem", fontWeight:700, color:"#111625" },
+  ghostBtn: { background:"#fff", border:"1px solid #e2e8f0", borderRadius:"4px", padding:"6px 12px", color:"#111625", fontSize:"0.78rem", fontWeight:600, cursor:"pointer" },
+
   ticketList: { display:"flex", flexDirection:"column", gap:"10px" },
-  ticketItem: { display:"flex", justifyContent:"space-between", alignItems:"center", background:"#0f172a", padding:"12px", borderRadius:"8px" },
-  ticketNo: { color:"#e2e8f0", fontSize:"13px", fontWeight:"600" },
-  ticketLoc: { color:"#64748b", fontSize:"12px", marginTop:"2px" },
-  badge: { fontSize:"11px", fontWeight:"600", padding:"3px 8px", borderRadius:"5px" },
-  empty: { color:"#475569", fontSize:"13px", textAlign:"center", padding:"20px" },
+  ticketItem: { display:"flex", justifyContent:"space-between", alignItems:"center", background:"#f8fafc", padding:"12px", borderRadius:"4px" },
+  ticketNo: { color:"#111625", fontSize:"0.82rem", fontWeight:600 },
+  ticketLoc: { color:"#64748b", fontSize:"0.75rem", marginTop:"2px" },
+  badge: { fontSize:"0.7rem", fontWeight:600, padding:"3px 8px", borderRadius:"20px" },
+  empty: { color:"#94a3b8", fontSize:"0.82rem", textAlign:"center", padding:"20px" },
+
   barList: { display:"flex", flexDirection:"column", gap:"12px" },
   barRow: { display:"flex", flexDirection:"column", gap:"4px" },
   barMeta: { display:"flex", justifyContent:"space-between" },
-  barLabel: { color:"#94a3b8", fontSize:"13px" },
-  barPct: { color:"#64748b", fontSize:"12px" },
-  barBg: { background:"#0f172a", borderRadius:"4px", height:"6px" },
-  barFill: { background:"linear-gradient(90deg,#6366f1,#8b5cf6)", height:"6px", borderRadius:"4px", transition:"width 0.3s" },
+  barLabel: { color:"#111625", fontSize:"0.82rem" },
+  barPct: { color:"#64748b", fontSize:"0.78rem" },
+  barBg: { background:"#f1f5f9", borderRadius:"4px", height:"6px" },
+  barFill: { background:"#0038a8", height:"6px", borderRadius:"4px" },
 };

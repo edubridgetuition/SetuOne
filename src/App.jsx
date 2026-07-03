@@ -1,5 +1,6 @@
-import { AppProvider } from "./context/AppContext";
-import { useApp } from "./context/AppContext";
+﻿import { AppProvider } from "./context/AppContext";
+import { useApp } from "./context/appContextCore";
+import AssetManagement from "./pages/AssetManagement";
 import LoginPage from "./pages/LoginPage";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
@@ -17,6 +18,7 @@ function AppContent() {
       case "dashboard": return <Dashboard />;
       case "tickets": return <Tickets />;
       case "checklist": return <Checklist />;
+      case "assets": return <AssetManagement />;
       default: return <GenericPage view={activeView} />;
     }
   };
@@ -31,3 +33,4 @@ export default function App() {
     </AppProvider>
   );
 }
+
