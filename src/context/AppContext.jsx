@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { AppContext } from "./appContextCore";
 import { demoUsers, tenants, rolePermissions } from "../data/appData";
 import { 
@@ -22,7 +22,30 @@ import {
   transferAsset as apiTransferAsset,
   changeAssetStatus as apiChangeAssetStatus,
   uploadAssetDocument as apiUploadAssetDocument,
-  importAssets as apiImportAssets
+  importAssets as apiImportAssets,
+  
+  // Purchase imports
+  fetchPurchaseRequests as apiFetchPurchaseRequests,
+  createPurchaseRequest as apiCreatePurchaseRequest,
+  updatePRStatus as apiUpdatePRStatus,
+  fetchQuotations as apiFetchQuotations,
+  submitQuotationComparison as apiSubmitQuotationComparison,
+  fetchPurchaseOrders as apiFetchPurchaseOrders,
+  
+  // Inventory imports
+  fetchInventoryItems as apiFetchInventoryItems,
+  createInventoryItem as apiCreateInventoryItem,
+  updateInventoryItem as apiUpdateInventoryItem,
+  fetchStockBalances as apiFetchStockBalances,
+  logInventoryTransaction as apiLogInventoryTransaction,
+  stockAdjustment as apiStockAdjustment,
+  fetchGRNs as apiFetchGRNs,
+  createGRN as apiCreateGRN,
+  approveGRN as apiApproveGRN,
+  fetchInvoices as apiFetchInvoices,
+  createInvoice as apiCreateInvoice,
+  fetchPayments as apiFetchPayments,
+  recordPayment as apiRecordPayment
 } from "../lib";
 
 export function AppProvider({ children }) {
@@ -38,6 +61,15 @@ export function AppProvider({ children }) {
   const [assets, setAssets] = useState([]);
   const [totalAssetsCount, setTotalAssetsCount] = useState(0);
   const [assetMetadata, setAssetMetadata] = useState(null);
+  
+  // Purchase & Inventory States
+  const [purchaseRequests, setPurchaseRequests] = useState([]);
+  const [purchaseOrders, setPurchaseOrders] = useState([]);
+  const [inventoryItems, setInventoryItems] = useState([]);
+  const [stockBalances, setStockBalances] = useState([]);
+  const [grns, setGrns] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [payments, setPayments] = useState([]);
   
   const [loading, setLoading] = useState(true);
 
@@ -282,6 +314,197 @@ export function AppProvider({ children }) {
     return res;
   }
 
+  // PURCHASE REQUISITIONS PIPELINE
+  async function loadPurchaseRequests() {
+    if (!session) return;
+    const res = await apiFetchPurchaseRequests();
+    if (res.success) {
+      setPurchaseRequests(res.data);
+    }
+    return res;
+  }
+
+  async function createPurchaseRequest(prData) {
+    if (!session) return null;
+    const res = await apiCreatePurchaseRequest(prData, session.companyId, session.id);
+    if (res.success) {
+      await loadPurchaseRequests();
+      return res.data;
+    } else {
+      alert("Error creating PR: " + res.message);
+    }
+    return null;
+  }
+
+  async function updatePRStatus(prId, status) {
+    const res = await apiUpdatePRStatus(prId, status);
+    if (res.success) {
+      await loadPurchaseRequests();
+    } else {
+      alert("Error updating PR status: " + res.message);
+    }
+    return res;
+  }
+
+  async function loadQuotations(requestId) {
+    return await apiFetchQuotations(requestId);
+  }
+
+  async function submitQuotationComparison(requestId, selectedQuoteId, remarks = "") {
+    const res = await apiSubmitQuotationComparison(requestId, selectedQuoteId, remarks);
+    if (res.success) {
+      await loadPurchaseRequests();
+      await loadPurchaseOrders();
+    } else {
+      alert("Comparison failed: " + res.message);
+    }
+    return res;
+  }
+
+  async function loadPurchaseOrders() {
+    if (!session) return;
+    const res = await apiFetchPurchaseOrders();
+    if (res.success) {
+      setPurchaseOrders(res.data);
+    }
+    return res;
+  }
+
+  // INVENTORY PIPELINE
+  async function loadInventoryItems() {
+    if (!session) return;
+    const res = await apiFetchInventoryItems(session.companyId);
+    if (res.success) {
+      setInventoryItems(res.data);
+    }
+    return res;
+  }
+
+  async function createInventoryItem(itemData) {
+    if (!session) return null;
+    const res = await apiCreateInventoryItem(itemData, session.companyId);
+    if (res.success) {
+      await loadInventoryItems();
+      return res.data;
+    } else {
+      alert("Item registration failed: " + res.message);
+    }
+    return null;
+  }
+
+  async function updateInventoryItem(itemId, updates) {
+    const res = await apiUpdateInventoryItem(itemId, updates);
+    if (res.success) {
+      await loadInventoryItems();
+    } else {
+      alert("Update failed: " + res.message);
+    }
+    return res;
+  }
+
+  async function loadStockBalances(branchId) {
+    if (!session) return;
+    const res = await apiFetchStockBalances(branchId || session.branchId);
+    if (res.success) {
+      setStockBalances(res.data);
+    }
+    return res;
+  }
+
+  async function logStockTransaction(itemId, branchId, type, quantity, referenceId = null) {
+    const targetBranch = branchId || session.branchId;
+    const res = await apiLogInventoryTransaction(itemId, targetBranch, type, quantity, referenceId);
+    if (res.success) {
+      await loadStockBalances(targetBranch);
+    }
+    return res;
+  }
+
+  async function stockAdjustment(itemId, branchId, quantity, reason, approvedBy) {
+    const targetBranch = branchId || session.branchId;
+    const res = await apiStockAdjustment(itemId, targetBranch, quantity, reason, approvedBy);
+    if (res.success) {
+      await loadStockBalances(targetBranch);
+    } else {
+      alert("Adjustment failed: " + res.message);
+    }
+    return res;
+  }
+
+  async function loadGRNs() {
+    if (!session) return;
+    const res = await apiFetchGRNs();
+    if (res.success) {
+      setGrns(res.data);
+    }
+    return res;
+  }
+
+  async function createGRN(poId, items) {
+    if (!session) return null;
+    const res = await apiCreateGRN(poId, session.id, items);
+    if (res.success) {
+      await loadGRNs();
+      return res.data;
+    } else {
+      alert("GRN creation failed: " + res.message);
+    }
+    return null;
+  }
+
+  async function approveGRN(grnId, branchId) {
+    const targetBranch = branchId || session.branchId;
+    const res = await apiApproveGRN(grnId, targetBranch);
+    if (res.success) {
+      await loadGRNs();
+      await loadStockBalances(targetBranch);
+    } else {
+      alert("GRN verification failed: " + res.message);
+    }
+    return res;
+  }
+
+  async function loadInvoices() {
+    if (!session) return;
+    const res = await apiFetchInvoices();
+    if (res.success) {
+      setInvoices(res.data);
+    }
+    return res;
+  }
+
+  async function createInvoice(poId, invoiceNo, amount, dueDate, items) {
+    const res = await apiCreateInvoice(poId, invoiceNo, amount, dueDate, items);
+    if (res.success) {
+      await loadInvoices();
+      return res.data;
+    } else {
+      alert("Invoice creation failed: " + res.message);
+    }
+    return null;
+  }
+
+  async function loadPayments() {
+    if (!session) return;
+    const res = await apiFetchPayments();
+    if (res.success) {
+      setPayments(res.data);
+    }
+    return res;
+  }
+
+  async function recordPayment(invoiceId, amountPaid, reference, mode) {
+    const res = await apiRecordPayment(invoiceId, amountPaid, reference, mode);
+    if (res.success) {
+      await loadPayments();
+      await loadInvoices();
+      return res.data;
+    } else {
+      alert("Payment recording failed: " + res.message);
+    }
+    return res;
+  }
+
   const tenantData = useMemo(() => tenants[activeTenant], [activeTenant]);
 
   if (loading) return (
@@ -299,7 +522,14 @@ export function AppProvider({ children }) {
       // Asset values
       assets, totalAssetsCount, assetMetadata, loadAssets, loadAssetDetails,
       loadAssetMetadata, createAsset, updateAsset, archiveAsset, assignAsset,
-      returnAsset, transferAsset, changeAssetStatus, uploadAssetDocument, importAssets
+      returnAsset, transferAsset, changeAssetStatus, uploadAssetDocument, importAssets,
+      
+      // Purchase & Inventory values
+      purchaseRequests, purchaseOrders, inventoryItems, stockBalances, grns, invoices, payments,
+      loadPurchaseRequests, createPurchaseRequest, updatePRStatus, loadQuotations, submitQuotationComparison,
+      loadPurchaseOrders, loadInventoryItems, createInventoryItem, updateInventoryItem, loadStockBalances,
+      logStockTransaction, stockAdjustment, loadGRNs, createGRN, approveGRN, loadInvoices, createInvoice,
+      loadPayments, recordPayment
     }}>
       {children}
     </AppContext.Provider>

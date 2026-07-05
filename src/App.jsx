@@ -1,4 +1,4 @@
-﻿import { AppProvider } from "./context/AppContext";
+import { AppProvider } from "./context/AppContext";
 import { useApp } from "./context/appContextCore";
 import AssetManagement from "./pages/AssetManagement";
 import LoginPage from "./pages/LoginPage";
@@ -7,6 +7,8 @@ import Dashboard from "./pages/Dashboard";
 import Tickets from "./pages/Tickets";
 import Checklist from "./pages/Checklist";
 import GenericPage from "./pages/GenericPage";
+import PurchaseRequisition from "./pages/PurchaseRequisition";
+import InventoryManagement from "./pages/InventoryManagement";
 
 function AppContent() {
   const { session, activeView } = useApp();
@@ -19,6 +21,8 @@ function AppContent() {
       case "tickets": return <Tickets />;
       case "checklist": return <Checklist />;
       case "assets": return <AssetManagement />;
+      case "purchase": return <PurchaseRequisition />;
+      case "inventory": return <InventoryManagement />;
       default: return <GenericPage view={activeView} />;
     }
   };
