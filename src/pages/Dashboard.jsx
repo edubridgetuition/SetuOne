@@ -1,4 +1,7 @@
-﻿import { useApp } from "../context/appContextCore";
+﻿import { useEffect, useState } from "react";
+import { useApp } from "../context/appContextCore";
+import { fetchDashboardSummary, fetchPriorityTickets } from "../lib";
+import { TICKET_PRIORITY } from "../constants";
 
 const statCards = [
   { key:"openComplaints", label:"Open Complaints", sub:"Across all departments" },
@@ -19,17 +22,57 @@ const expenses = [
   { label:"Stationery", value:19 },
 ];
 
-const priorityColors = { High:"#f59e0b", Critical:"#ef4444", Medium:"#0038a8", Low:"#10b981" };
+const priorityColors = { 
+  [TICKET_PRIORITY.HIGH]: "#f59e0b", 
+  [TICKET_PRIORITY.CRITICAL]: "#ef4444", 
+  [TICKET_PRIORITY.MEDIUM]: "#0038a8", 
+  [TICKET_PRIORITY.LOW]: "#10b981" 
+};
 
 export default function Dashboard() {
-  const { tenantData, tickets, session, setActiveView } = useApp();
-  const stats = tenantData?.stats || {};
-  const priorityTickets = tickets.filter(t => ["High","Critical"].includes(t.priority));
+  const { session, setActiveView, tenantData } = useApp();
+  const [stats, setStats] = useState({});
+  const [priorityTickets, setPriorityTickets] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadDashboardData() {
+      setLoading(true);
+      const [summaryRes, ticketsRes] = await Promise.all([
+        fetchDashboardSummary(),
+        fetchPriorityTickets()
+      ]);
+
+      if (summaryRes.success && summaryRes.data) {
+        setStats(summaryRes.data);
+      } else {
+        // Fallback to local appData stats
+        setStats(tenantData?.stats || {});
+      }
+
+      if (ticketsRes.success) {
+        setPriorityTickets(ticketsRes.data);
+      }
+      setLoading(false);
+    }
+
+    if (session) {
+      loadDashboardData();
+    }
+  }, [session, tenantData]);
+
+  if (loading) {
+    return (
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"center", padding:"100px", color:"#64748b" }}>
+        Loading dashboard metrics...
+      </div>
+    );
+  }
 
   return (
     <div style={styles.page}>
       <div style={styles.welcome}>
-        Welcome back, <strong style={{ color:"#0038a8" }}>{session?.name}</strong>
+        Welcome back, <strong style={{ color:"#0038a8" }}>{session?.name || "User"}</strong>
       </div>
 
       <div style={styles.statsRow}>
