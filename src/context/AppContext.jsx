@@ -46,6 +46,7 @@ import {
   createInvoice as apiCreateInvoice,
   fetchPayments as apiFetchPayments,
   recordPayment as apiRecordPayment,
+  fetchInventoryTransactions as apiFetchInventoryTransactions,
 
   // Maintenance imports
   fetchChecklistTemplates as apiFetchChecklistTemplates,
@@ -80,6 +81,7 @@ export function AppProvider({ children }) {
   const [grns, setGrns] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [inventoryTransactions, setInventoryTransactions] = useState([]);
 
   // Maintenance States
   const [checklistTemplates, setChecklistTemplates] = useState([]);
@@ -427,11 +429,21 @@ export function AppProvider({ children }) {
     return res;
   }
 
+  async function loadInventoryTransactions(branchId) {
+    if (!session) return;
+    const res = await apiFetchInventoryTransactions(branchId || session.branchId);
+    if (res.success) {
+      setInventoryTransactions(res.data);
+    }
+    return res;
+  }
+
   async function logStockTransaction(itemId, branchId, type, quantity, referenceId = null) {
     const targetBranch = branchId || session.branchId;
     const res = await apiLogInventoryTransaction(itemId, targetBranch, type, quantity, referenceId);
     if (res.success) {
       await loadStockBalances(targetBranch);
+      await loadInventoryTransactions(targetBranch);
     }
     return res;
   }
@@ -441,6 +453,7 @@ export function AppProvider({ children }) {
     const res = await apiStockAdjustment(itemId, targetBranch, quantity, reason, approvedBy);
     if (res.success) {
       await loadStockBalances(targetBranch);
+      await loadInventoryTransactions(targetBranch);
     } else {
       alert("Adjustment failed: " + res.message);
     }
@@ -474,6 +487,7 @@ export function AppProvider({ children }) {
     if (res.success) {
       await loadGRNs();
       await loadStockBalances(targetBranch);
+      await loadInventoryTransactions(targetBranch);
     } else {
       alert("GRN verification failed: " + res.message);
     }
@@ -578,6 +592,7 @@ export function AppProvider({ children }) {
     if (res.success) {
       await loadPPMSchedules();
       await loadStockBalances(session.branchId); // targeted refresh of spares stock levels
+      await loadInventoryTransactions(session.branchId);
     } else {
       alert("PPM status update failed: " + res.message);
     }
@@ -623,9 +638,9 @@ export function AppProvider({ children }) {
       returnAsset, transferAsset, changeAssetStatus, uploadAssetDocument, importAssets,
       
       // Purchase & Inventory values
-      purchaseRequests, purchaseOrders, inventoryItems, stockBalances, grns, invoices, payments,
+      purchaseRequests, purchaseOrders, inventoryItems, stockBalances, grns, invoices, payments, inventoryTransactions,
       loadPurchaseRequests, createPurchaseRequest, updatePRStatus, loadQuotations, submitQuotationComparison,
-      loadPurchaseOrders, loadInventoryItems, createInventoryItem, updateInventoryItem, loadStockBalances,
+      loadPurchaseOrders, loadInventoryItems, createInventoryItem, updateInventoryItem, loadStockBalances, loadInventoryTransactions,
       logStockTransaction, stockAdjustment, loadGRNs, createGRN, approveGRN, loadInvoices, createInvoice,
       loadPayments, recordPayment,
 

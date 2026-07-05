@@ -1,4 +1,4 @@
-﻿import { supabase } from './supabase';
+import { supabase } from './supabase';
 
 // Fetch inventory item master catalog
 export async function fetchInventoryItems(companyId) {
@@ -372,5 +372,23 @@ export async function recordPayment(invoiceId, amountPaid, reference, mode) {
     return { success: true, data, message: 'Payment recorded successfully.', error: null };
   } catch (error) {
     return { success: false, data: null, message: error.message || 'Failed to record payment.', error };
+  }
+}
+
+export async function fetchInventoryTransactions(branchId) {
+  try {
+    const { data, error } = await supabase
+      .from('inventory_transactions')
+      .select(`
+        *,
+        inventory_items (*)
+      `)
+      .eq('branch_id', branchId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return { success: true, data: data || [], message: 'Transactions fetched.', error: null };
+  } catch (error) {
+    return { success: false, data: [], message: error.message, error };
   }
 }

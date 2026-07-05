@@ -1,6 +1,8 @@
 ﻿import { useEffect, useState } from "react";
 import { useApp } from "../context/appContextCore";
 
+const statusColors = { Pending: "#f59e0b", "In Progress": "#6366f1", Completed: "#22c55e", Escalated: "#ef4444" };
+
 export default function InventoryManagement() {
   const {
     session,
@@ -18,13 +20,16 @@ export default function InventoryManagement() {
     loadInvoices,
     payments,
     loadPayments,
-    recordPayment
+    recordPayment,
+    inventoryTransactions,
+    loadInventoryTransactions,
+    logStockTransaction
   } = useApp();
 
   const [selectedBranch, setSelectedBranch] = useState("");
   
-  // Tabs: "Stock", "GRN", "Invoices"
-  const [activeTab, setActiveTab] = useState("Stock");
+  // Tabs: "Stock Balance", "Goods Receipts (GRN)", "Billing & Invoices", "Pantry & Coffee"
+  const [activeTab, setActiveTab] = useState("Stock Balance");
 
   // Selection states
   const [selectedGRNId, setSelectedGRNId] = useState(null);
@@ -40,6 +45,14 @@ export default function InventoryManagement() {
   const [showPaymentForm, setShowPaymentForm] = useState(false);
   const [paymentForm, setPaymentForm] = useState({ amount: 0, reference: "", mode: "UPI" });
 
+  // Pantry & Coffee Logger Form
+  const [pantryForm, setPantryForm] = useState({
+    itemId: "",
+    action: "Consumed", // "Arrived" (In) or "Consumed" (Out)
+    quantity: 1,
+    remarks: ""
+  });
+
   // Initialize
   useEffect(() => {
     loadInventoryItems();
@@ -53,8 +66,23 @@ export default function InventoryManagement() {
       const branch = session.branchId || "Ahmedabad Branch";
       setSelectedBranch(branch);
       loadStockBalances(branch);
+      loadInventoryTransactions(branch);
     }
   }, [session]);
+
+  // Auto-seed pantry items on mount if they do not exist
+  useEffect(() => {
+    if (inventoryItems.length > 0) {
+      const pantryNames = ["Water Bottle (20L)", "Water Jug", "Coffee Beans", "Milk Packet"];
+      pantryNames.forEach(async name => {
+        const match = inventoryItems.find(i => i.name === name);
+        if (!match) {
+          const unit = name.includes("Beans") ? "kg" : name.includes("Bottle") ? "bottles" : name.includes("Milk") ? "packets" : "jugs";
+          await createInventoryItem({ name, unit, reorderLevel: 5 });
+        }
+      });
+    }
+  }, [inventoryItems]);
 
   async function handleAddInventoryItem(e) {
     e.preventDefault();
@@ -112,6 +140,61 @@ export default function InventoryManagement() {
     }
   }
 
+  // Handle Pantry & Coffee log transactions submission
+  async function handlePantryLog(e) {
+    e.preventDefault();
+    if (!pantryForm.itemId) {
+      alert("Please select a pantry item.");
+      return;
+    }
+    const type = pantryForm.action === "Arrived" ? "In" : "Out";
+    const res = await logStockTransaction(
+      pantryForm.itemId,
+      selectedBranch,
+      type,
+      Number(pantryForm.quantity)
+    );
+    if (res.success) {
+      alert("Consumption/Refill logged successfully!");
+      setPantryForm({ itemId: "", action: "Consumed", quantity: 1, remarks: "" });
+    }
+  }
+
+  // Daily and Monthly Pantry analytics calculations
+  const pantryItems = inventoryItems.filter(i => 
+    ["Water Bottle (20L)", "Water Jug", "Coffee Beans", "Milk Packet"].includes(i.name)
+  );
+
+  const getPantryStats = (itemName) => {
+    const item = inventoryItems.find(i => i.name === itemName);
+    if (!item) return { daily: 0, monthly: 0, current: 0, unit: "" };
+
+    const stock = stockBalances.find(st => st.itemId === item.id);
+    const txs = inventoryTransactions.filter(t => t.item_id === item.id && t.transaction_type === "Out");
+
+    const todayStr = new Date().toDateString();
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    const daily = txs
+      .filter(t => new Date(t.created_at).toDateString() === todayStr)
+      .reduce((sum, t) => sum + Number(t.quantity), 0);
+
+    const monthly = txs
+      .filter(t => {
+        const d = new Date(t.created_at);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      })
+      .reduce((sum, t) => sum + Number(t.quantity), 0);
+
+    return {
+      daily,
+      monthly,
+      current: stock ? stock.closingStock : 0,
+      unit: item.unit
+    };
+  };
+
   const isManager = activeRole === "Admin Manager" || activeRole === "Super Admin";
 
   const selectedGRN = grns.find(g => g.id === selectedGRNId);
@@ -123,7 +206,7 @@ export default function InventoryManagement() {
         <div style={styles.panel}>
           {/* Navigation Tabs */}
           <div style={styles.tabHeader}>
-            {["Stock Balance", "Goods Receipts (GRN)", "Billing & Invoices"].map(tab => (
+            {["Stock Balance", "Goods Receipts (GRN)", "Billing & Invoices", "Pantry & Coffee"].map(tab => (
               <button
                 key={tab}
                 style={{ ...styles.tabBtn, ...(activeTab === tab ? styles.tabBtnActive : {}) }}
@@ -292,6 +375,62 @@ export default function InventoryManagement() {
               </div>
             </div>
           )}
+
+          {/* TAB 4: PANTRY & COFFEE UTILITIES */}
+          {activeTab === "Pantry & Coffee" && (
+            <div>
+              <div style={styles.panelHeader} style={{ marginBottom: "15px" }}>
+                <div>
+                  <div style={styles.panelTitle}>Pantry Utilities & Coffee Tracker</div>
+                  <div style={styles.panelSub}>Realtime consumption logging for office supplies.</div>
+                </div>
+              </div>
+
+              {/* Consumption Analytics Cards Grid */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "20px" }}>
+                {["Water Bottle (20L)", "Water Jug", "Coffee Beans", "Milk Packet"].map(name => {
+                  const stat = getPantryStats(name);
+                  return (
+                    <div key={name} style={{ ...styles.descBox, marginBottom: 0 }}>
+                      <div style={styles.muted}>{name}</div>
+                      <div style={{ fontSize: "1.4rem", fontWeight: 700, margin: "8px 0", color: "#0038a8" }}>
+                        {stat.current} <span style={{ fontSize: "0.8rem", color: "#64748b" }}>{stat.unit} Left</span>
+                      </div>
+                      <div style={{ fontSize: "0.78rem", color: "#64748b" }}>
+                        Today: <strong>{stat.daily}</strong> | Month: <strong>{stat.monthly}</strong>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Log Consumption Form */}
+              <form onSubmit={handlePantryLog} style={styles.form}>
+                <div style={styles.panelTitle} style={{ fontSize: "0.8rem", marginBottom: "10px" }}>Log Pantry Usage / Delivery</div>
+                <div style={styles.formGrid}>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Select Supply Item</label>
+                    <select style={styles.input} required value={pantryForm.itemId} onChange={e => setPantryForm({ ...pantryForm, itemId: e.target.value })}>
+                      <option value="">Choose supply item...</option>
+                      {pantryItems.map(i => <option key={i.id} value={i.id}>{i.name} ({i.unit})</option>)}
+                    </select>
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Action Type</label>
+                    <select style={styles.input} value={pantryForm.action} onChange={e => setPantryForm({ ...pantryForm, action: e.target.value })}>
+                      <option value="Consumed">Consumption (Daily Usage / Empty Returned)</option>
+                      <option value="Arrived">Refill Delivery (Refilled Arrived)</option>
+                    </select>
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Quantity</label>
+                    <input style={styles.input} type="number" min="1" required value={pantryForm.quantity} onChange={e => setPantryForm({ ...pantryForm, quantity: Number(e.target.value) })} />
+                  </div>
+                </div>
+                <button style={styles.primaryBtn} type="submit" style={{ marginTop: "10px" }}>Post Consumption Entry</button>
+              </form>
+            </div>
+          )}
         </div>
       </div>
 
@@ -390,7 +529,7 @@ export default function InventoryManagement() {
           )
         )}
 
-        {activeTab === "Stock Balance" && (
+        {(activeTab === "Stock Balance" || activeTab === "Pantry & Coffee") && (
           <div style={styles.emptyDetail}>Select GRN or Billing views to edit custody records.</div>
         )}
       </div>
@@ -406,7 +545,7 @@ const styles = {
   panelTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: "1rem", fontWeight: 700, color: "#111625" },
   panelSub: { fontSize: "0.78rem", color: "#64748b", marginTop: "2px" },
   primaryBtn: { background: "#0038a8", color: "#fff", border: "none", borderRadius: "4px", padding: "10px 16px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" },
-  secondaryBtn: { background: "#fff", color: "#64748b", border: "1px solid #cbd5e1", borderRadius: "4px", padding: "8px 14px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", display: "inline-block", textAlign: "center" },
+  secondaryBtn: { background: "#fff", color: "#64748b", border: "1px solid #cbd5e1", borderRadius: "4px", padding: "8px 14px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" },
 
   tabHeader: { display: "flex", gap: "10px", borderBottom: "2px solid #e2e8f0", paddingBottom: "10px" },
   tabBtn: { background: "none", border: "none", color: "#64748b", fontSize: "0.85rem", fontWeight: 600, padding: "8px 16px", cursor: "pointer", outline: "none" },
