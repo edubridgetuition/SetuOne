@@ -45,7 +45,17 @@ import {
   fetchInvoices as apiFetchInvoices,
   createInvoice as apiCreateInvoice,
   fetchPayments as apiFetchPayments,
-  recordPayment as apiRecordPayment
+  recordPayment as apiRecordPayment,
+
+  // Maintenance imports
+  fetchChecklistTemplates as apiFetchChecklistTemplates,
+  fetchChecklistSchedules as apiFetchChecklistSchedules,
+  submitChecklist as apiSubmitChecklist,
+  fetchPPMSchedules as apiFetchPPMSchedules,
+  createPPMSchedule as apiCreatePPMSchedule,
+  updatePPMStatus as apiUpdatePPMStatus,
+  fetchAMCExpirations as apiFetchAMCExpirations,
+  renewAMC as apiRenewAMC
 } from "../lib";
 
 export function AppProvider({ children }) {
@@ -70,6 +80,12 @@ export function AppProvider({ children }) {
   const [grns, setGrns] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [payments, setPayments] = useState([]);
+
+  // Maintenance States
+  const [checklistTemplates, setChecklistTemplates] = useState([]);
+  const [checklistSchedules, setChecklistSchedules] = useState([]);
+  const [ppmSchedules, setPpmSchedules] = useState([]);
+  const [amcContracts, setAmcContracts] = useState([]);
   
   const [loading, setLoading] = useState(true);
 
@@ -505,6 +521,88 @@ export function AppProvider({ children }) {
     return res;
   }
 
+  // MAINTENANCE ACTIONS & STATES PIPELINE
+  async function loadChecklistTemplates() {
+    if (!session) return;
+    const res = await apiFetchChecklistTemplates();
+    if (res.success) {
+      setChecklistTemplates(res.data);
+    }
+    return res;
+  }
+
+  async function loadChecklistSchedules(filters = {}) {
+    if (!session) return;
+    const res = await apiFetchChecklistSchedules(filters);
+    if (res.success) {
+      setChecklistSchedules(res.data);
+    }
+    return res;
+  }
+
+  async function submitChecklist(scheduleId, status, remarks) {
+    if (!session) return null;
+    const res = await apiSubmitChecklist(scheduleId, status, remarks, session.id);
+    if (res.success) {
+      await loadChecklistSchedules();
+    } else {
+      alert("Checklist update failed: " + res.message);
+    }
+    return res;
+  }
+
+  async function loadPPMSchedules() {
+    if (!session) return;
+    const res = await apiFetchPPMSchedules();
+    if (res.success) {
+      setPpmSchedules(res.data);
+    }
+    return res;
+  }
+
+  async function createPPMSchedule(ppmData) {
+    if (!session) return null;
+    const res = await apiCreatePPMSchedule(ppmData, session.companyId);
+    if (res.success) {
+      await loadPPMSchedules();
+      return res.data;
+    } else {
+      alert("PPM creation failed: " + res.message);
+    }
+    return null;
+  }
+
+  async function updatePPMStatus(ppmId, status, updates = {}) {
+    if (!session) return null;
+    const res = await apiUpdatePPMStatus(ppmId, status, updates, session.id);
+    if (res.success) {
+      await loadPPMSchedules();
+      await loadStockBalances(session.branchId); // targeted refresh of spares stock levels
+    } else {
+      alert("PPM status update failed: " + res.message);
+    }
+    return res;
+  }
+
+  async function loadAMCContracts() {
+    if (!session) return;
+    const res = await apiFetchAMCExpirations();
+    if (res.success) {
+      setAmcContracts(res.data);
+    }
+    return res;
+  }
+
+  async function renewAMC(vendorId, newExpiryDate, newContractValue) {
+    const res = await apiRenewAMC(vendorId, newExpiryDate, newContractValue);
+    if (res.success) {
+      await loadAMCContracts();
+    } else {
+      alert("AMC renewal failed: " + res.message);
+    }
+    return res;
+  }
+
   const tenantData = useMemo(() => tenants[activeTenant], [activeTenant]);
 
   if (loading) return (
@@ -529,7 +627,12 @@ export function AppProvider({ children }) {
       loadPurchaseRequests, createPurchaseRequest, updatePRStatus, loadQuotations, submitQuotationComparison,
       loadPurchaseOrders, loadInventoryItems, createInventoryItem, updateInventoryItem, loadStockBalances,
       logStockTransaction, stockAdjustment, loadGRNs, createGRN, approveGRN, loadInvoices, createInvoice,
-      loadPayments, recordPayment
+      loadPayments, recordPayment,
+
+      // Maintenance values
+      checklistTemplates, checklistSchedules, ppmSchedules, amcContracts,
+      loadChecklistTemplates, loadChecklistSchedules, submitChecklist, loadPPMSchedules,
+      createPPMSchedule, updatePPMStatus, loadAMCContracts, renewAMC
     }}>
       {children}
     </AppContext.Provider>

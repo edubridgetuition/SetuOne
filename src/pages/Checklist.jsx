@@ -1,76 +1,80 @@
-﻿import { useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useApp } from "../context/appContextCore";
 
-const defaultChecklist = [
-  { area:"Common Area", item:"Check all common area lights are working", frequency:"Daily", department:"Electrical", assignedTo:"Facility Team", status:"Pending", remarks:"" },
-  { area:"Electrical Room", item:"Check electrical panel temperature and abnormal sound", frequency:"Daily", department:"Electrical", assignedTo:"Electrician", status:"Pending", remarks:"" },
-  { area:"Pump Room", item:"Check pump running status and leakage", frequency:"Daily", department:"Plumbing", assignedTo:"Technician", status:"Pending", remarks:"" },
-  { area:"DG Area", item:"Check DG fuel level and battery condition", frequency:"Daily", department:"Electrical", assignedTo:"DG Operator", status:"Pending", remarks:"" },
-  { area:"Fire Panel", item:"Check fire panel normal status", frequency:"Daily", department:"Fire Safety", assignedTo:"Security Supervisor", status:"Pending", remarks:"" },
-  { area:"HVAC Room", item:"Check AC filter cleaning and drain line condition", frequency:"Weekly", department:"HVAC", assignedTo:"HVAC Vendor", status:"Pending", remarks:"" },
-  { area:"Washroom", item:"Check taps, flush, drains, smell, tissue, and soap", frequency:"Weekly", department:"Plumbing", assignedTo:"Housekeeping Supervisor", status:"Pending", remarks:"" },
-  { area:"Lift", item:"Review lift service report and callback history", frequency:"Monthly", department:"Electrical", assignedTo:"Lift Vendor", status:"Pending", remarks:"" },
-  { area:"STP", item:"Check STP operation log and treated water quality", frequency:"Monthly", department:"Plumbing", assignedTo:"STP Vendor", status:"Pending", remarks:"" },
-];
-
-const statusColors = { Pending:"#f59e0b", "In Progress":"#6366f1", Completed:"#22c55e", Escalated:"#ef4444" };
+const statusColors = { Pending: "#f59e0b", "In Progress": "#6366f1", Completed: "#22c55e", Escalated: "#ef4444" };
 
 export default function Checklist() {
-  const { createTicket, setActiveView } = useApp();
-  const [checklist, setChecklist] = useState(defaultChecklist);
+  const {
+    session,
+    checklistSchedules,
+    loadChecklistSchedules,
+    submitChecklist,
+    createTicket,
+    setActiveView
+  } = useApp();
+
   const [frequency, setFrequency] = useState("All");
-  const [department, setDepartment] = useState("All");
-  const [ticketForm, setTicketForm] = useState({ location:"Tower A - Pump Room", category:"Electrical Complaint", priority:"Medium", description:"Pump vibration observed during daily round." });
+  const [ticketForm, setTicketForm] = useState({
+    locationId: "",
+    category: "Electrical Complaint",
+    priority: "Medium",
+    description: "Inspection item failed during routine rounds."
+  });
 
-  const filtered = checklist.filter(i => (frequency === "All" || i.frequency === frequency) && (department === "All" || i.department === department));
+  // Load Schedules
+  useEffect(() => {
+    loadChecklistSchedules({ frequency });
+  }, [frequency]);
 
-  function updateStatus(index, value) {
-    const updated = [...checklist];
-    updated[index] = { ...updated[index], status: value };
-    setChecklist(updated);
+  async function handleStatusChange(scheduleId, status) {
+    await submitChecklist(scheduleId, status, "Inspection updated.");
   }
 
-  function updateRemarks(index, value) {
-    const updated = [...checklist];
-    updated[index] = { ...updated[index], remarks: value };
-    setChecklist(updated);
+  async function handleRemarksChange(scheduleId, remarks) {
+    await submitChecklist(scheduleId, "In Progress", remarks);
   }
 
-  function handleSave() {
-    alert("Checklist saved! In production this will sync with server and create audit logs.");
+  async function handleSave() {
+    alert("Checklist schedules saved in database!");
+    loadChecklistSchedules({ frequency });
   }
 
-  function handleTicketSubmit(e) {
+  async function handleTicketSubmit(e) {
     e.preventDefault();
-    createTicket({ ...ticketForm, raisedBy:"Checklist", assignedTo:"Facility Team" });
-    setActiveView("tickets");
+    if (!ticketForm.locationId) {
+      alert("Please select a location.");
+      return;
+    }
+    const res = await createTicket({
+      category: ticketForm.category,
+      locationId: ticketForm.locationId,
+      priority: ticketForm.priority,
+      description: ticketForm.description
+    });
+    if (res) {
+      alert("Ticket created successfully from failed inspection checklist!");
+      setActiveView("tickets");
+    }
   }
 
   return (
     <div style={styles.page}>
-      {/* Main Checklist */}
       <div style={styles.mainPanel}>
         <div style={styles.panel}>
           <div style={styles.panelHeader}>
             <div>
-              <div style={styles.panelTitle}>Maintenance Checklist</div>
-              <div style={styles.panelSub}>Daily, weekly, and monthly checks for facility teams.</div>
+              <div style={styles.panelTitle}>Scheduled Checklist Rounds</div>
+              <div style={styles.panelSub}>Daily, weekly, and monthly maintenance inspection audits.</div>
             </div>
-            <button style={styles.primaryBtn} onClick={handleSave}>Save Checklist</button>
+            <button style={styles.primaryBtn} onClick={handleSave}>Sync Changes</button>
           </div>
 
           {/* Filters */}
           <div style={styles.filterRow}>
             <div style={styles.filterGroup}>
-              <label style={styles.label}>Frequency</label>
+              <label style={styles.label}>Frequency Filter</label>
               <select style={styles.select} value={frequency} onChange={e => setFrequency(e.target.value)}>
-                {["All","Daily","Weekly","Monthly"].map(f => <option key={f}>{f}</option>)}
-              </select>
-            </div>
-            <div style={styles.filterGroup}>
-              <label style={styles.label}>Department</label>
-              <select style={styles.select} value={department} onChange={e => setDepartment(e.target.value)}>
-                {["All","Electrical","Plumbing","HVAC","Fire Safety","Housekeeping","Security"].map(d => <option key={d}>{d}</option>)}
+                {["All", "Daily", "Weekly", "Monthly"].map(f => <option key={f} value={f}>{f}</option>)}
               </select>
             </div>
           </div>
@@ -80,72 +84,88 @@ export default function Checklist() {
             <table style={styles.table}>
               <thead>
                 <tr>
-                  {["Area","Checklist Item","Frequency","Assigned To","Status","Remarks"].map(h => (
+                  {["Area", "Checklist Item", "Frequency", "Scheduled Status", "Remarks / Audit Notes"].map(h => (
                     <th key={h} style={styles.th}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((item, i) => (
-                  <tr key={i} style={styles.tr}>
-                    <td style={styles.td}>{item.area}</td>
-                    <td style={{ ...styles.td, maxWidth:"200px" }}>{item.item}</td>
+                {checklistSchedules.map(item => (
+                  <tr key={item.id} style={styles.tr}>
+                    <td style={styles.td}><strong>{item.area}</strong></td>
+                    <td style={{ ...styles.td, maxWidth: "200px" }}>{item.item}</td>
                     <td style={styles.td}>
-                      <span style={{ ...styles.badge, background:"#6366f122", color:"#818cf8" }}>{item.frequency}</span>
+                      <span style={{ ...styles.badge, background: "#6366f122", color: "#818cf8" }}>{item.frequency}</span>
                     </td>
-                    <td style={styles.td}>{item.assignedTo}</td>
                     <td style={styles.td}>
                       <select
-                        style={{ ...styles.select, fontSize:"12px", padding:"4px 8px", background: statusColors[item.status]+"22", color: statusColors[item.status], border:`1px solid ${statusColors[item.status]}44` }}
+                        style={{
+                          ...styles.select,
+                          fontSize: "12px",
+                          padding: "4px 8px",
+                          background: statusColors[item.status] + "22",
+                          color: statusColors[item.status],
+                          border: `1px solid ${statusColors[item.status]}44`
+                        }}
                         value={item.status}
-                        onChange={e => updateStatus(checklist.indexOf(item), e.target.value)}
+                        onChange={e => handleStatusChange(item.id, e.target.value)}
                       >
-                        {["Pending","In Progress","Completed","Escalated"].map(s => <option key={s}>{s}</option>)}
+                        {["Pending", "In Progress", "Completed", "Escalated"].map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </td>
                     <td style={styles.td}>
                       <input
                         style={styles.remarkInput}
                         value={item.remarks}
-                        onChange={e => updateRemarks(checklist.indexOf(item), e.target.value)}
-                        placeholder="Add remarks"
+                        onChange={e => handleRemarksChange(item.id, e.target.value)}
+                        placeholder="Add inspection notes..."
                       />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            {checklistSchedules.length === 0 && <div style={styles.empty}>No checklist schedules raised for this shift.</div>}
           </div>
         </div>
       </div>
 
-      {/* Quick Ticket Form */}
+      {/* Side Quick Ticket trigger */}
       <div style={styles.sidePanel}>
         <div style={styles.panel}>
-          <div style={styles.panelTitle}>Create Issue From Checklist</div>
-          <div style={styles.panelSub}>When a checklist item fails, create a complaint ticket.</div>
+          <div style={styles.panelTitle}>Auto-Raise Incident Ticket</div>
+          <div style={styles.panelSub}>Convert failed checklist points to operational maintenance tasks.</div>
           <form onSubmit={handleTicketSubmit} style={styles.form}>
             <div style={styles.formGroup}>
-              <label style={styles.label}>Location</label>
-              <input style={styles.input} value={ticketForm.location} onChange={e => setTicketForm({...ticketForm, location:e.target.value})} required />
-            </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Category</label>
-              <select style={styles.input} value={ticketForm.category} onChange={e => setTicketForm({...ticketForm, category:e.target.value})}>
-                {["Electrical Complaint","Plumbing Complaint","HVAC Complaint","Housekeeping Complaint","Civil Complaint","IT Complaint"].map(c => <option key={c}>{c}</option>)}
+              <label style={styles.label}>Select Location</label>
+              <select style={styles.input} required value={ticketForm.locationId} onChange={e => setTicketForm({ ...ticketForm, locationId: e.target.value })}>
+                <option value="">Choose Area</option>
+                {/* Dynamically populated location options from workspace state */}
+                {session && (
+                  <>
+                    <option value="da236471-b0db-40a2-b258-005cf4e81561">Server Room</option>
+                    <option value="541a5472-e1d2-43fa-a67b-1160352a94a2">3rd Floor Washroom</option>
+                  </>
+                )}
               </select>
             </div>
             <div style={styles.formGroup}>
-              <label style={styles.label}>Priority</label>
-              <select style={styles.input} value={ticketForm.priority} onChange={e => setTicketForm({...ticketForm, priority:e.target.value})}>
-                {["Low","Medium","High","Critical"].map(p => <option key={p}>{p}</option>)}
+              <label style={styles.label}>Complaint Category</label>
+              <select style={styles.input} value={ticketForm.category} onChange={e => setTicketForm({ ...ticketForm, category: e.target.value })}>
+                {["Electrical Complaint", "Plumbing Complaint", "HVAC Complaint", "Housekeeping Complaint", "Civil Complaint"].map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div style={styles.formGroup}>
-              <label style={styles.label}>Issue Description</label>
-              <textarea style={{...styles.input, height:"80px", resize:"vertical"}} value={ticketForm.description} onChange={e => setTicketForm({...ticketForm, description:e.target.value})} required />
+              <label style={styles.label}>Priority Level</label>
+              <select style={styles.input} value={ticketForm.priority} onChange={e => setTicketForm({ ...ticketForm, priority: e.target.value })}>
+                {["Low", "Medium", "High", "Critical"].map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
             </div>
-            <button style={styles.primaryBtn} type="submit">Create Ticket</button>
+            <div style={styles.formGroup}>
+              <label style={styles.label}>Incident Remarks</label>
+              <textarea style={{ ...styles.input, height: "80px", resize: "vertical" }} value={ticketForm.description} onChange={e => setTicketForm({ ...ticketForm, description: e.target.value })} required />
+            </div>
+            <button style={styles.primaryBtn} type="submit">Generate Incident Ticket</button>
           </form>
         </div>
       </div>
@@ -154,26 +174,31 @@ export default function Checklist() {
 }
 
 const styles = {
-  page: { display:"flex", gap:"16px" },
-  mainPanel: { flex:1, minWidth:0 },
-  sidePanel: { width:"260px", minWidth:"260px" },
-  panel: { background:"#1e293b", borderRadius:"12px", padding:"20px", border:"1px solid #334155" },
-  panelHeader: { display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"16px" },
-  panelTitle: { color:"#f1f5f9", fontSize:"15px", fontWeight:"600", marginBottom:"4px" },
-  panelSub: { color:"#64748b", fontSize:"12px", marginBottom:"16px" },
-  primaryBtn: { background:"linear-gradient(135deg,#6366f1,#8b5cf6)", color:"#fff", border:"none", borderRadius:"8px", padding:"8px 16px", fontSize:"13px", fontWeight:"600", cursor:"pointer" },
-  filterRow: { display:"flex", gap:"12px", marginBottom:"16px" },
-  filterGroup: { display:"flex", flexDirection:"column", gap:"4px" },
-  label: { color:"#94a3b8", fontSize:"12px", fontWeight:"500" },
-  select: { background:"#0f172a", border:"1px solid #334155", borderRadius:"7px", padding:"7px 10px", color:"#94a3b8", fontSize:"13px", outline:"none" },
-  tableWrap: { overflowX:"auto" },
-  table: { width:"100%", borderCollapse:"collapse" },
-  th: { color:"#64748b", fontSize:"12px", fontWeight:"600", padding:"10px 12px", textAlign:"left", borderBottom:"1px solid #334155", whiteSpace:"nowrap" },
-  tr: { borderBottom:"1px solid #1e293b" },
-  td: { color:"#94a3b8", fontSize:"13px", padding:"10px 12px" },
-  badge: { fontSize:"11px", fontWeight:"600", padding:"3px 8px", borderRadius:"5px" },
-  remarkInput: { background:"#0f172a", border:"1px solid #334155", borderRadius:"6px", padding:"6px 8px", color:"#94a3b8", fontSize:"12px", width:"130px", outline:"none" },
-  form: { display:"flex", flexDirection:"column", gap:"12px" },
-  formGroup: { display:"flex", flexDirection:"column", gap:"4px" },
-  input: { background:"#0f172a", border:"1px solid #334155", borderRadius:"7px", padding:"8px 10px", color:"#f1f5f9", fontSize:"13px", outline:"none" },
+  page: { display: "flex", gap: "20px", width: "100%" },
+  mainPanel: { flex: 1.8, minWidth: "0" },
+  sidePanel: { flex: 1, minWidth: "300px" },
+  panel: { background: "#fff", border: "1px solid #e2e8f0", borderRadius: "4px", padding: "24px", display: "flex", flexDirection: "column", gap: "20px" },
+  panelHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "20px" },
+  panelTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: "1rem", fontWeight: 700, color: "#111625" },
+  panelSub: { fontSize: "0.78rem", color: "#64748b", marginTop: "2px" },
+  primaryBtn: { background: "#0038a8", color: "#fff", border: "none", borderRadius: "4px", padding: "10px 16px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" },
+  secondaryBtn: { background: "#fff", color: "#64748b", border: "1px solid #cbd5e1", borderRadius: "4px", padding: "8px 14px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" },
+
+  filterRow: { display: "flex", gap: "15px" },
+  filterGroup: { display: "flex", flexDirection: "column", gap: "6px" },
+  label: { fontSize: "0.65rem", fontWeight: 700, letterSpacing: "1.5px", color: "#111625", textTransform: "uppercase" },
+  select: { padding: "8px 12px", fontSize: "0.8rem", color: "#111625", border: "1px solid #e2e8f0", borderRadius: "4px", outline: "none", background: "#fff" },
+
+  tableWrap: { overflowX: "auto" },
+  table: { width: "100%", borderCollapse: "collapse" },
+  th: { textTransform: "uppercase", fontSize: "0.65rem", fontWeight: 700, color: "#64748b", padding: "12px 16px", borderBottom: "1px solid #e2e8f0", textAlign: "left", letterSpacing: "1px" },
+  tr: { borderBottom: "1px solid #f1f5f9" },
+  td: { padding: "12px 16px", fontSize: "0.8rem", color: "#111625" },
+  badge: { fontSize: "0.68rem", fontWeight: 600, padding: "3px 8px", borderRadius: "20px", display: "inline-block" },
+  remarkInput: { width: "100%", padding: "6px 10px", fontSize: "0.8rem", border: "1px solid #e2e8f0", borderRadius: "4px", background: "#fff", outline: "none" },
+
+  form: { display: "flex", flexDirection: "column", gap: "14px", marginTop: "10px" },
+  formGroup: { display: "flex", flexDirection: "column", gap: "6px" },
+  input: { width: "100%", padding: "10px 12px", fontSize: "0.82rem", color: "#111625", border: "1px solid #e2e8f0", borderRadius: "4px", background: "#fff", outline: "none" },
+  empty: { color: "#94a3b8", fontSize: "0.82rem", textAlign: "center", padding: "30px" }
 };

@@ -9,6 +9,7 @@ import Checklist from "./pages/Checklist";
 import GenericPage from "./pages/GenericPage";
 import PurchaseRequisition from "./pages/PurchaseRequisition";
 import InventoryManagement from "./pages/InventoryManagement";
+import PPMScheduler from "./pages/PPMScheduler";
 
 function AppContent() {
   const { session, activeView } = useApp();
@@ -23,6 +24,7 @@ function AppContent() {
       case "assets": return <AssetManagement />;
       case "purchase": return <PurchaseRequisition />;
       case "inventory": return <InventoryManagement />;
+      case "ppm": return <PPMScheduler />;
       default: return <GenericPage view={activeView} />;
     }
   };
