@@ -236,6 +236,26 @@ GROUP BY status;</pre>
 FROM public.attendance 
 GROUP BY status;</pre>
       </div>
+
+      <!-- G. Phase 8 Dynamic Reports -->
+      <div class="card">
+        <h3>📊 Dynamic Report Templates & Custom Columns</h3>
+        <p><strong>Visualizes</strong>: Custom metadata configurations for reports, sorting rules, and visibility switches.</p>
+        <p><strong>Tables</strong>: <code>public.saved_report_filters</code> and <code>public.report_templates</code></p>
+        <pre>SELECT template_name, report_type, config_payload 
+FROM public.report_templates 
+WHERE company_id = auth.current_company_id();</pre>
+      </div>
+
+      <!-- H. Phase 9 Automation Rules -->
+      <div class="card">
+        <h3>🤖 Automation Alerts Rules & Dispatch Queue</h3>
+        <p><strong>Visualizes</strong>: Trigger conditions (e.g. Stock &lt;= Reorder Level) and delivery status logs.</p>
+        <p><strong>Tables</strong>: <code>public.notification_rules</code>, <code>public.notification_queue</code>, and <code>public.automation_logs</code></p>
+        <pre>SELECT rule_name, trigger_type, is_active, condition_payload 
+FROM public.notification_rules 
+WHERE company_id = auth.current_company_id();</pre>
+      </div>
     </section>
   </div>
 

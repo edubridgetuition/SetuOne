@@ -101,3 +101,29 @@ This section maps each frontend analytics widget and chart to its corresponding 
      SELECT status, COUNT(*) FROM public.visitors GROUP BY status;
      -- Binds to 'Inside' and 'Checked Out' badges
      ```
+
+---
+
+### 📊 E. Phase 8 Dynamic Reports
+1. **Dynamic Report Templates & Custom Columns**
+   * **Visualizes**: Custom metadata configurations for reports, sorting rules, and visibility switches.
+   * **Database Connection**: `public.saved_report_filters` and `public.report_templates` tables.
+   * **SQL Mapping**:
+     ```sql
+     SELECT template_name, report_type, config_payload 
+     FROM public.report_templates 
+     WHERE company_id = auth.current_company_id();
+     ```
+
+---
+
+### 🤖 F. Phase 9 Automation & Notifications Rules
+1. **Automation Rules & Logs Queue**
+   * **Visualizes**: Trigger conditions (e.g. Stock <= Reorder Level) and delivery status logs.
+   * **Database Connection**: `public.notification_rules`, `public.notification_queue`, and `public.automation_logs` tables.
+   * **SQL Mapping**:
+     ```sql
+     SELECT rule_name, trigger_type, is_active, condition_payload 
+     FROM public.notification_rules 
+     WHERE company_id = auth.current_company_id();
+     ```

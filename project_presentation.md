@@ -89,7 +89,29 @@
 
 ---
 
-### Slide 10: Implementation Roadmap & Milestones
-* **Phase 1-5**: Helpdesk, Assets, Procurement, Inventory, PPM (Completed).
-* **Phase 6-7**: Visitors Gate, Geofenced Attendance (Completed).
-* **Phase 8-11**: Reports & Analytics, Global Settings, Notifications (In Progress).
+### Slide 10: Reports & Analytics Engine
+* **Problem**: Fragmented reporting views, static filters, manual export tasks.
+* **Solution**: Metadata-driven reporting engine.
+* **Features**:
+  - Live KPI ribbon with clickable drill-down filters.
+  - Check/uncheck dynamic column visibility selector.
+  - Saved filters configuration and CSV exporter.
+
+---
+
+### Slide 11: Automation Rules & Notifications Engine
+* **Problem**: Unmonitored events, delayed stock orders, manual report emails.
+* **Solution**: Event & Time-based automation pipeline.
+* **Features**:
+  - Toggled notification channels (Email, SMS, Push, In-App).
+  - Dynamic mustache variables template parser.
+  - Multi-recipient group routing and latency logs audit.
+
+---
+
+### Slide 12: Implementation Roadmap & Milestones
+* **Phase 1-5**: Helpdesk, Assets, Procurement, Inventory, PPM (Completed)
+* **Phase 6-7**: Visitors Gate, Geofenced Attendance (Completed)
+* **Phase 8**: Dynamic Reports & Filtering (Completed)
+* **Phase 9**: Notifications, Alerts & Automation (Completed)
+* **Phase 10-11**: Dynamic Metadata & Mobile Support (In Progress)
