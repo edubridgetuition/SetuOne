@@ -63,7 +63,19 @@ import {
   checkInVisitor as apiCheckInVisitor,
   checkOutVisitor as apiCheckOutVisitor,
   uploadVisitorPhoto as apiUploadVisitorPhoto,
-  searchVisitors as apiSearchVisitors
+  searchVisitors as apiSearchVisitors,
+
+  // Attendance imports
+  fetchShifts as apiFetchShifts,
+  fetchUserAttendance as apiFetchUserAttendance,
+  fetchAttendanceHistory as apiFetchAttendanceHistory,
+  fetchBranchAttendanceSummary as apiFetchBranchAttendanceSummary,
+  clockIn as apiClockIn,
+  clockOut as apiClockOut,
+  updateDutyStatus as apiUpdateDutyStatus,
+  requestRegularization as apiRequestRegularization,
+  approveRegularization as apiApproveRegularization,
+  rejectRegularization as apiRejectRegularization
 } from "../lib";
 
 export function AppProvider({ children }) {
@@ -98,6 +110,12 @@ export function AppProvider({ children }) {
 
   // Visitor States
   const [visitors, setVisitors] = useState([]);
+
+  // Attendance States
+  const [attendanceToday, setAttendanceToday] = useState(null);
+  const [attendanceHistory, setAttendanceHistory] = useState([]);
+  const [attendanceBranchSummary, setAttendanceBranchSummary] = useState([]);
+  const [shiftsList, setShiftsList] = useState([]);
   
   const [loading, setLoading] = useState(true);
 
@@ -677,6 +695,107 @@ export function AppProvider({ children }) {
     return res;
   }
 
+  // ATTENDANCE ACTIONS & STATES PIPELINE
+  async function loadShifts() {
+    const res = await apiFetchShifts();
+    if (res.success) {
+      setShiftsList(res.data);
+    }
+    return res;
+  }
+
+  async function loadUserAttendanceStatus() {
+    if (!session) return;
+    const res = await apiFetchUserAttendance(session.id);
+    if (res.success) {
+      setAttendanceToday(res.data);
+    }
+    return res;
+  }
+
+  async function loadAttendanceHistory() {
+    if (!session) return;
+    const res = await apiFetchAttendanceHistory(session.id);
+    if (res.success) {
+      setAttendanceHistory(res.data);
+    }
+    return res;
+  }
+
+  async function loadBranchAttendanceSummary() {
+    if (!session) return;
+    const res = await apiFetchBranchAttendanceSummary(session.branchId);
+    if (res.success) {
+      setAttendanceBranchSummary(res.data);
+    }
+    return res;
+  }
+
+  async function clockIn(shiftName, coords, isVerified, method = 'GPS', manualReason = null) {
+    if (!session) return null;
+    const res = await apiClockIn(session.id, shiftName, coords, isVerified, method, manualReason);
+    if (res.success) {
+      await loadUserAttendanceStatus();
+      await loadAttendanceHistory();
+    } else {
+      alert("Clock-in failed: " + res.message);
+    }
+    return res;
+  }
+
+  async function clockOut(method = 'GPS', manualReason = null) {
+    if (!attendanceToday) return null;
+    const res = await apiClockOut(attendanceToday.id, method, manualReason);
+    if (res.success) {
+      await loadUserAttendanceStatus();
+      await loadAttendanceHistory();
+    } else {
+      alert("Clock-out failed: " + res.message);
+    }
+    return res;
+  }
+
+  async function updateDutyStatus(status) {
+    if (!attendanceToday) return null;
+    const res = await apiUpdateDutyStatus(attendanceToday.id, status);
+    if (res.success) {
+      await loadUserAttendanceStatus();
+    }
+    return res;
+  }
+
+  async function requestRegularization(attendanceId, reason) {
+    const res = await apiRequestRegularization(attendanceId, reason);
+    if (res.success) {
+      await loadAttendanceHistory();
+    } else {
+      alert("Regularization request failed: " + res.message);
+    }
+    return res;
+  }
+
+  async function approveRegularization(attendanceId) {
+    if (!session) return null;
+    const res = await apiApproveRegularization(attendanceId, session.id);
+    if (res.success) {
+      await loadBranchAttendanceSummary();
+    } else {
+      alert("Approval failed: " + res.message);
+    }
+    return res;
+  }
+
+  async function rejectRegularization(attendanceId) {
+    if (!session) return null;
+    const res = await apiRejectRegularization(attendanceId, session.id);
+    if (res.success) {
+      await loadBranchAttendanceSummary();
+    } else {
+      alert("Rejection failed: " + res.message);
+    }
+    return res;
+  }
+
   const tenantData = useMemo(() => tenants[activeTenant], [activeTenant]);
 
   if (loading) return (
@@ -709,7 +828,12 @@ export function AppProvider({ children }) {
       createPPMSchedule, updatePPMStatus, loadAMCContracts, renewAMC,
 
       // Visitor values
-      visitors, loadVisitors, checkInVisitor, checkOutVisitor, uploadVisitorPhoto, searchVisitors
+      visitors, loadVisitors, checkInVisitor, checkOutVisitor, uploadVisitorPhoto, searchVisitors,
+
+      // Attendance values
+      attendanceToday, attendanceHistory, attendanceBranchSummary, shiftsList,
+      loadShifts, loadUserAttendanceStatus, loadAttendanceHistory, loadBranchAttendanceSummary,
+      clockIn, clockOut, updateDutyStatus, requestRegularization, approveRegularization, rejectRegularization
     }}>
       {children}
     </AppContext.Provider>

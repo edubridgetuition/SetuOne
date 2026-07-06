@@ -6,3 +6,4 @@ export * from './purchaseRepository';
 export * from './inventoryRepository';
 export * from './maintenanceRepository';
 export * from './visitorRepository';
+export * from './attendanceRepository';

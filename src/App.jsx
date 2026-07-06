@@ -11,6 +11,7 @@ import PurchaseRequisition from "./pages/PurchaseRequisition";
 import InventoryManagement from "./pages/InventoryManagement";
 import PPMScheduler from "./pages/PPMScheduler";
 import VisitorManagement from "./pages/VisitorManagement";
+import Attendance from "./pages/Attendance";
 
 function AppContent() {
   const { session, activeView } = useApp();
@@ -27,6 +28,7 @@ function AppContent() {
       case "inventory": return <InventoryManagement />;
       case "ppm": return <PPMScheduler />;
       case "visitors": return <VisitorManagement />;
+      case "attendance": return <Attendance />;
       default: return <GenericPage view={activeView} />;
     }
   };
