@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppContext } from "./appContextCore";
 import { demoUsers, tenants, rolePermissions } from "../data/appData";
 import { 
@@ -438,9 +438,9 @@ export function AppProvider({ children }) {
     return res;
   }
 
-  async function logStockTransaction(itemId, branchId, type, quantity, referenceId = null) {
+  async function logStockTransaction(itemId, branchId, type, quantity, referenceId = null, customDate = null) {
     const targetBranch = branchId || session.branchId;
-    const res = await apiLogInventoryTransaction(itemId, targetBranch, type, quantity, referenceId);
+    const res = await apiLogInventoryTransaction(itemId, targetBranch, type, quantity, referenceId, customDate);
     if (res.success) {
       await loadStockBalances(targetBranch);
       await loadInventoryTransactions(targetBranch);

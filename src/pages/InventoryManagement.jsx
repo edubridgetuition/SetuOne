@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useApp } from "../context/appContextCore";
 
 const statusColors = { Pending: "#f59e0b", "In Progress": "#6366f1", Completed: "#22c55e", Escalated: "#ef4444" };
@@ -50,8 +50,15 @@ export default function InventoryManagement() {
     itemId: "",
     action: "Consumed", // "Arrived" (In) or "Consumed" (Out)
     quantity: 1,
+    date: new Date().toISOString().split("T")[0],
     remarks: ""
   });
+
+  // Report Date Range Filter States
+  const [startDate, setStartDate] = useState(
+    new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0] // 7 days ago
+  );
+  const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
 
   // Initialize
   useEffect(() => {
@@ -148,15 +155,27 @@ export default function InventoryManagement() {
       return;
     }
     const type = pantryForm.action === "Arrived" ? "In" : "Out";
+    
+    // Log stock transaction with custom date parameter
     const res = await logStockTransaction(
       pantryForm.itemId,
       selectedBranch,
       type,
-      Number(pantryForm.quantity)
+      Number(pantryForm.quantity),
+      null, // referenceId
+      pantryForm.date // customDate selected by the user
     );
+    
     if (res.success) {
-      alert("Consumption/Refill logged successfully!");
-      setPantryForm({ itemId: "", action: "Consumed", quantity: 1, remarks: "" });
+      alert("Pantry transaction entry registered date-wise in database!");
+      setPantryForm({
+        itemId: "",
+        action: "Consumed",
+        quantity: 1,
+        date: new Date().toISOString().split("T")[0],
+        remarks: ""
+      });
+      loadInventoryTransactions(selectedBranch);
     }
   }
 
@@ -195,6 +214,15 @@ export default function InventoryManagement() {
     };
   };
 
+  // Filtered transactions for consolidated reports
+  const filteredPantryTransactions = inventoryTransactions.filter(t => {
+    const isPantry = ["Water Bottle (20L)", "Water Jug", "Coffee Beans", "Milk Packet"].includes(t.inventory_items?.name);
+    if (!isPantry) return false;
+
+    const tDate = new Date(t.created_at).toISOString().split("T")[0];
+    return tDate >= startDate && tDate <= endDate;
+  });
+
   const isManager = activeRole === "Admin Manager" || activeRole === "Super Admin";
 
   const selectedGRN = grns.find(g => g.id === selectedGRNId);
@@ -220,7 +248,7 @@ export default function InventoryManagement() {
           {/* TAB 1: STOCK LEDGER */}
           {activeTab === "Stock Balance" && (
             <div>
-              <div style={styles.panelHeader} style={{ marginBottom: "15px" }}>
+              <div style={{ ...styles.panelHeader, marginBottom: "15px" }}>
                 <div>
                   <div style={styles.panelTitle}>Warehouse Stock Ledger Balances</div>
                   <div style={styles.panelSub}>Realtime items custody counts.</div>
@@ -305,7 +333,7 @@ export default function InventoryManagement() {
           {/* TAB 2: GOODS RECEIPTS (GRN) */}
           {activeTab === "Goods Receipts (GRN)" && (
             <div>
-              <div style={styles.panelHeader} style={{ marginBottom: "15px" }}>
+              <div style={{ ...styles.panelHeader, marginBottom: "15px" }}>
                 <div>
                   <div style={styles.panelTitle}>Verify Goods Received Notes (GRN)</div>
                   <div style={styles.panelSub}>Ensure items physical counts match purchase orders before stock entries.</div>
@@ -342,7 +370,7 @@ export default function InventoryManagement() {
           {/* TAB 3: INVOICES & PAYMENTS */}
           {activeTab === "Billing & Invoices" && (
             <div>
-              <div style={styles.panelHeader} style={{ marginBottom: "15px" }}>
+              <div style={{ ...styles.panelHeader, marginBottom: "15px" }}>
                 <div>
                   <div style={styles.panelTitle}>Supplier Invoices</div>
                   <div style={styles.panelSub}>Match invoice codes and ledger receipts.</div>
@@ -379,7 +407,7 @@ export default function InventoryManagement() {
           {/* TAB 4: PANTRY & COFFEE UTILITIES */}
           {activeTab === "Pantry & Coffee" && (
             <div>
-              <div style={styles.panelHeader} style={{ marginBottom: "15px" }}>
+              <div style={{ ...styles.panelHeader, marginBottom: "15px" }}>
                 <div>
                   <div style={styles.panelTitle}>Pantry Utilities & Coffee Tracker</div>
                   <div style={styles.panelSub}>Realtime consumption logging for office supplies.</div>
@@ -404,9 +432,9 @@ export default function InventoryManagement() {
                 })}
               </div>
 
-              {/* Log Consumption Form */}
+              {/* Log Consumption Form with Date selection */}
               <form onSubmit={handlePantryLog} style={styles.form}>
-                <div style={styles.panelTitle} style={{ fontSize: "0.8rem", marginBottom: "10px" }}>Log Pantry Usage / Delivery</div>
+                <div style={{ ...styles.panelTitle, fontSize: "0.8rem", marginBottom: "10px" }}>Log Pantry Usage / Delivery</div>
                 <div style={styles.formGrid}>
                   <div style={styles.formGroup}>
                     <label style={styles.label}>Select Supply Item</label>
@@ -426,9 +454,69 @@ export default function InventoryManagement() {
                     <label style={styles.label}>Quantity</label>
                     <input style={styles.input} type="number" min="1" required value={pantryForm.quantity} onChange={e => setPantryForm({ ...pantryForm, quantity: Number(e.target.value) })} />
                   </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Log Entry Date</label>
+                    <input style={styles.input} type="date" required value={pantryForm.date} onChange={e => setPantryForm({ ...pantryForm, date: e.target.value })} />
+                  </div>
                 </div>
                 <button style={styles.primaryBtn} type="submit" style={{ marginTop: "10px" }}>Post Consumption Entry</button>
               </form>
+
+              {/* Consolidated Report Section */}
+              <div style={{ marginTop: "30px", borderTop: "2px solid #e2e8f0", paddingTop: "20px" }}>
+                <div style={{ ...styles.panelHeader, marginBottom: "15px" }}>
+                  <div>
+                    <div style={styles.panelTitle}>Consolidated Consumption Report</div>
+                    <div style={styles.panelSub}>Historical tracking list filtered date-wise.</div>
+                  </div>
+                  
+                  {/* Date range filters */}
+                  <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      <label style={styles.label}>From Date</label>
+                      <input style={styles.input} type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column" }}>
+                      <label style={styles.label}>To Date</label>
+                      <input style={styles.input} type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+
+                <div style={styles.tableWrap}>
+                  <table style={styles.table}>
+                    <thead>
+                      <tr>
+                        {["Log Date", "Supply Item", "Action Type", "Quantity", "Measurement Unit"].map(h => (
+                          <th key={h} style={styles.th}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredPantryTransactions.map(tx => (
+                        <tr key={tx.id} style={styles.tr}>
+                          <td style={styles.td}>{new Date(tx.created_at).toLocaleDateString()}</td>
+                          <td style={styles.td}><strong>{tx.inventory_items?.name}</strong></td>
+                          <td style={styles.td}>
+                            <span style={{ 
+                              ...styles.badge, 
+                              background: tx.transaction_type === "In" ? "#22c55e22" : "#3b82f622", 
+                              color: tx.transaction_type === "In" ? "#22c55e" : "#3b82f6" 
+                            }}>
+                              {tx.transaction_type === "In" ? "Refill Arrived" : "Consumed / Returned"}
+                            </span>
+                          </td>
+                          <td style={styles.td}>{tx.quantity}</td>
+                          <td style={styles.td}>{tx.inventory_items?.unit}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {filteredPantryTransactions.length === 0 && (
+                    <div style={styles.empty}>No logs found matching selected date range filter.</div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>

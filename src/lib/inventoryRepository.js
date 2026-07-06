@@ -88,18 +88,23 @@ export async function fetchStockBalances(branchId) {
 }
 
 // Log stock transaction and update closing balances inside stock ledger table
-export async function logInventoryTransaction(itemId, branchId, type, quantity, referenceId = null) {
+export async function logInventoryTransaction(itemId, branchId, type, quantity, referenceId = null, customDate = null) {
   try {
+    const payload = {
+      item_id: itemId,
+      branch_id: branchId,
+      transaction_type: type,
+      quantity,
+      reference_id: referenceId
+    };
+    if (customDate) {
+      payload.created_at = new Date(customDate).toISOString();
+    }
+
     // 1. Log transaction movement
     const { error: txErr } = await supabase
       .from('inventory_transactions')
-      .insert({
-        item_id: itemId,
-        branch_id: branchId,
-        transaction_type: type,
-        quantity,
-        reference_id: referenceId
-      });
+      .insert(payload);
 
     if (txErr) throw txErr;
 
