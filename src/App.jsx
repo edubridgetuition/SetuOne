@@ -12,6 +12,7 @@ import InventoryManagement from "./pages/InventoryManagement";
 import PPMScheduler from "./pages/PPMScheduler";
 import VisitorManagement from "./pages/VisitorManagement";
 import Attendance from "./pages/Attendance";
+import Reports from "./pages/Reports";
 
 function AppContent() {
   const { session, activeView } = useApp();
@@ -29,6 +30,7 @@ function AppContent() {
       case "ppm": return <PPMScheduler />;
       case "visitors": return <VisitorManagement />;
       case "attendance": return <Attendance />;
+      case "reports": return <Reports />;
       default: return <GenericPage view={activeView} />;
     }
   };

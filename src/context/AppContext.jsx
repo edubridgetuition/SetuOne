@@ -75,7 +75,22 @@ import {
   updateDutyStatus as apiUpdateDutyStatus,
   requestRegularization as apiRequestRegularization,
   approveRegularization as apiApproveRegularization,
-  rejectRegularization as apiRejectRegularization
+  rejectRegularization as apiRejectRegularization,
+
+  // Report imports
+  fetchDashboardKPIs as apiFetchDashboardKPIs,
+  fetchAttendanceReport as apiFetchAttendanceReport,
+  fetchTicketReport as apiFetchTicketReport,
+  fetchInventoryReport as apiFetchInventoryReport,
+  fetchAssetReport as apiFetchAssetReport,
+  fetchVisitorReport as apiFetchVisitorReport,
+  fetchPurchaseReport as apiFetchPurchaseReport,
+  fetchPPMReport as apiFetchPPMReport,
+  fetchSavedFilters as apiFetchSavedFilters,
+  saveReportFilter as apiSaveReportFilter,
+  generateReportTemplate as apiGenerateReportTemplate,
+  scheduleReport as apiScheduleReport,
+  exportReport as apiExportReport
 } from "../lib";
 
 export function AppProvider({ children }) {
@@ -116,6 +131,10 @@ export function AppProvider({ children }) {
   const [attendanceHistory, setAttendanceHistory] = useState([]);
   const [attendanceBranchSummary, setAttendanceBranchSummary] = useState([]);
   const [shiftsList, setShiftsList] = useState([]);
+
+  // Report States
+  const [dashboardKPIs, setDashboardKPIs] = useState(null);
+  const [savedFilters, setSavedFilters] = useState([]);
   
   const [loading, setLoading] = useState(true);
 
@@ -796,6 +815,39 @@ export function AppProvider({ children }) {
     return res;
   }
 
+  // REPORT ACTIONS & STATES PIPELINE
+  async function loadDashboardKPIs() {
+    if (!session) return;
+    const res = await apiFetchDashboardKPIs(session.id, session.branchId);
+    if (res.success) {
+      setDashboardKPIs(res.data);
+    }
+    return res;
+  }
+
+  async function loadSavedFilters() {
+    if (!session) return;
+    const res = await apiFetchSavedFilters(session.id);
+    if (res.success) {
+      setSavedFilters(res.data);
+    }
+    return res;
+  }
+
+  async function saveFilter(filterName, reportType, payload) {
+    if (!session) return null;
+    const res = await apiSaveReportFilter(session.id, filterName, reportType, payload);
+    if (res.success) {
+      await loadSavedFilters();
+    }
+    return res;
+  }
+
+  async function createTemplate(templateName, reportType, configPayload) {
+    if (!session) return null;
+    return await apiGenerateReportTemplate(session.companyId, templateName, reportType, configPayload);
+  }
+
   const tenantData = useMemo(() => tenants[activeTenant], [activeTenant]);
 
   if (loading) return (
@@ -833,7 +885,20 @@ export function AppProvider({ children }) {
       // Attendance values
       attendanceToday, attendanceHistory, attendanceBranchSummary, shiftsList,
       loadShifts, loadUserAttendanceStatus, loadAttendanceHistory, loadBranchAttendanceSummary,
-      clockIn, clockOut, updateDutyStatus, requestRegularization, approveRegularization, rejectRegularization
+      clockIn, clockOut, updateDutyStatus, requestRegularization, approveRegularization, rejectRegularization,
+
+      // Report values
+      dashboardKPIs, savedFilters,
+      loadDashboardKPIs, loadSavedFilters, saveFilter, createTemplate,
+      fetchAttendanceReport: apiFetchAttendanceReport,
+      fetchTicketReport: apiFetchTicketReport,
+      fetchInventoryReport: apiFetchInventoryReport,
+      fetchAssetReport: apiFetchAssetReport,
+      fetchVisitorReport: apiFetchVisitorReport,
+      fetchPurchaseReport: apiFetchPurchaseReport,
+      fetchPPMReport: apiFetchPPMReport,
+      exportReport: apiExportReport,
+      scheduleReport: apiScheduleReport
     }}>
       {children}
     </AppContext.Provider>

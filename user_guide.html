@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SetuOne ERP - Interactive User Manual</title>
+  <style>
+    :root {
+      --primary: #0038a8;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #22c55e;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar Styles */
+    aside {
+      width: 280px;
+      background-color: #0f172a;
+      color: #fff;
+      padding: 30px 20px;
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      overflow-y: auto;
+      border-right: 1px solid #1e293b;
+    }
+
+    .brand {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #38bdf8;
+      margin-bottom: 30px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .nav-item a {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.9rem;
+      display: block;
+      padding: 10px 14px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    .nav-item a:hover, .nav-item.active a {
+      color: #fff;
+      background-color: var(--primary);
+    }
+
+    /* Main Content Styles */
+    main {
+      margin-left: 280px;
+      flex: 1;
+      padding: 40px;
+      max-width: 1000px;
+    }
+
+    header {
+      margin-bottom: 40px;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 2rem;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      color: var(--primary);
+      margin-top: 40px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+
+    p {
+      line-height: 1.6;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .card {
+      background-color: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px;
+      margin-bottom: 30px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .step-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .step {
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+
+    .step-number {
+      background-color: var(--primary);
+      color: #fff;
+      font-weight: 700;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.85rem;
+    }
+
+    .step-content strong {
+      display: block;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .step-content p {
+      margin-bottom: 0;
+      font-size: 0.9rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background-color: #e2e8f0;
+      color: #475569;
+    }
+
+    .badge.success {
+      background-color: #dcfce7;
+      color: #15803d;
+    }
+
+    .badge.warning {
+      background-color: #fef3c7;
+      color: #b45309;
+    }
+
+    code {
+      background-color: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      color: #0f172a;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation Sidebar -->
+  <aside>
+    <div class="brand">🚀 SetuOne Manual</div>
+    <ul class="nav-list">
+      <li class="nav-item"><a href="#getstarted">1. Getting Started</a></li>
+      <li class="nav-item"><a href="#helpdesk">2. Helpdesk (Tickets)</a></li>
+      <li class="nav-item"><a href="#assets">3. Asset Management</a></li>
+      <li class="nav-item"><a href="#purchase">4. Purchase Requisition</a></li>
+      <li class="nav-item"><a href="#inventory">5. Inventory Consumption</a></li>
+      <li class="nav-item"><a href="#maintenance">6. Checklist & PPM</a></li>
+      <li class="nav-item"><a href="#visitors">7. Visitor Gates</a></li>
+      <li class="nav-item"><a href="#attendance">8. Geofenced Attendance</a></li>
+    </ul>
+  </aside>
+
+  <!-- Main User Manual Contents -->
+  <main>
+    <header>
+      <h1>SetuOne ERP - Comprehensive User Manual</h1>
+      <p>Your step-by-step guide to navigate the Integrated Facility Operations platform from login to exit.</p>
+    </header>
+
+    <!-- 1. Getting Started -->
+    <section id="getstarted">
+      <h2>🔑 1. Getting Started & Authentication</h2>
+      <div class="card">
+        <p>SetuOne uses a role-based landing dashboard. To access specialized configurations, use the target demo accounts:</p>
+        <ul style="margin-left: 20px; margin-bottom: 20px; color: var(--text-muted); font-size: 0.9rem; line-height: 1.6;">
+          <li><strong>Manager (Admin Access)</strong>: <code>manager@orion.test</code> (Password: <code>password</code>)</li>
+          <li><strong>General Employee</strong>: <code>employee@orion.test</code> (Password: <code>password</code>)</li>
+        </ul>
+        <ul class="step-list">
+          <li class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <strong>Open Login Screen</strong>
+              <p>Enter the credentials matching your operational profile and click Sign In.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <strong>Dashboard Overview</strong>
+              <p>View real-time pending ticket counts, active staff logs, and system counters at a single glance.</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 2. Helpdesk (Tickets) -->
+    <section id="helpdesk">
+      <h2>🎫 2. Helpdesk & Tickets Lifecycle</h2>
+      <div class="card">
+        <p>Used to file facility maintenance complaints (e.g., faulty AC, plumbing leak).</p>
+        <ul class="step-list">
+          <li class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <strong>Raise a New Ticket</strong>
+              <p>Click "Raise Ticket" button, specify Category, Subject details, exact building location, and Priority level.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <strong>Assign Ticket (Manager only)</strong>
+              <p>Managers can open any ticket and choose a staff assignee from the dropdown panel to start work.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <strong>Resolution Remarks</strong>
+              <p>Assignee transitions status to "Resolved" after adding mandatory diagnostic comments.</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 3. Asset Management -->
+    <section id="assets">
+      <h2>🖥️ 3. Asset Registry & AMC Contracts</h2>
+      <div class="card">
+        <p>Catalog physical devices and monitor Annual Maintenance Contracts (AMC).</p>
+        <ul class="step-list">
+          <li class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <strong>Register Asset</strong>
+              <p>Click "Register Asset", input Serial Number, Asset Category, purchase price, and location.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <strong>Assign or Transfer Assets</strong>
+              <p>Choose an asset from the list, click "Assign Asset" to choose an employee, or "Transfer" to re-route it.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <strong>Monitor AMC Expirations</strong>
+              <p>Navigate to "AMC Alert Panel" in the sidebar to review approaching vendor contract expiration dates.</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 4. Purchase Requisition -->
+    <section id="purchase">
+      <h2>🛒 4. Purchase Requisitions (Procurement)</h2>
+      <div class="card">
+        <p>Manage budget allocation and comparative vendor quote checks.</p>
+        <ul class="step-list">
+          <li class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <strong>Raise PR Request</strong>
+              <p>Specify item requirements, estimated costs, and delivery timeline specifications.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <strong>Compare Quotations</strong>
+              <p>Upload files representing 3 separate vendor quotations. Compare details on the comparative grid.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <strong>Purchase Order Generation</strong>
+              <p>Choose the optimal quotation. The system automatically locks the deal and generates a Purchase Order (PO).</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 5. Inventory Consumption -->
+    <section id="inventory">
+      <h2>📦 5. Inventory & Consumption Tracking</h2>
+      <div class="card">
+        <p>Monitor daily consumables like office water bottles, returnable water jugs, and coffee machine materials.</p>
+        <ul class="step-list">
+          <li class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <strong>Log Daily Water Bottles Delivery</strong>
+              <p>Select "Water Bottle Tracker", log incoming bottle counts, and specify returnable empty bottles count.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <strong>Coffee Material Logs</strong>
+              <p>Log monthly deliveries and usage stats for coffee machine coffee beans, milk, and cups.</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 6. Checklist & PPM -->
+    <section id="maintenance">
+      <h2>🔧 6. Checklist Inspections & Preventive Maintenance</h2>
+      <div class="card">
+        <p>Prevent system breakdowns with Scheduled PPM Checklists.</p>
+        <ul class="step-list">
+          <li class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <strong>Submit Daily Checklist</strong>
+              <p>Open the Checklist tab, inspect items (e.g. AC cooling, DG battery voltage) and submit PASS / FAIL updates.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <strong>Trigger Scheduled PPM</strong>
+              <p>Technicians check dynamic schedules, execute checks, and log spare parts consumed from stock.</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 7. Visitor Gates -->
+    <section id="visitors">
+      <h2>👤 7. Visitor Gate Pass Control</h2>
+      <div class="card">
+        <p>Manage walk-in guests, issue passes, and capture security logs.</p>
+        <ul class="step-list">
+          <li class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <strong>Check-in Guest</strong>
+              <p>Fill out the name, purpose dropdown, ID proof number, vehicle details, and click "Check-in" to generate pass `VIS-XXXXXX`.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <strong>Security Photo Capture</strong>
+              <p>Select the guest, trigger upload/webcam capture to link the face profile to the pass.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <strong>Check-out Guest</strong>
+              <p>Select the visitor, choose checkout remarks (e.g. Meeting Completed, No Show), and click "Stamps Out".</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 8. Geofenced Attendance -->
+    <section id="attendance">
+      <h2>⏱️ 8. Geofenced Attendance Punching</h2>
+      <div class="card">
+        <p>Staff check-ins with GPS verification checks.</p>
+        <ul class="step-list">
+          <li class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <strong>Check GPS geofence radar status</strong>
+              <p>Verify that the geofence indicator displays Green (Inside Office Radius).</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <strong>Clock-in</strong>
+              <p>Select shift (General, Night, etc.), set method to GPS, and click "CLOCK IN".</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <strong>Duty Status Toggle</strong>
+              <p>Switch between status flags (On Duty, Break, WFH) as needed. Click "CLOCK OUT" on departure.</p>
+            </div>
+          </li>
+          <li class="step">
+            <div class="step-number">4</div>
+            <div class="step-content">
+              <strong>Attendance Regularization</strong>
+              <p>If marked late, click "Regularize" on the history row and input justification details for manager approval.</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+</body>
+</html>

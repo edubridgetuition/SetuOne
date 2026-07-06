@@ -7,3 +7,4 @@ export * from './inventoryRepository';
 export * from './maintenanceRepository';
 export * from './visitorRepository';
 export * from './attendanceRepository';
+export * from './reportRepository';

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SetuOne ERP - Comprehensive Project Report</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({startOnLoad:true, theme:'forest'});</script>
+  <style>
+    :root {
+      --primary: #0038a8;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --accent: #22c55e;
+      --code-bg: #1e293b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 40px 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 40px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    header {
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 20px;
+      margin-bottom: 30px;
+    }
+
+    h1 {
+      font-size: 2rem;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+
+    .meta {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      color: var(--text);
+      margin-top: 30px;
+      margin-bottom: 16px;
+      border-left: 4px solid var(--primary);
+      padding-left: 12px;
+    }
+
+    p {
+      margin-bottom: 16px;
+      color: #334155;
+    }
+
+    .card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+
+    .card h3 {
+      font-size: 1.1rem;
+      color: var(--primary);
+      margin-bottom: 10px;
+    }
+
+    .mermaid {
+      background: #f1f5f9;
+      padding: 20px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: center;
+    }
+
+    pre {
+      background: var(--code-bg);
+      color: #f8fbfd;
+      padding: 14px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-family: Consolas, Monaco, monospace;
+      font-size: 0.85rem;
+      margin-top: 10px;
+    }
+
+    code {
+      font-family: Consolas, Monaco, monospace;
+      background: #f1f5f9;
+      color: #0f172a;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+    }
+
+    .accent {
+      color: var(--accent);
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>SetuOne ERP - Project Report</h1>
+      <div class="meta">Documenting System Architecture, Database Schema, and Analytics Chart Connections</div>
+    </header>
+
+    <!-- Flowchart section -->
+    <section>
+      <h2>🔄 System Workflow & Data Flow Chart</h2>
+      <p>This flow diagram illustrates how user actions propagate from the UI layer to the context state, repositories, and ultimately into the Supabase database schema.</p>
+      
+      <div class="mermaid">
+        graph TD
+          User[User Interface / Actions] -->|Invokes State| Context[React AppContext.jsx]
+          Context -->|Calls APIs| Repos[Repository Layer / visitorRepository, etc.]
+          Repos -->|Executes Query| Supabase[Supabase DB / PostgreSQL Tables]
+          
+          subgraph Database Schema
+            Supabase -->|Tickets| T[public.tickets]
+            Supabase -->|Assets| A[public.assets]
+            Supabase -->|Inventory| I[public.inventory_transactions]
+            Supabase -->|Attendance| Att[public.attendance]
+            Supabase -->|Visitors| V[public.visitors]
+          end
+
+          subgraph Analytics Engines
+            T -->|Chart Binding| C1[Helpdesk Ticket Status Doughnut]
+            A -->|Chart Binding| C2[Asset Status Breakdown Bar]
+            I -->|Chart Binding| C3[Water & Coffee Consumption Lines]
+            Att -->|Chart Binding| C4[Staff Shifts Attendance Status]
+          end
+      </div>
+    </section>
+
+    <section>
+      <h2>1. Core Security & Row-Level Security (RLS)</h2>
+      <p>SetuOne uses multi-tenant partitioning secured by PostgreSQL Row Level Security (RLS). Every query automatically isolates rows according to the authenticated tenant context.</p>
+      <div class="card">
+        <h3>Policy Boundaries</h3>
+        <ul>
+          <li>All tables include a <code>company_id</code> column linked to <code>public.companies(id)</code>.</li>
+          <li>Users can only query, insert, or modify data rows containing their specific user account profile's <code>company_id</code>.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>2. Module Chart Connections & SQL Mappings</h2>
+      <p>This section maps every dynamic dashboard reporting chart directly to its database source schema and query logic.</p>
+
+      <!-- A. Ticketing -->
+      <div class="card">
+        <h3>📊 Helpdesk Ticketing Doughnut Chart</h3>
+        <p><strong>Visualizes</strong>: Counts of Open, Assigned, In-Progress, and Resolved tickets.</p>
+        <p><strong>Table</strong>: <code>public.tickets</code></p>
+        <pre>SELECT status, COUNT(*) 
+FROM public.tickets 
+WHERE company_id = auth.current_company_id()
+GROUP BY status;</pre>
+      </div>
+
+      <!-- B. Asset Registry -->
+      <div class="card">
+        <h3>🖥️ Asset Status Bar Chart</h3>
+        <p><strong>Visualizes</strong>: Inventory asset status metrics (In Use, Available, Maintenance, Retired).</p>
+        <p><strong>Table</strong>: <code>public.assets</code></p>
+        <pre>SELECT status, COUNT(*) 
+FROM public.assets 
+GROUP BY status;</pre>
+      </div>
+
+      <!-- C. Procurement -->
+      <div class="card">
+        <h3>💰 Monthly Purchase Orders Cost Graph</h3>
+        <p><strong>Visualizes</strong>: Total expense breakdown logs filtered month-wise.</p>
+        <p><strong>Table</strong>: <code>public.purchase_orders</code></p>
+        <pre>SELECT DATE_TRUNC('month', created_at) as month, SUM(total_amount) 
+FROM public.purchase_orders 
+GROUP BY month;</pre>
+      </div>
+
+      <!-- D. Daily Consumption -->
+      <div class="card">
+        <h3>📦 Water Bottles & Consumption Trends</h3>
+        <p><strong>Visualizes</strong>: Daily delivered water bottles against returnable empty jugs.</p>
+        <p><strong>Table</strong>: <code>public.inventory_transactions</code> joined with <code>public.inventory_items</code></p>
+        <ul>
+          <li><strong>Deliveries</strong>: Transaction type = <span class="accent">IN</span> where name = '20L Water Jug'.</li>
+          <li><strong>Returns</strong>: Transaction type = <span class="accent">OUT</span> or logged return quantities.</li>
+        </ul>
+      </div>
+
+      <!-- E. Maintenance -->
+      <div class="card">
+        <h3>🔧 PPM Inspection Checklist Compliance</h3>
+        <p><strong>Visualizes</strong>: Compliance gauge showing inspection completion rates.</p>
+        <p><strong>Table</strong>: <code>public.checklist_schedules</code></p>
+        <pre>SELECT status, COUNT(*) 
+FROM public.checklist_schedules 
+GROUP BY status;</pre>
+      </div>
+
+      <!-- F. Attendance -->
+      <div class="card">
+        <h3>⏱️ Staff Shift Presence rates</h3>
+        <p><strong>Visualizes</strong>: Shift presence metrics (Present, Late, Absent, WFH, On Leave).</p>
+        <p><strong>Table</strong>: <code>public.attendance</code></p>
+        <pre>SELECT status, COUNT(*) 
+FROM public.attendance 
+GROUP BY status;</pre>
+      </div>
+    </section>
+  </div>
+
+</body>
+</html>
