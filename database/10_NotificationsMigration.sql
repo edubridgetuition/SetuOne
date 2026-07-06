@@ -1,5 +1,6 @@
 -- SetuOne Database Schema - Notifications & Automation Engine Migration (10_NotificationsMigration.sql)
 -- Target Platform: Supabase / PostgreSQL SQL Editor
+-- Description: Idempotent script with correct table creation order.
 
 -- 1. Notification channels
 CREATE TABLE IF NOT EXISTS public.notification_channels (
@@ -61,7 +62,24 @@ CREATE TABLE IF NOT EXISTS public.email_templates (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 6. Automation rules
+-- 6. Report scheduler configurations (Created BEFORE notification_rules)
+CREATE TABLE IF NOT EXISTS public.scheduled_reports (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
+    report_type TEXT NOT NULL, -- Attendance, Tickets, Inventory, etc.
+    frequency TEXT NOT NULL CHECK (frequency IN ('Daily', 'Weekly', 'Monthly')),
+    day TEXT, -- e.g. "1st", "Monday"
+    time TIME NOT NULL,
+    branch_id UUID REFERENCES public.branches(id) ON DELETE SET NULL,
+    emails JSONB NOT NULL DEFAULT '[]'::jsonb, -- Array of emails
+    format TEXT NOT NULL CHECK (format IN ('PDF', 'Excel', 'CSV')),
+    subject TEXT,
+    message TEXT,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- 7. Automation rules
 CREATE TABLE IF NOT EXISTS public.notification_rules (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
@@ -88,7 +106,7 @@ CREATE TABLE IF NOT EXISTS public.notification_rules (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 7. Queue tables for delivery reliability
+-- 8. Queue tables for delivery reliability
 CREATE TABLE IF NOT EXISTS public.notification_queue (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     rule_id UUID REFERENCES public.notification_rules(id) ON DELETE CASCADE,
@@ -103,7 +121,7 @@ CREATE TABLE IF NOT EXISTS public.notification_queue (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 8. Rule execution history
+-- 9. Rule execution history
 CREATE TABLE IF NOT EXISTS public.rule_execution_history (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     rule_id UUID REFERENCES public.notification_rules(id) ON DELETE CASCADE,
@@ -114,7 +132,7 @@ CREATE TABLE IF NOT EXISTS public.rule_execution_history (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 9. Automation audit logs
+-- 10. Automation audit logs
 CREATE TABLE IF NOT EXISTS public.automation_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     rule_id UUID REFERENCES public.notification_rules(id) ON DELETE SET NULL,
