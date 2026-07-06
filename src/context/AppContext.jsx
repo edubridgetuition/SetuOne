@@ -56,7 +56,14 @@ import {
   createPPMSchedule as apiCreatePPMSchedule,
   updatePPMStatus as apiUpdatePPMStatus,
   fetchAMCExpirations as apiFetchAMCExpirations,
-  renewAMC as apiRenewAMC
+  renewAMC as apiRenewAMC,
+
+  // Visitor imports
+  fetchVisitors as apiFetchVisitors,
+  checkInVisitor as apiCheckInVisitor,
+  checkOutVisitor as apiCheckOutVisitor,
+  uploadVisitorPhoto as apiUploadVisitorPhoto,
+  searchVisitors as apiSearchVisitors
 } from "../lib";
 
 export function AppProvider({ children }) {
@@ -88,6 +95,9 @@ export function AppProvider({ children }) {
   const [checklistSchedules, setChecklistSchedules] = useState([]);
   const [ppmSchedules, setPpmSchedules] = useState([]);
   const [amcContracts, setAmcContracts] = useState([]);
+
+  // Visitor States
+  const [visitors, setVisitors] = useState([]);
   
   const [loading, setLoading] = useState(true);
 
@@ -618,6 +628,55 @@ export function AppProvider({ children }) {
     return res;
   }
 
+  // VISITORS ACTIONS & STATES PIPELINE
+  async function loadVisitors() {
+    if (!session) return;
+    const res = await apiFetchVisitors();
+    if (res.success) {
+      setVisitors(res.data);
+    }
+    return res;
+  }
+
+  async function checkInVisitor(visitorData) {
+    if (!session) return null;
+    const res = await apiCheckInVisitor(visitorData, session.companyId);
+    if (res.success) {
+      await loadVisitors();
+      return res.data;
+    } else {
+      alert("Check-in failed: " + res.message);
+    }
+    return null;
+  }
+
+  async function checkOutVisitor(visitorId, remarks = "") {
+    const res = await apiCheckOutVisitor(visitorId, remarks);
+    if (res.success) {
+      await loadVisitors();
+      return res.data;
+    } else {
+      alert("Check-out failed: " + res.message);
+    }
+    return null;
+  }
+
+  async function uploadVisitorPhoto(visitorId, photoBase64) {
+    const res = await apiUploadVisitorPhoto(visitorId, photoBase64);
+    if (res.success) {
+      await loadVisitors();
+    }
+    return res;
+  }
+
+  async function searchVisitors(queryStr) {
+    const res = await apiSearchVisitors(queryStr);
+    if (res.success) {
+      setVisitors(res.data);
+    }
+    return res;
+  }
+
   const tenantData = useMemo(() => tenants[activeTenant], [activeTenant]);
 
   if (loading) return (
@@ -647,7 +706,10 @@ export function AppProvider({ children }) {
       // Maintenance values
       checklistTemplates, checklistSchedules, ppmSchedules, amcContracts,
       loadChecklistTemplates, loadChecklistSchedules, submitChecklist, loadPPMSchedules,
-      createPPMSchedule, updatePPMStatus, loadAMCContracts, renewAMC
+      createPPMSchedule, updatePPMStatus, loadAMCContracts, renewAMC,
+
+      // Visitor values
+      visitors, loadVisitors, checkInVisitor, checkOutVisitor, uploadVisitorPhoto, searchVisitors
     }}>
       {children}
     </AppContext.Provider>
