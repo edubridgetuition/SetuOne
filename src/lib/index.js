@@ -8,3 +8,4 @@ export * from './maintenanceRepository';
 export * from './visitorRepository';
 export * from './attendanceRepository';
 export * from './reportRepository';
+export * from './notificationRepository';

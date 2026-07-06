@@ -13,6 +13,7 @@ import PPMScheduler from "./pages/PPMScheduler";
 import VisitorManagement from "./pages/VisitorManagement";
 import Attendance from "./pages/Attendance";
 import Reports from "./pages/Reports";
+import AutomationSettings from "./pages/AutomationSettings";
 
 function AppContent() {
   const { session, activeView } = useApp();
@@ -31,6 +32,7 @@ function AppContent() {
       case "visitors": return <VisitorManagement />;
       case "attendance": return <Attendance />;
       case "reports": return <Reports />;
+      case "automation": return <AutomationSettings />;
       default: return <GenericPage view={activeView} />;
     }
   };

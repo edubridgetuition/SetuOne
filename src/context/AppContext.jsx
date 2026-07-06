@@ -90,7 +90,22 @@ import {
   saveReportFilter as apiSaveReportFilter,
   generateReportTemplate as apiGenerateReportTemplate,
   scheduleReport as apiScheduleReport,
-  exportReport as apiExportReport
+  exportReport as apiExportReport,
+
+  // Notification imports
+  fetchNotifications as apiFetchNotifications,
+  markNotificationAsRead as apiMarkNotificationAsRead,
+  fetchNotificationRules as apiFetchNotificationRules,
+  saveNotificationRule as apiSaveNotificationRule,
+  fetchRecipientGroups as apiFetchRecipientGroups,
+  saveRecipientGroup as apiSaveRecipientGroup,
+  fetchEmailTemplates as apiFetchEmailTemplates,
+  saveEmailTemplate as apiSaveEmailTemplate,
+  fetchNotificationChannels as apiFetchNotificationChannels,
+  fetchNotificationPreferences as apiFetchNotificationPreferences,
+  saveNotificationPreference as apiSaveNotificationPreference,
+  fetchAutomationLogs as apiFetchAutomationLogs,
+  dispatchNotification as apiDispatchNotification
 } from "../lib";
 
 export function AppProvider({ children }) {
@@ -135,6 +150,15 @@ export function AppProvider({ children }) {
   // Report States
   const [dashboardKPIs, setDashboardKPIs] = useState(null);
   const [savedFilters, setSavedFilters] = useState([]);
+
+  // Notification States
+  const [inboxNotifications, setInboxNotifications] = useState([]);
+  const [rulesList, setRulesList] = useState([]);
+  const [recipientGroups, setRecipientGroups] = useState([]);
+  const [emailTemplatesList, setEmailTemplatesList] = useState([]);
+  const [notificationChannels, setNotificationChannels] = useState([]);
+  const [notificationPreferences, setNotificationPreferences] = useState([]);
+  const [automationLogsList, setAutomationLogsList] = useState([]);
   
   const [loading, setLoading] = useState(true);
 
@@ -848,6 +872,113 @@ export function AppProvider({ children }) {
     return await apiGenerateReportTemplate(session.companyId, templateName, reportType, configPayload);
   }
 
+  // NOTIFICATION ACTIONS & STATES PIPELINE
+  async function loadInboxNotifications() {
+    if (!session) return;
+    const res = await apiFetchNotifications(session.id);
+    if (res.success) {
+      setInboxNotifications(res.data);
+    }
+    return res;
+  }
+
+  async function markRead(id) {
+    const res = await apiMarkNotificationAsRead(id);
+    if (res.success) {
+      await loadInboxNotifications();
+    }
+    return res;
+  }
+
+  async function loadNotificationRules() {
+    if (!session) return;
+    const res = await apiFetchNotificationRules(session.companyId);
+    if (res.success) {
+      setRulesList(res.data);
+    }
+    return res;
+  }
+
+  async function saveRule(ruleData) {
+    if (!session) return null;
+    const res = await apiSaveNotificationRule(ruleData, session.companyId);
+    if (res.success) {
+      await loadNotificationRules();
+    }
+    return res;
+  }
+
+  async function loadRecipientGroups() {
+    if (!session) return;
+    const res = await apiFetchRecipientGroups(session.companyId);
+    if (res.success) {
+      setRecipientGroups(res.data);
+    }
+    return res;
+  }
+
+  async function saveGroup(groupData) {
+    if (!session) return null;
+    const res = await apiSaveRecipientGroup(groupData, session.companyId);
+    if (res.success) {
+      await loadRecipientGroups();
+    }
+    return res;
+  }
+
+  async function loadEmailTemplates() {
+    if (!session) return;
+    const res = await apiFetchEmailTemplates(session.companyId);
+    if (res.success) {
+      setEmailTemplatesList(res.data);
+    }
+    return res;
+  }
+
+  async function saveTemplate(templateData) {
+    if (!session) return null;
+    const res = await apiSaveEmailTemplate(templateData, session.companyId);
+    if (res.success) {
+      await loadEmailTemplates();
+    }
+    return res;
+  }
+
+  async function loadChannels() {
+    const res = await apiFetchNotificationChannels();
+    if (res.success) {
+      setNotificationChannels(res.data);
+    }
+    return res;
+  }
+
+  async function loadPreferences() {
+    if (!session) return;
+    const res = await apiFetchNotificationPreferences(session.id);
+    if (res.success) {
+      setNotificationPreferences(res.data);
+    }
+    return res;
+  }
+
+  async function updatePreference(channelId, isEnabled) {
+    if (!session) return null;
+    const res = await apiSaveNotificationPreference(session.id, channelId, isEnabled);
+    if (res.success) {
+      await loadPreferences();
+    }
+    return res;
+  }
+
+  async function loadAutomationLogs() {
+    if (!session) return;
+    const res = await apiFetchAutomationLogs(session.companyId);
+    if (res.success) {
+      setAutomationLogsList(res.data);
+    }
+    return res;
+  }
+
   const tenantData = useMemo(() => tenants[activeTenant], [activeTenant]);
 
   if (loading) return (
@@ -898,7 +1029,13 @@ export function AppProvider({ children }) {
       fetchPurchaseReport: apiFetchPurchaseReport,
       fetchPPMReport: apiFetchPPMReport,
       exportReport: apiExportReport,
-      scheduleReport: apiScheduleReport
+      scheduleReport: apiScheduleReport,
+
+      // Notification values
+      inboxNotifications, rulesList, recipientGroups, emailTemplatesList, notificationChannels, notificationPreferences, automationLogsList,
+      loadInboxNotifications, markRead, loadNotificationRules, saveRule, loadRecipientGroups, saveGroup,
+      loadEmailTemplates, saveTemplate, loadChannels, loadPreferences, updatePreference, loadAutomationLogs,
+      dispatchNotification: apiDispatchNotification
     }}>
       {children}
     </AppContext.Provider>
