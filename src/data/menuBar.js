@@ -1,4 +1,4 @@
-﻿export const menuBar = [
+export const menuBar = [
   {
     key: "dashboard",
     label: "Dashboard",
@@ -79,6 +79,9 @@
   {
     key: "roles",
     label: "User Roles",
-    subItems: [{ key: "roles", label: "User Roles" }],
+    subItems: [
+      { key: "roles", label: "User Roles" },
+      { key: "automation", label: "Automation Rules" }
+    ],
   },
 ];

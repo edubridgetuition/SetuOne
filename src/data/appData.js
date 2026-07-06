@@ -1,4 +1,4 @@
-﻿export const tenants = {
+export const tenants = {
   orion: {
     name: "Orion Corporate Park",
     stats: {
@@ -27,8 +27,8 @@ export const demoUsers = {
 };
 
 export const rolePermissions = {
-  "Super Admin": ["dashboard","checklist","tickets","ppm","assets","inventory","itasset","mobile","sim","furniture","hvac","vendors","visitors","housekeeping","security","attendance","purchase","workorders","energy","documents","reports","roles"],
-  "Admin Manager": [ "dashboard","checklist","tickets","ppm","assets","inventory","itasset","mobile","sim","furniture","hvac","vendors","visitors","housekeeping","security","attendance","purchase","workorders","energy","documents","reports"],
+  "Super Admin": ["dashboard","checklist","tickets","ppm","assets","inventory","itasset","mobile","sim","furniture","hvac","vendors","visitors","housekeeping","security","attendance","purchase","workorders","energy","documents","reports","roles","automation"],
+  "Admin Manager": [ "dashboard","checklist","tickets","ppm","assets","inventory","itasset","mobile","sim","furniture","hvac","vendors","visitors","housekeeping","security","attendance","purchase","workorders","energy","documents","reports","automation"],
   Vendor: ["dashboard","tickets","ppm","workorders","documents"],
   Employee: ["dashboard","tickets","visitors","purchase"],
   "Security Supervisor": ["dashboard","tickets","visitors","security","attendance","reports"],
