@@ -234,6 +234,17 @@ export default function InventoryManagement() {
   const selectedGRN = grns.find(g => g.id === selectedGRNId);
   const selectedInvoice = invoices.find(i => i.id === selectedInvoiceId);
 
+  const displayStockBalances = inventoryItems.map(item => {
+    const stock = stockBalances.find(st => st.itemId === item.id || st.name === item.name);
+    return {
+      id: item.id,
+      name: item.name,
+      closingStock: stock ? stock.closingStock : 0,
+      reorderLevel: item.reorderLevel || 0,
+      unit: item.unit || 'pcs'
+    };
+  });
+
   return (
     <div style={styles.page}>
       <div style={styles.left}>
@@ -312,10 +323,10 @@ export default function InventoryManagement() {
                     </tr>
                   </thead>
                   <tbody>
-                    {stockBalances.map(st => {
+                    {displayStockBalances.map(st => {
                       const isLow = Number(st.closingStock) <= Number(st.reorderLevel);
                       return (
-                        <tr key={st.id} style={styles.tr}>
+                        <tr key={st.id || st.name} style={styles.tr}>
                           <td style={styles.td}><strong>{st.name}</strong></td>
                           <td style={styles.td}>{st.closingStock}</td>
                           <td style={styles.td}>{st.reorderLevel}</td>
