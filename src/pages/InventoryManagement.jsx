@@ -147,6 +147,32 @@ export default function InventoryManagement() {
     }
   }
 
+  const handleExportCSV = () => {
+    if (filteredPantryTransactions.length === 0) {
+      alert("No data available to export.");
+      return;
+    }
+    const headers = ["Log Date", "Supply Item", "Action Type", "Quantity", "Measurement Unit"];
+    const rows = filteredPantryTransactions.map(tx => [
+      new Date(tx.created_at).toLocaleDateString(),
+      tx.inventory_items?.name || "",
+      tx.transaction_type === "In" ? "Refill Arrived" : "Consumed / Returned",
+      tx.quantity,
+      tx.inventory_items?.unit || ""
+    ]);
+    
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + [headers.join(","), ...rows.map(e => e.map(val => `"${val}"`).join(","))].join("\n");
+      
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `pantry_report_${startDate}_to_${endDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   function handleStartEdit(tx) {
     setEditingTxId(tx.id);
     setEditForm({
@@ -567,6 +593,12 @@ export default function InventoryManagement() {
                       <label style={styles.label}>To Date</label>
                       <input style={styles.input} type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
                     </div>
+                    <button 
+                      onClick={handleExportCSV}
+                      style={{ ...styles.secondaryBtn, height: "38px", marginTop: "18px", background: "#22c55e", color: "#fff", borderColor: "#22c55e", padding: "0 16px", cursor: "pointer" }}
+                    >
+                      Export CSV
+                    </button>
                   </div>
                 </div>
 

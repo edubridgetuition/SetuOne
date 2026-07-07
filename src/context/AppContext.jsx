@@ -117,6 +117,7 @@ import {
   fetchMasterDefinitions as apiFetchMasterDefinitions,
   saveMasterDefinition as apiSaveMasterDefinition,
   saveMasterValue as apiSaveMasterValue,
+  deleteMasterValue as apiDeleteMasterValue,
   fetchNumberSeries as apiFetchNumberSeries,
   saveNumberSeries as apiSaveNumberSeries,
   fetchApprovalWorkflows as apiFetchApprovalWorkflows,

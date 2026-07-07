@@ -617,3 +617,16 @@ export async function saveRolePermissions(companyId, roleId, permissionKeys) {
     return { success: false, message: error.message, error };
   }
 }
+
+export async function deleteMasterValue(valueId) {
+  try {
+    const { error } = await supabase
+      .from('master_values')
+      .delete()
+      .eq('id', valueId);
+    if (error) throw error;
+    return { success: true, message: 'Master value deleted successfully.', error: null };
+  } catch (error) {
+    return { success: false, message: error.message, error };
+  }
+}
