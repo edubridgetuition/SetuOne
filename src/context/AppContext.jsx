@@ -235,7 +235,9 @@ export function AppProvider({ children }) {
       const [ticketsRes, locationsRes, assigneesRes] = await Promise.all([
         fetchTickets(),
         fetchLocations(),
-        fetchAssignees()
+        fetchAssignees(),
+        loadMasterDefinitions(),
+        loadCustomFieldDefinitions()
       ]);
 
       if (ticketsRes.success) setTickets(ticketsRes.data);

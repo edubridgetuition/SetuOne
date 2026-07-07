@@ -190,12 +190,7 @@ export default function InventoryManagement() {
     pantryAllowedNames.includes(i.name)
   );
 
-  console.log("DEBUG: session =", session);
-  console.log("DEBUG: masterDefinitionsList =", masterDefinitionsList);
-  console.log("DEBUG: pantryDef =", pantryDef);
-  console.log("DEBUG: pantryAllowedNames =", pantryAllowedNames);
-  console.log("DEBUG: inventoryItems =", inventoryItems);
-  console.log("DEBUG: pantryItems =", pantryItems);
+
 
   const getPantryStats = (itemName) => {
     const item = inventoryItems.find(i => i.name === itemName);
