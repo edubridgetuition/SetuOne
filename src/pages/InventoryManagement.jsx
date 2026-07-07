@@ -190,6 +190,11 @@ export default function InventoryManagement() {
     pantryAllowedNames.includes(i.name)
   );
 
+  console.log("DEBUG: pantryDef =", pantryDef);
+  console.log("DEBUG: pantryAllowedNames =", pantryAllowedNames);
+  console.log("DEBUG: inventoryItems =", inventoryItems);
+  console.log("DEBUG: pantryItems =", pantryItems);
+
   const getPantryStats = (itemName) => {
     const item = inventoryItems.find(i => i.name === itemName);
     if (!item) return { daily: 0, monthly: 0, current: 0, unit: "" };
