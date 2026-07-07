@@ -81,7 +81,8 @@ export const menuBar = [
     label: "User Roles",
     subItems: [
       { key: "roles", label: "User Roles" },
-      { key: "automation", label: "Automation Rules" }
+      { key: "automation", label: "Automation Rules" },
+      { key: "admin_console", label: "Admin Console" }
     ],
   },
 ];

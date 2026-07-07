@@ -14,6 +14,7 @@ import VisitorManagement from "./pages/VisitorManagement";
 import Attendance from "./pages/Attendance";
 import Reports from "./pages/Reports";
 import AutomationSettings from "./pages/AutomationSettings";
+import AdminConsoleSettings from "./pages/AdminConsoleSettings";
 
 function AppContent() {
   const { session, activeView } = useApp();
@@ -33,6 +34,7 @@ function AppContent() {
       case "attendance": return <Attendance />;
       case "reports": return <Reports />;
       case "automation": return <AutomationSettings />;
+      case "admin_console": return <AdminConsoleSettings />;
       default: return <GenericPage view={activeView} />;
     }
   };

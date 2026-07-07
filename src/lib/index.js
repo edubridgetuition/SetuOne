@@ -9,3 +9,4 @@ export * from './visitorRepository';
 export * from './attendanceRepository';
 export * from './reportRepository';
 export * from './notificationRepository';
+export * from './adminRepository';

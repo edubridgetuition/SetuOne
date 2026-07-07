@@ -105,7 +105,34 @@ import {
   fetchNotificationPreferences as apiFetchNotificationPreferences,
   saveNotificationPreference as apiSaveNotificationPreference,
   fetchAutomationLogs as apiFetchAutomationLogs,
-  dispatchNotification as apiDispatchNotification
+  dispatchNotification as apiDispatchNotification,
+
+  // Admin settings imports
+  fetchSystemSettings as apiFetchSystemSettings,
+  updateSystemSettings as apiUpdateSystemSettings,
+  fetchBrandingSettings as apiFetchBrandingSettings,
+  updateBrandingSettings as apiUpdateBrandingSettings,
+  fetchMasterDefinitions as apiFetchMasterDefinitions,
+  saveMasterDefinition as apiSaveMasterDefinition,
+  saveMasterValue as apiSaveMasterValue,
+  fetchNumberSeries as apiFetchNumberSeries,
+  saveNumberSeries as apiSaveNumberSeries,
+  fetchApprovalWorkflows as apiFetchApprovalWorkflows,
+  saveApprovalWorkflow as apiSaveApprovalWorkflow,
+  fetchFeatureFlags as apiFetchFeatureFlags,
+  saveFeatureFlag as apiSaveFeatureFlag,
+  fetchHolidayCalendar as apiFetchHolidayCalendar,
+  saveHoliday as apiSaveHoliday,
+  fetchWorkingDays as apiFetchWorkingDays,
+  saveWorkingDays as apiSaveWorkingDays,
+  fetchCustomFieldDefinitions as apiFetchCustomFieldDefinitions,
+  saveCustomFieldDefinition as apiSaveCustomFieldDefinition,
+  fetchAuditLogs as apiFetchAuditLogs,
+  writeAuditLog as apiWriteAuditLog,
+  fetchNotificationTemplates as apiFetchNotificationTemplates,
+  saveNotificationTemplate as apiSaveNotificationTemplate,
+  fetchRecurringJobs as apiFetchRecurringJobs,
+  saveRecurringJob as apiSaveRecurringJob
 } from "../lib";
 
 export function AppProvider({ children }) {
@@ -159,6 +186,20 @@ export function AppProvider({ children }) {
   const [notificationChannels, setNotificationChannels] = useState([]);
   const [notificationPreferences, setNotificationPreferences] = useState([]);
   const [automationLogsList, setAutomationLogsList] = useState([]);
+
+  // Admin Settings States
+  const [systemSettings, setSystemSettings] = useState(null);
+  const [brandingSettings, setBrandingSettings] = useState(null);
+  const [masterDefinitionsList, setMasterDefinitionsList] = useState([]);
+  const [numberSeriesList, setNumberSeriesList] = useState([]);
+  const [approvalWorkflowsList, setApprovalWorkflowsList] = useState([]);
+  const [featureFlagsList, setFeatureFlagsList] = useState([]);
+  const [holidayCalendarList, setHolidayCalendarList] = useState([]);
+  const [workingDaysData, setWorkingDaysData] = useState(null);
+  const [customFieldDefinitionsList, setCustomFieldDefinitionsList] = useState([]);
+  const [auditLogsList, setAuditLogsList] = useState([]);
+  const [notificationTemplatesList, setNotificationTemplatesList] = useState([]);
+  const [recurringSchedulerJobsList, setRecurringSchedulerJobsList] = useState([]);
   
   const [loading, setLoading] = useState(true);
 
@@ -979,6 +1020,236 @@ export function AppProvider({ children }) {
     return res;
   }
 
+  // ADMIN CONSOLE ACTIONS & STATES PIPELINE
+  async function loadSystemSettings() {
+    if (!session) return;
+    const res = await apiFetchSystemSettings(session.companyId);
+    if (res.success) {
+      setSystemSettings(res.data);
+    }
+    return res;
+  }
+
+  async function saveSystemSettings(settings) {
+    if (!session) return null;
+    const res = await apiUpdateSystemSettings(settings, session.companyId);
+    if (res.success) {
+      await loadSystemSettings();
+      await apiWriteAuditLog({
+        module: 'System Settings',
+        tableName: 'public.system_settings',
+        recordId: res.data.id,
+        action: 'UPDATE',
+        newData: res.data,
+        changedBy: session.id
+      }, session.companyId);
+    }
+    return res;
+  }
+
+  async function loadBrandingSettings() {
+    if (!session) return;
+    const res = await apiFetchBrandingSettings(session.companyId);
+    if (res.success) {
+      setBrandingSettings(res.data);
+    }
+    return res;
+  }
+
+  async function saveBrandingSettings(branding) {
+    if (!session) return null;
+    const res = await apiUpdateBrandingSettings(branding, session.companyId);
+    if (res.success) {
+      await loadBrandingSettings();
+      await apiWriteAuditLog({
+        module: 'Branding Settings',
+        tableName: 'public.branding_settings',
+        recordId: res.data.id,
+        action: 'UPDATE',
+        newData: res.data,
+        changedBy: session.id
+      }, session.companyId);
+    }
+    return res;
+  }
+
+  async function loadMasterDefinitions() {
+    if (!session) return;
+    const res = await apiFetchMasterDefinitions(session.companyId);
+    if (res.success) {
+      setMasterDefinitionsList(res.data);
+    }
+    return res;
+  }
+
+  async function createMasterDefinition(masterData) {
+    if (!session) return null;
+    const res = await apiSaveMasterDefinition(masterData, session.companyId);
+    if (res.success) {
+      await loadMasterDefinitions();
+    }
+    return res;
+  }
+
+  async function createMasterValue(valueData) {
+    const res = await apiSaveMasterValue(valueData);
+    if (res.success) {
+      await loadMasterDefinitions();
+    }
+    return res;
+  }
+
+  async function loadNumberSeries() {
+    if (!session) return;
+    const res = await apiFetchNumberSeries(session.companyId);
+    if (res.success) {
+      setNumberSeriesList(res.data);
+    }
+    return res;
+  }
+
+  async function saveNumberSeries(seriesData) {
+    const res = await apiSaveNumberSeries(seriesData);
+    if (res.success) {
+      await loadNumberSeries();
+    }
+    return res;
+  }
+
+  async function loadApprovalWorkflows() {
+    if (!session) return;
+    const res = await apiFetchApprovalWorkflows(session.companyId);
+    if (res.success) {
+      setApprovalWorkflowsList(res.data);
+    }
+    return res;
+  }
+
+  async function saveApprovalWorkflow(workflowData) {
+    if (!session) return null;
+    const res = await apiSaveApprovalWorkflow(workflowData, session.companyId);
+    if (res.success) {
+      await loadApprovalWorkflows();
+    }
+    return res;
+  }
+
+  async function loadFeatureFlags() {
+    if (!session) return;
+    const res = await apiFetchFeatureFlags(session.companyId);
+    if (res.success) {
+      setFeatureFlagsList(res.data);
+    }
+    return res;
+  }
+
+  async function toggleFeatureFlag(flagId, isEnabled) {
+    const res = await apiSaveFeatureFlag(flagId, isEnabled);
+    if (res.success) {
+      await loadFeatureFlags();
+    }
+    return res;
+  }
+
+  async function loadHolidayCalendar() {
+    if (!session) return;
+    const res = await apiFetchHolidayCalendar(session.companyId);
+    if (res.success) {
+      setHolidayCalendarList(res.data);
+    }
+    return res;
+  }
+
+  async function createHoliday(holidayData) {
+    if (!session) return null;
+    const res = await apiSaveHoliday(holidayData, session.companyId);
+    if (res.success) {
+      await loadHolidayCalendar();
+    }
+    return res;
+  }
+
+  async function loadWorkingDays() {
+    if (!session) return;
+    const res = await apiFetchWorkingDays(session.companyId);
+    if (res.success) {
+      setWorkingDaysData(res.data);
+    }
+    return res;
+  }
+
+  async function saveWorkingDays(daysArray) {
+    if (!session) return null;
+    const res = await apiSaveWorkingDays(daysArray, session.companyId);
+    if (res.success) {
+      await loadWorkingDays();
+    }
+    return res;
+  }
+
+  async function loadCustomFieldDefinitions() {
+    if (!session) return;
+    const res = await apiFetchCustomFieldDefinitions(session.companyId);
+    if (res.success) {
+      setCustomFieldDefinitionsList(res.data);
+    }
+    return res;
+  }
+
+  async function saveCustomField(fieldData) {
+    if (!session) return null;
+    const res = await apiSaveCustomFieldDefinition(fieldData, session.companyId);
+    if (res.success) {
+      await loadCustomFieldDefinitions();
+    }
+    return res;
+  }
+
+  async function loadAuditLogs() {
+    if (!session) return;
+    const res = await apiFetchAuditLogs(session.companyId);
+    if (res.success) {
+      setAuditLogsList(res.data);
+    }
+    return res;
+  }
+
+  async function loadNotificationTemplates() {
+    if (!session) return;
+    const res = await apiFetchNotificationTemplates(session.companyId);
+    if (res.success) {
+      setNotificationTemplatesList(res.data);
+    }
+    return res;
+  }
+
+  async function saveNotificationTemplate(templateData) {
+    if (!session) return null;
+    const res = await apiSaveNotificationTemplate(templateData, session.companyId);
+    if (res.success) {
+      await loadNotificationTemplates();
+    }
+    return res;
+  }
+
+  async function loadRecurringSchedulerJobs() {
+    if (!session) return;
+    const res = await apiFetchRecurringJobs(session.companyId);
+    if (res.success) {
+      setRecurringSchedulerJobsList(res.data);
+    }
+    return res;
+  }
+
+  async function saveRecurringSchedulerJob(jobData) {
+    if (!session) return null;
+    const res = await apiSaveRecurringJob(jobData, session.companyId);
+    if (res.success) {
+      await loadRecurringSchedulerJobs();
+    }
+    return res;
+  }
+
   const tenantData = useMemo(() => tenants[activeTenant], [activeTenant]);
 
   if (loading) return (
@@ -1035,7 +1306,11 @@ export function AppProvider({ children }) {
       inboxNotifications, rulesList, recipientGroups, emailTemplatesList, notificationChannels, notificationPreferences, automationLogsList,
       loadInboxNotifications, markRead, loadNotificationRules, saveRule, loadRecipientGroups, saveGroup,
       loadEmailTemplates, saveTemplate, loadChannels, loadPreferences, updatePreference, loadAutomationLogs,
-      dispatchNotification: apiDispatchNotification
+      dispatchNotification: apiDispatchNotification,
+
+      // Admin Settings values
+      systemSettings, brandingSettings, masterDefinitionsList, numberSeriesList, approvalWorkflowsList, featureFlagsList, holidayCalendarList, workingDaysData, customFieldDefinitionsList, auditLogsList, notificationTemplatesList, recurringSchedulerJobsList,
+      loadSystemSettings, saveSystemSettings, loadBrandingSettings, saveBrandingSettings, loadMasterDefinitions, createMasterDefinition, createMasterValue, loadNumberSeries, saveNumberSeries, loadApprovalWorkflows, saveApprovalWorkflow, loadFeatureFlags, toggleFeatureFlag, loadHolidayCalendar, createHoliday, loadWorkingDays, saveWorkingDays, loadCustomFieldDefinitions, saveCustomField, loadAuditLogs, loadNotificationTemplates, saveNotificationTemplate, loadRecurringSchedulerJobs, saveRecurringSchedulerJob
     }}>
       {children}
     </AppContext.Provider>
