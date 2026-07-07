@@ -1,8 +1,13 @@
 -- SetuOne Database Schema - Dynamic Dashboard Builder Migration (12_DashboardBuilderMigration.sql)
 -- Target Platform: Supabase / PostgreSQL SQL Editor
+-- Description: Drop tables first to ensure fresh columns match schema definition.
+
+-- Drop existing tables to prevent mismatched column structures
+DROP TABLE IF EXISTS public.dashboard_layouts CASCADE;
+DROP TABLE IF EXISTS public.dashboard_widgets CASCADE;
 
 -- 1. Catalog of available widgets in the system
-CREATE TABLE IF NOT EXISTS public.dashboard_widgets (
+CREATE TABLE public.dashboard_widgets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     widget_key TEXT UNIQUE NOT NULL, -- e.g. "OPEN_TICKETS", "TODAYS_VISITORS", "ENERGY_CONSUMPTION"
     widget_name TEXT NOT NULL,
@@ -31,20 +36,10 @@ INSERT INTO public.dashboard_widgets (widget_key, widget_name, widget_category, 
 ('STOCK_LEVELS', 'Inventory Alert levels', 'Inventory', 'Items currently below minimum safety stock levels.', 4, 3, 'InventoryWidget', 600, '{"low_stock_only":true}', false),
 ('ATTENDANCE_SUMMARY', 'Attendance Headcount', 'HR', 'Live checked-in staff count with percentage indicators.', 4, 2, 'AttendanceWidget', 30, '{}', false),
 ('ENERGY_MONITOR', 'Energy & Power monitor', 'Energy', 'KWh consumption load analytics.', 6, 3, 'EnergyWidget', 900, '{"time_range":"7d"}', false),
-('TOP_VENDORS', 'Top Active Vendors', 'Finance', 'Contract rankings by value and deliverables.', 4, 3, 'VendorsWidget', 3600, '{}', false)
-ON CONFLICT (widget_key) DO UPDATE SET
-    widget_name = EXCLUDED.widget_name,
-    widget_category = EXCLUDED.widget_category,
-    description = EXCLUDED.description,
-    default_w = EXCLUDED.default_w,
-    default_h = EXCLUDED.default_h,
-    component_name = EXCLUDED.component_name,
-    refresh_interval_seconds = EXCLUDED.refresh_interval_seconds,
-    default_config = EXCLUDED.default_config,
-    is_required = EXCLUDED.is_required;
+('TOP_VENDORS', 'Top Active Vendors', 'Finance', 'Contract rankings by value and deliverables.', 4, 3, 'VendorsWidget', 3600, '{}', false);
 
 -- 2. Layout configuration mapping table
-CREATE TABLE IF NOT EXISTS public.dashboard_layouts (
+CREATE TABLE public.dashboard_layouts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
     role_name TEXT REFERENCES public.roles(name) ON DELETE CASCADE, -- layout per role
@@ -67,8 +62,7 @@ SELECT
     '[{"widget_key":"OPEN_TICKETS","x":0,"y":0,"w":4,"h":2},{"widget_key":"TODAYS_VISITORS","x":4,"y":0,"w":4,"h":2},{"widget_key":"ATTENDANCE_SUMMARY","x":0,"y":2,"w":8,"h":2}]'::jsonb,
     '[{"widget_key":"OPEN_TICKETS","x":0,"y":0,"w":12,"h":2},{"widget_key":"TODAYS_VISITORS","x":0,"y":2,"w":12,"h":2}]'::jsonb,
     true
-FROM public.companies c
-ON CONFLICT DO NOTHING;
+FROM public.companies c;
 
 INSERT INTO public.dashboard_layouts (company_id, role_name, desktop_layout, tablet_layout, mobile_layout, is_default)
 SELECT 
@@ -78,8 +72,7 @@ SELECT
     '[{"widget_key":"OPEN_TICKETS","x":0,"y":0,"w":4,"h":2},{"widget_key":"TODAYS_VISITORS","x":4,"y":0,"w":4,"h":2}]'::jsonb,
     '[{"widget_key":"OPEN_TICKETS","x":0,"y":0,"w":12,"h":2}]'::jsonb,
     true
-FROM public.companies c
-ON CONFLICT DO NOTHING;
+FROM public.companies c;
 
 -- Enable Row Level Security
 ALTER TABLE public.dashboard_widgets ENABLE ROW LEVEL SECURITY;
