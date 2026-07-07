@@ -3,6 +3,34 @@ import { useApp } from "../context/appContextCore";
 
 const statusColors = { Pending: "#f59e0b", "In Progress": "#6366f1", Completed: "#22c55e", Escalated: "#ef4444" };
 
+const toLocalDateKey = (value) => {
+  if (!value) return "";
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}/.test(value)) {
+    return value.slice(0, 10);
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const getMonthBounds = (offset = 0) => {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth() + offset, 1);
+  const end = offset === 0
+    ? now
+    : new Date(now.getFullYear(), now.getMonth() + offset + 1, 0);
+
+  return {
+    startKey: toLocalDateKey(start),
+    endKey: toLocalDateKey(end)
+  };
+};
+
 export default function InventoryManagement() {
   const {
     session,
@@ -220,55 +248,44 @@ export default function InventoryManagement() {
     ? pantryDef.master_values.map(val => val.value_label) 
     : ["Water Bottle (20L)", "Water Jug", "Coffee Beans", "Milk Packet"];
 
+  const cardDef = masterDefinitionsList?.find(d => d.master_key === "PANTRY_DASHBOARD_CARDS");
+  const cardAllowedNames = cardDef 
+    ? cardDef.master_values.map(val => val.value_label) 
+    : ["Water Bottle (20L)", "Water Jug", "Coffee Beans", "Milk Packet"];
+
   const pantryItems = inventoryItems.filter(i => 
     pantryAllowedNames.includes(i.name)
   );
 
 
 
-    const getPantryStats = (itemName) => {
+  const getPantryStats = (itemName) => {
     const item = inventoryItems.find(i => i.name === itemName);
-    if (!item) return { dailyIn: 0, lastMonthIn: 0, currentMonthIn: 0, unit: "" };
+    if (!item) return { todayTotal: 0, lastMonthTotal: 0, currentMonthTotal: 0, unit: "" };
 
     const txs = inventoryTransactions.filter(t => t.item_id === item.id);
 
-    const now = new Date();
-    const todayStr = now.toDateString();
-    
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+    const pantryUsageTxs = txs.filter(t => t.transaction_type === "In");
 
-    const lastMonthDate = new Date(currentYear, currentMonth - 1, 1);
-    const lastMonth = lastMonthDate.getMonth();
-    const lastMonthYear = lastMonthDate.getFullYear();
+    const todayKey = toLocalDateKey(new Date());
+    const currentMonthBounds = getMonthBounds();
+    const lastMonthBounds = getMonthBounds(-1);
 
-    // 1. Today's INWARD (transaction_type === "In") entries
-    const dailyIn = txs
-      .filter(t => t.transaction_type === "In" && new Date(t.created_at).toDateString() === todayStr)
-      .reduce((sum, t) => sum + Number(t.quantity), 0);
-
-    // 2. Current Month's INWARD (transaction_type === "In") entries
-    const currentMonthIn = txs
+    const totalBetween = (startKey, endKey) => pantryUsageTxs
       .filter(t => {
-        if (t.transaction_type !== "In") return false;
-        const d = new Date(t.created_at);
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+        const txDateKey = toLocalDateKey(t.created_at);
+        return txDateKey >= startKey && txDateKey <= endKey;
       })
-      .reduce((sum, t) => sum + Number(t.quantity), 0);
+      .reduce((sum, t) => sum + Number(t.quantity || 0), 0);
 
-    // 3. Last Month's INWARD (transaction_type === "In") entries
-    const lastMonthIn = txs
-      .filter(t => {
-        if (t.transaction_type !== "In") return false;
-        const d = new Date(t.created_at);
-        return d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear;
-      })
-      .reduce((sum, t) => sum + Number(t.quantity), 0);
+    const todayTotal = totalBetween(todayKey, todayKey);
+    const currentMonthTotal = totalBetween(currentMonthBounds.startKey, currentMonthBounds.endKey);
+    const lastMonthTotal = totalBetween(lastMonthBounds.startKey, lastMonthBounds.endKey);
 
     return {
-      dailyIn,
-      lastMonthIn,
-      currentMonthIn,
+      todayTotal,
+      lastMonthTotal,
+      currentMonthTotal,
       unit: item.unit
     };
   };
@@ -278,7 +295,7 @@ export default function InventoryManagement() {
     const isPantry = ["Water Bottle (20L)", "Water Jug", "Coffee Beans", "Milk Packet"].includes(t.inventory_items?.name);
     if (!isPantry) return false;
 
-    const tDate = new Date(t.created_at).toISOString().split("T")[0];
+    const tDate = toLocalDateKey(t.created_at);
     return tDate >= startDate && tDate <= endDate;
   });
 
@@ -486,16 +503,16 @@ export default function InventoryManagement() {
 
               {/* Consumption Analytics Cards Grid */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "20px" }}>
-                {pantryAllowedNames.map(name => {
+                {cardAllowedNames.map(name => {
                   const stat = getPantryStats(name);
                   return (
                                        <div key={name} style={{ ...styles.descBox, marginBottom: 0 }}>
                       <div style={styles.muted}>{name}</div>
                       <div style={{ fontSize: "1.4rem", fontWeight: 700, margin: "8px 0", color: "#0038a8" }}>
-                        {stat.currentMonthIn} <span style={{ fontSize: "0.8rem", color: "#64748b" }}>{stat.unit}</span>
+                        {stat.currentMonthTotal} <span style={{ fontSize: "0.8rem", color: "#64748b" }}>{stat.unit}</span>
                       </div>
                       <div style={{ fontSize: "0.78rem", color: "#64748b" }}>
-                        Today: <strong>{stat.dailyIn}</strong> | Month: <strong>{stat.lastMonthIn}</strong>
+                        Today: <strong>{stat.todayTotal}</strong> | Month: <strong>{stat.lastMonthTotal}</strong>
                       </div>
                     </div>
                   );
