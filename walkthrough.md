@@ -1,6 +1,6 @@
-# SetuOne ERP Migration Walkthrough - Dynamic Dropdowns, Catalog Visibility & Transaction Rollbacks
+# SetuOne ERP Migration Walkthrough - Dynamic Dropdowns, Catalog Visibility & Inline Edits
 
-This walkthrough documents the updates made to connect frontend dropdown selections to the Dynamic Masters registry dynamically, ensure catalog items with zero stock display correctly, and add transaction deletion capabilities.
+This walkthrough documents the updates made to connect frontend dropdown selections to the Dynamic Masters registry dynamically, ensure catalog items with zero stock display correctly, and add transaction editing & deletion capabilities.
 
 ---
 
@@ -22,9 +22,11 @@ This walkthrough documents the updates made to connect frontend dropdown selecti
 * **Visitor Management (`VisitorManagement.jsx`)**: Purposes, vehicle types, and ID proof types dropdown selections load dynamically from their respective registries.
 * **Admin Settings Console (`AdminConsoleSettings.jsx`)**: Added auto-slugifying logic for `masterKey` so new master categories created in the UI are formatted correctly (e.g. `Pantry Item Names` ➡️ `PANTRY_ITEM_NAMES`).
 
-### 3. Super Admin Transaction Rollback (`InventoryManagement.jsx`)
-* Exclusively for the **Super Admin** role, added a "Delete" button in the Consolidated Consumption Report table.
-* Deleting a pantry consumption transaction automatically adjusts (rolls back) the closing stock of the item in the database, maintaining mathematical consistency (e.g. deleting a Consumed entry adds the quantity back to stock, deleting a Refill entry subtracts it).
+### 3. Super Admin Transaction Rollback & Inline Edits (`InventoryManagement.jsx`)
+* Exclusively for the **Super Admin** role, added an **`Edit`** and **`Delete`** button in the Consolidated Consumption Report table.
+* **Delete Action**: Deleting a pantry consumption transaction automatically adjusts (rolls back) the closing stock of the item in the database (e.g. deleting a Consumed entry adds the quantity back to stock, deleting a Refill entry subtracts it).
+* **Inline Edit Mode**: Clicking `Edit` replaces row cells with editable input fields (Quantity, Action Type, Log Date) along with `Save` and `Cancel` buttons.
+* **Smart Stock Correction**: When a transaction is edited, the system calculates the delta (difference) between the old configuration and the new configuration, then corrects the current stock balance automatically in a single database transaction.
 
 ---
 
