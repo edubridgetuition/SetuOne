@@ -228,14 +228,14 @@ export default function InventoryManagement() {
 
   const getPantryStats = (itemName) => {
     const item = inventoryItems.find(i => i.name === itemName);
-    if (!item) return { daily: 0, monthly: 0, current: 0, unit: "" };
+    if (!item) return { daily: 0, monthly: 0, rangeTotal: 0, unit: "" };
 
-    const stock = stockBalances.find(st => st.itemId === item.id);
     const txs = inventoryTransactions.filter(t => t.item_id === item.id && t.transaction_type === "Out");
 
     const todayStr = new Date().toDateString();
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
+    const filterEndDate = new Date(endDate);
+    const filterMonth = filterEndDate.getMonth();
+    const filterYear = filterEndDate.getFullYear();
 
     const daily = txs
       .filter(t => new Date(t.created_at).toDateString() === todayStr)
@@ -244,14 +244,21 @@ export default function InventoryManagement() {
     const monthly = txs
       .filter(t => {
         const d = new Date(t.created_at);
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+        return d.getMonth() === filterMonth && d.getFullYear() === filterYear;
+      })
+      .reduce((sum, t) => sum + Number(t.quantity), 0);
+
+    const rangeTotal = txs
+      .filter(t => {
+        const tDate = new Date(t.created_at).toISOString().split("T")[0];
+        return tDate >= startDate && tDate <= endDate;
       })
       .reduce((sum, t) => sum + Number(t.quantity), 0);
 
     return {
       daily,
       monthly,
-      current: stock ? stock.closingStock : 0,
+      rangeTotal,
       unit: item.unit
     };
   };
@@ -475,7 +482,7 @@ export default function InventoryManagement() {
                     <div key={name} style={{ ...styles.descBox, marginBottom: 0 }}>
                       <div style={styles.muted}>{name}</div>
                       <div style={{ fontSize: "1.4rem", fontWeight: 700, margin: "8px 0", color: "#0038a8" }}>
-                        {stat.current} <span style={{ fontSize: "0.8rem", color: "#64748b" }}>{stat.unit} Left</span>
+                        {stat.rangeTotal} <span style={{ fontSize: "0.8rem", color: "#64748b" }}>{stat.unit}</span>
                       </div>
                       <div style={{ fontSize: "0.78rem", color: "#64748b" }}>
                         Today: <strong>{stat.daily}</strong> | Month: <strong>{stat.monthly}</strong>
