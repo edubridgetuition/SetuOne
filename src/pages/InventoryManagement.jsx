@@ -31,6 +31,18 @@ const getMonthBounds = (offset = 0) => {
   };
 };
 
+const PANTRY_CATEGORIES = [
+  { value: "Coffee Material", itemNames: ["Coffee Beans", "Milk Packet", "Sugar"] },
+  { value: "Drinking Water", itemNames: ["Water Bottle (20L)", "Water Jug"] }
+];
+
+const DEFAULT_PANTRY_NAMES = PANTRY_CATEGORIES.flatMap(category => category.itemNames);
+
+const getPantryCategory = (itemName) => {
+  const match = PANTRY_CATEGORIES.find(category => category.itemNames.includes(itemName));
+  return match?.value || "Other";
+};
+
 export default function InventoryManagement() {
   const {
     session,
@@ -78,6 +90,7 @@ export default function InventoryManagement() {
 
   // Pantry & Coffee Logger Form
   const [pantryForm, setPantryForm] = useState({
+    category: "Coffee Material",
     itemId: "",
     action: "Consumed", // "Arrived" (In) or "Consumed" (Out)
     quantity: 1,
@@ -93,6 +106,7 @@ export default function InventoryManagement() {
     new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0] // 7 days ago
   );
   const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
+  const [reportCategory, setReportCategory] = useState("All");
 
   // Initialize
   useEffect(() => {
@@ -114,11 +128,10 @@ export default function InventoryManagement() {
   // Auto-seed pantry items on mount if they do not exist
   useEffect(() => {
     if (inventoryItems.length > 0) {
-      const pantryNames = ["Water Bottle (20L)", "Water Jug", "Coffee Beans", "Milk Packet"];
-      pantryNames.forEach(async name => {
+      DEFAULT_PANTRY_NAMES.forEach(async name => {
         const match = inventoryItems.find(i => i.name === name);
         if (!match) {
-          const unit = name.includes("Beans") ? "kg" : name.includes("Bottle") ? "bottles" : name.includes("Milk") ? "packets" : "jugs";
+          const unit = name.includes("Beans") ? "kg" : name.includes("Bottle") ? "bottles" : name.includes("Milk") ? "packets" : name.includes("Sugar") ? "pcs" : "jugs";
           await createInventoryItem({ name, unit, reorderLevel: 5 });
         }
       });
@@ -152,9 +165,10 @@ export default function InventoryManagement() {
       alert("No data available to export.");
       return;
     }
-    const headers = ["Log Date", "Supply Item", "Action Type", "Quantity", "Measurement Unit"];
+    const headers = ["Log Date", "Category", "Supply Item", "Action Type", "Quantity", "Measurement Unit"];
     const rows = filteredPantryTransactions.map(tx => [
       new Date(tx.created_at).toLocaleDateString(),
+      getPantryCategory(tx.inventory_items?.name),
       tx.inventory_items?.name || "",
       tx.transaction_type === "In" ? "Refill Arrived" : "Consumed / Returned",
       tx.quantity,
@@ -167,7 +181,8 @@ export default function InventoryManagement() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `pantry_report_${startDate}_to_${endDate}.csv`);
+    const categorySlug = reportCategory === "All" ? "all_categories" : reportCategory.toLowerCase().replace(/\s+/g, "_");
+    link.setAttribute("download", `pantry_report_${categorySlug}_${startDate}_to_${endDate}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -258,6 +273,7 @@ export default function InventoryManagement() {
     if (res.success) {
       alert("Pantry transaction entry registered date-wise in database!");
       setPantryForm({
+        category: pantryForm.category,
         itemId: "",
         action: "Consumed",
         quantity: 1,
@@ -270,17 +286,19 @@ export default function InventoryManagement() {
 
   // Daily and Monthly Pantry analytics calculations
   const pantryDef = masterDefinitionsList?.find(d => d.master_key === "PANTRY_ITEM_NAMES");
-  const pantryAllowedNames = pantryDef 
-    ? pantryDef.master_values.map(val => val.value_label) 
-    : ["Water Bottle (20L)", "Water Jug", "Coffee Beans", "Milk Packet"];
+  const pantryAllowedNames = Array.from(new Set([
+    ...DEFAULT_PANTRY_NAMES,
+    ...(pantryDef ? pantryDef.master_values.map(val => val.value_label) : [])
+  ]));
 
   const cardDef = masterDefinitionsList?.find(d => d.master_key === "PANTRY_DASHBOARD_CARDS");
-  const cardAllowedNames = cardDef 
-    ? cardDef.master_values.map(val => val.value_label) 
-    : ["Water Bottle (20L)", "Water Jug", "Coffee Beans", "Milk Packet"];
+  const cardAllowedNames = Array.from(new Set([
+    ...DEFAULT_PANTRY_NAMES,
+    ...(cardDef ? cardDef.master_values.map(val => val.value_label) : [])
+  ]));
 
   const pantryItems = inventoryItems.filter(i => 
-    pantryAllowedNames.includes(i.name)
+    pantryAllowedNames.includes(i.name) && getPantryCategory(i.name) === pantryForm.category
   );
 
 
@@ -318,8 +336,10 @@ export default function InventoryManagement() {
 
   // Filtered transactions for consolidated reports
   const filteredPantryTransactions = inventoryTransactions.filter(t => {
-    const isPantry = ["Water Bottle (20L)", "Water Jug", "Coffee Beans", "Milk Packet"].includes(t.inventory_items?.name);
+    const itemName = t.inventory_items?.name;
+    const isPantry = pantryAllowedNames.includes(itemName);
     if (!isPantry) return false;
+    if (reportCategory !== "All" && getPantryCategory(itemName) !== reportCategory) return false;
 
     const tDate = toLocalDateKey(t.created_at);
     return tDate >= startDate && tDate <= endDate;
@@ -550,6 +570,19 @@ export default function InventoryManagement() {
                 <div style={{ ...styles.panelTitle, fontSize: "0.8rem", marginBottom: "10px" }}>Log Pantry Usage / Delivery</div>
                 <div style={styles.formGrid}>
                   <div style={styles.formGroup}>
+                    <label style={styles.label}>Category</label>
+                    <select
+                      style={styles.input}
+                      required
+                      value={pantryForm.category}
+                      onChange={e => setPantryForm({ ...pantryForm, category: e.target.value, itemId: "" })}
+                    >
+                      {PANTRY_CATEGORIES.map(category => (
+                        <option key={category.value} value={category.value}>{category.value}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={styles.formGroup}>
                     <label style={styles.label}>Select Supply Item</label>
                     <select style={styles.input} required value={pantryForm.itemId} onChange={e => setPantryForm({ ...pantryForm, itemId: e.target.value })}>
                       <option value="">Choose supply item...</option>
@@ -586,6 +619,15 @@ export default function InventoryManagement() {
                   {/* Date range filters */}
                   <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                     <div style={{ display: "flex", flexDirection: "column" }}>
+                      <label style={styles.label}>Category</label>
+                      <select style={styles.input} value={reportCategory} onChange={e => setReportCategory(e.target.value)}>
+                        <option value="All">All Categories</option>
+                        {PANTRY_CATEGORIES.map(category => (
+                          <option key={category.value} value={category.value}>{category.value}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column" }}>
                       <label style={styles.label}>From Date</label>
                       <input style={styles.input} type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
                     </div>
@@ -606,7 +648,7 @@ export default function InventoryManagement() {
                   <table style={styles.table}>
                     <thead>
                       <tr>
-                        {["Log Date", "Supply Item", "Action Type", "Quantity", "Measurement Unit"].map(h => (
+                        {["Log Date", "Category", "Supply Item", "Action Type", "Quantity", "Measurement Unit"].map(h => (
                           <th key={h} style={styles.th}>{h}</th>
                         ))}
                         {activeRole === "Super Admin" && <th style={styles.th}>Actions</th>}
@@ -629,6 +671,7 @@ export default function InventoryManagement() {
                                 new Date(tx.created_at).toLocaleDateString()
                               )}
                             </td>
+                            <td style={styles.td}>{getPantryCategory(tx.inventory_items?.name)}</td>
                             <td style={styles.td}><strong>{tx.inventory_items?.name}</strong></td>
                             <td style={styles.td}>
                               {isEditing ? (
