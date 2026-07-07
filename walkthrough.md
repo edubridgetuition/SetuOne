@@ -1,4 +1,4 @@
-# SetuOne ERP Migration Walkthrough - Phase 6, 7 & 8 Completed
+# SetuOne ERP Migration Walkthrough - Phase 9 & 10 Completed
 
 This walkthrough summarizes the implementation, database synchronization steps, and interface upgrades.
 
@@ -6,19 +6,16 @@ This walkthrough summarizes the implementation, database synchronization steps, 
 
 ## 🚀 Accomplished Tasks
 
-### 1. Phase 6: Visitor Management
-* **Database Model**: Altered `public.visitors` with columns for visitor face photos, purposes of visit, expected walk-in types, ID card details, and auto-generated pass codes (VIS-XXXXXX).
-* **Security Logs view**: Integrated camera snapshot/file uploading controls and search queries.
+### 1. Phase 9: Notifications, Alerts & Automation Engine
+* **Rules & Channels Engine**: Dynamic channels toggles (`notification_channels`), preferences (`notification_preferences`), and catalog events (`notification_events`).
+* **Delivery Retry Queues**: Sequential processing queue (`notification_queue`) supporting priorities (Critical, High, Medium, Low) and exponential backoff dates.
+* **Unified Dispatcher**: Stateless dispatch parser (`dispatchNotification`) evaluating templates, variables, and logs.
 
-### 2. Phase 7: Attendance & Geofencing
-* **Roster shifts**: Configured morning/general/night shift details.
-* **Geofence Radar**: Real-time GPS coordinate checker flagging out-of-bounds punch attempts.
-* **Regularizations**: RLS-scoped approvals for managers.
-
-### 3. Phase 8: Reports & Analytics comparative engine
-* **Dynamic Report Generator**: Dynamic Column Toggles, saved filters drawers, and reusable templates.
-* **Consolidated KPI Summary Ribbon**: Detailed cards tracking pending orders, tickets, and attendance stats.
-* **Audit Trail & Exporter**: Direct CSV exporter.
+### 2. Phase 10: Dynamic Metadata & Enterprise Admin Console
+* **Hierarchical Dependent Masters**: Recursive parent value links (`parent_value_id`) supporting cascading lookups (Building ➡️ Floor ➡️ Room) in dynamic masters.
+* **Atomic Number Series**: Custom serial numbers formatting (prefixes, suffixes, FY resets) with live format preview widgets.
+* **System Backup & Recovery**: Custom configuration export/import console download backups.
+* **Security Change Audit Logs**: Detailed IP address, table references, and action audit trail (`audit_logs`) tracking setting changes.
 
 ---
 
