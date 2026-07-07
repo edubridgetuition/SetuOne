@@ -24,6 +24,7 @@ export default function InventoryManagement() {
     inventoryTransactions,
     loadInventoryTransactions,
     logStockTransaction,
+    deleteInventoryTransaction,
     masterDefinitionsList
   } = useApp();
 
@@ -101,6 +102,16 @@ export default function InventoryManagement() {
       setShowItemForm(false);
       setNewItem({ name: "", unit: "pcs", reorderLevel: 100 });
       loadStockBalances(selectedBranch);
+    }
+  }
+
+  async function handleDeleteTransaction(txId) {
+    if (!window.confirm("Are you sure you want to delete this transaction entry? This will rollback the item stock count.")) return;
+    const res = await deleteInventoryTransaction(txId, selectedBranch);
+    if (res.success) {
+      alert("Transaction deleted successfully and stock count rolled back!");
+    } else {
+      alert("Deletion failed: " + res.message);
     }
   }
 
@@ -509,6 +520,7 @@ export default function InventoryManagement() {
                         {["Log Date", "Supply Item", "Action Type", "Quantity", "Measurement Unit"].map(h => (
                           <th key={h} style={styles.th}>{h}</th>
                         ))}
+                        {activeRole === "Super Admin" && <th style={styles.th}>Actions</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -527,6 +539,16 @@ export default function InventoryManagement() {
                           </td>
                           <td style={styles.td}>{tx.quantity}</td>
                           <td style={styles.td}>{tx.inventory_items?.unit}</td>
+                          {activeRole === "Super Admin" && (
+                            <td style={styles.td}>
+                              <button 
+                                style={{ ...styles.secondaryBtn, color: "#ef4444", borderColor: "#fecaca", padding: "4px 8px", fontSize: "12px", background: "#fef2f2" }}
+                                onClick={() => handleDeleteTransaction(tx.id)}
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>

@@ -397,3 +397,49 @@ export async function fetchInventoryTransactions(branchId) {
     return { success: false, data: [], message: error.message, error };
   }
 }
+
+export async function deleteInventoryTransaction(txId) {
+  try {
+    // 1. Fetch transaction detail to understand the stock rollback amount
+    const { data: tx, error: txError } = await supabase
+      .from('inventory_transactions')
+      .select('*')
+      .eq('id', txId)
+      .single();
+
+    if (txError) throw txError;
+
+    // 2. Fetch current stock balance
+    const { data: current } = await supabase
+      .from('inventory_stock')
+      .select('id, closing_stock')
+      .eq('branch_id', tx.branch_id)
+      .eq('item_id', tx.item_id)
+      .maybeSingle();
+
+    // Rollback formula
+    const rollback = tx.transaction_type === 'In' ? -Number(tx.quantity) : Number(tx.quantity);
+    const newStock = current ? Number(current.closing_stock) + rollback : 0;
+
+    // 3. Update stock balance
+    if (current) {
+      const { error: stockError } = await supabase
+        .from('inventory_stock')
+        .update({ closing_stock: Math.max(0, newStock), updated_at: new Date().toISOString() })
+        .eq('id', current.id);
+      if (stockError) throw stockError;
+    }
+
+    // 4. Delete the transaction record
+    const { error: delError } = await supabase
+      .from('inventory_transactions')
+      .delete()
+      .eq('id', txId);
+
+    if (delError) throw delError;
+
+    return { success: true, message: 'Transaction deleted and stock adjusted.', error: null };
+  } catch (error) {
+    return { success: false, message: error.message || 'Failed to delete transaction.', error };
+  }
+}

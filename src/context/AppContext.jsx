@@ -47,6 +47,7 @@ import {
   fetchPayments as apiFetchPayments,
   recordPayment as apiRecordPayment,
   fetchInventoryTransactions as apiFetchInventoryTransactions,
+  deleteInventoryTransaction as apiDeleteInventoryTransaction,
 
   // Maintenance imports
   fetchChecklistTemplates as apiFetchChecklistTemplates,
@@ -586,6 +587,16 @@ export function AppProvider({ children }) {
   async function logStockTransaction(itemId, branchId, type, quantity, referenceId = null, customDate = null) {
     const targetBranch = branchId || session.branchId;
     const res = await apiLogInventoryTransaction(itemId, targetBranch, type, quantity, referenceId, customDate);
+    if (res.success) {
+      await loadStockBalances(targetBranch);
+      await loadInventoryTransactions(targetBranch);
+    }
+    return res;
+  }
+
+  async function deleteInventoryTransaction(txId, branchId) {
+    const targetBranch = branchId || session.branchId;
+    const res = await apiDeleteInventoryTransaction(txId);
     if (res.success) {
       await loadStockBalances(targetBranch);
       await loadInventoryTransactions(targetBranch);
@@ -1371,7 +1382,7 @@ export function AppProvider({ children }) {
       purchaseRequests, purchaseOrders, inventoryItems, stockBalances, grns, invoices, payments, inventoryTransactions,
       loadPurchaseRequests, createPurchaseRequest, updatePRStatus, loadQuotations, submitQuotationComparison,
       loadPurchaseOrders, loadInventoryItems, createInventoryItem, updateInventoryItem, loadStockBalances, loadInventoryTransactions,
-      logStockTransaction, stockAdjustment, loadGRNs, createGRN, approveGRN, loadInvoices, createInvoice,
+      logStockTransaction, deleteInventoryTransaction, stockAdjustment, loadGRNs, createGRN, approveGRN, loadInvoices, createInvoice,
       loadPayments, recordPayment,
 
       // Maintenance values
