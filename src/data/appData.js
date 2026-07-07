@@ -27,7 +27,7 @@ export const demoUsers = {
 };
 
 export const rolePermissions = {
-  "Super Admin": ["dashboard","checklist","tickets","ppm","assets","inventory","itasset","mobile","sim","furniture","hvac","vendors","visitors","housekeeping","security","attendance","purchase","workorders","energy","documents","reports","roles","automation","admin_console"],
+  "Super Admin": ["dashboard","checklist","tickets","ppm","assets","inventory","itasset","mobile","sim","furniture","hvac","vendors","visitors","housekeeping","security","attendance","purchase","workorders","energy","documents","reports","roles","automation","admin_console","permission_manager"],
   "Admin Manager": [ "dashboard","checklist","tickets","ppm","assets","inventory","itasset","mobile","sim","furniture","hvac","vendors","visitors","housekeeping","security","attendance","purchase","workorders","energy","documents","reports","automation","admin_console"],
   Vendor: ["dashboard","tickets","ppm","workorders","documents"],
   Employee: ["dashboard","tickets","visitors","purchase"],

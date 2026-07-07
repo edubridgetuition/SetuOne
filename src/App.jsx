@@ -1,3 +1,4 @@
+import PermissionManager from "./pages/PermissionManager";
 import { AppProvider } from "./context/AppContext";
 import { useApp } from "./context/appContextCore";
 import AssetManagement from "./pages/AssetManagement";
@@ -26,6 +27,7 @@ function AppContent() {
       case "dashboard": return <Dashboard />;
       case "tickets": return <Tickets />;
       case "checklist": return <Checklist />;
+      case "permission_manager": return <PermissionManager />;
       case "assets": return <AssetManagement />;
       case "purchase": return <PurchaseRequisition />;
       case "inventory": return <InventoryManagement />;

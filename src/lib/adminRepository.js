@@ -558,3 +558,62 @@ export async function saveRecurringJob(jobData, companyId) {
     return { success: false, data: null, message: error.message, error };
   }
 }
+
+// 6. Dynamic RBAC Role Permissions Matrix
+export async function fetchSystemRoles() {
+  try {
+    const { data, error } = await supabase
+      .from('roles')
+      .select('*')
+      .order('name', { ascending: true });
+    if (error) throw error;
+    return { success: true, data: data || [], error: null };
+  } catch (error) {
+    return { success: false, data: [], error };
+  }
+}
+
+export async function fetchCompanyRolePermissions(companyId) {
+  try {
+    const { data, error } = await supabase
+      .from('role_permissions')
+      .select(`
+        *,
+        roles (id, name)
+      `)
+      .eq('company_id', companyId);
+    if (error) throw error;
+    return { success: true, data: data || [], message: 'Role permissions loaded.', error: null };
+  } catch (error) {
+    return { success: false, data: [], message: error.message, error };
+  }
+}
+
+export async function saveRolePermissions(companyId, roleId, permissionKeys) {
+  try {
+    // Delete existing permissions for this role and company
+    const { error: delError } = await supabase
+      .from('role_permissions')
+      .delete()
+      .eq('company_id', companyId)
+      .eq('role_id', roleId);
+    if (delError) throw delError;
+
+    // Insert new permissions if any
+    if (permissionKeys.length > 0) {
+      const payloads = permissionKeys.map(key => ({
+        company_id: companyId,
+        role_id: roleId,
+        permission_key: key,
+        is_granted: true
+      }));
+      const { error: insError } = await supabase
+        .from('role_permissions')
+        .insert(payloads);
+      if (insError) throw insError;
+    }
+    return { success: true, message: 'Permissions saved successfully.', error: null };
+  } catch (error) {
+    return { success: false, message: error.message, error };
+  }
+}

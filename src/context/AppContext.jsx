@@ -133,6 +133,9 @@ import {
   saveNotificationTemplate as apiSaveNotificationTemplate,
   fetchRecurringJobs as apiFetchRecurringJobs,
   saveRecurringJob as apiSaveRecurringJob,
+  fetchSystemRoles as apiFetchSystemRoles,
+  fetchCompanyRolePermissions as apiFetchCompanyRolePermissions,
+  saveRolePermissions as apiSaveRolePermissions,
 
   // Dashboard Builder imports
   fetchAvailableWidgets as apiFetchAvailableWidgets,
@@ -208,6 +211,8 @@ export function AppProvider({ children }) {
   const [auditLogsList, setAuditLogsList] = useState([]);
   const [notificationTemplatesList, setNotificationTemplatesList] = useState([]);
   const [recurringSchedulerJobsList, setRecurringSchedulerJobsList] = useState([]);
+  const [systemRolesList, setSystemRolesList] = useState([]);
+  const [dynamicRolePermissionsList, setDynamicRolePermissionsList] = useState([]);
 
   // Dashboard Builder States
   const [dashboardWidgetsList, setDashboardWidgetsList] = useState([]);
@@ -289,7 +294,20 @@ export function AppProvider({ children }) {
     setActiveView("dashboard");
   }
 
-  function canAccess(view) {
+    function canAccess(view) {
+    const saved = localStorage.getItem("setuone_company_permissions");
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const companyKey = activeTenant === "orion" ? "orion" : "greenfield";
+        const rolePerms = parsed?.[companyKey]?.[activeRole];
+        if (rolePerms) {
+          return rolePerms.includes(view);
+        }
+      } catch (e) {
+        console.error("Permission check error:", e);
+      }
+    }
     return (rolePermissions[activeRole] || []).includes(view);
   }
 

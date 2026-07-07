@@ -85,4 +85,12 @@ export const menuBar = [
       { key: "admin_console", label: "Admin Console" }
     ],
   },
+    {
+    key: "admin_setup",
+    label: "Admin Setup",
+    subItems: [
+      { key: "permission_manager", label: "Permission Manager" },
+      { key: "roles", label: "User Roles" },
+    ],
+  }
 ];
