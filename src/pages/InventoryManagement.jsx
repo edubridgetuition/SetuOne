@@ -228,37 +228,47 @@ export default function InventoryManagement() {
 
   const getPantryStats = (itemName) => {
     const item = inventoryItems.find(i => i.name === itemName);
-    if (!item) return { daily: 0, monthly: 0, rangeTotal: 0, unit: "" };
+    if (!item) return { dailyIn: 0, lastMonthOut: 0, currentMonthOut: 0, unit: "" };
 
-    const txs = inventoryTransactions.filter(t => t.item_id === item.id && t.transaction_type === "Out");
+    const txs = inventoryTransactions.filter(t => t.item_id === item.id);
 
-    const todayStr = new Date().toDateString();
-    const filterEndDate = new Date(endDate);
-    const filterMonth = filterEndDate.getMonth();
-    const filterYear = filterEndDate.getFullYear();
+    const now = new Date();
+    const todayStr = now.toDateString();
+    
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
 
-    const daily = txs
-      .filter(t => new Date(t.created_at).toDateString() === todayStr)
+    const lastMonthDate = new Date(currentYear, currentMonth - 1, 1);
+    const lastMonth = lastMonthDate.getMonth();
+    const lastMonthYear = lastMonthDate.getFullYear();
+
+    // 1. Today's INWARD (transaction_type === "In") entries
+    const dailyIn = txs
+      .filter(t => t.transaction_type === "In" && new Date(t.created_at).toDateString() === todayStr)
       .reduce((sum, t) => sum + Number(t.quantity), 0);
 
-    const monthly = txs
+    // 2. Current Month's OUTWARD (transaction_type === "Out") entries
+    const currentMonthOut = txs
       .filter(t => {
+        if (t.transaction_type !== "Out") return false;
         const d = new Date(t.created_at);
-        return d.getMonth() === filterMonth && d.getFullYear() === filterYear;
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
       })
       .reduce((sum, t) => sum + Number(t.quantity), 0);
 
-    const rangeTotal = txs
+    // 3. Last Month's OUTWARD (transaction_type === "Out") entries
+    const lastMonthOut = txs
       .filter(t => {
-        const tDate = new Date(t.created_at).toISOString().split("T")[0];
-        return tDate >= startDate && tDate <= endDate;
+        if (t.transaction_type !== "Out") return false;
+        const d = new Date(t.created_at);
+        return d.getMonth() === lastMonth && d.getFullYear() === lastMonthYear;
       })
       .reduce((sum, t) => sum + Number(t.quantity), 0);
 
     return {
-      daily,
-      monthly,
-      rangeTotal,
+      dailyIn,
+      lastMonthOut,
+      currentMonthOut,
       unit: item.unit
     };
   };
@@ -482,10 +492,10 @@ export default function InventoryManagement() {
                     <div key={name} style={{ ...styles.descBox, marginBottom: 0 }}>
                       <div style={styles.muted}>{name}</div>
                       <div style={{ fontSize: "1.4rem", fontWeight: 700, margin: "8px 0", color: "#0038a8" }}>
-                        {stat.rangeTotal} <span style={{ fontSize: "0.8rem", color: "#64748b" }}>{stat.unit}</span>
+                        {stat.currentMonthOut} <span style={{ fontSize: "0.8rem", color: "#64748b" }}>{stat.unit}</span>
                       </div>
                       <div style={{ fontSize: "0.78rem", color: "#64748b" }}>
-                        Today: <strong>{stat.daily}</strong> | Month: <strong>{stat.monthly}</strong>
+                        Today: <strong>{stat.dailyIn}</strong> | Month: <strong>{stat.lastMonthOut}</strong>
                       </div>
                     </div>
                   );
