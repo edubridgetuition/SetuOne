@@ -25,6 +25,7 @@ export default function InventoryManagement() {
     loadInventoryTransactions,
     logStockTransaction,
     deleteInventoryTransaction,
+    updateInventoryTransaction,
     masterDefinitionsList
   } = useApp();
 
@@ -55,6 +56,9 @@ export default function InventoryManagement() {
     date: new Date().toISOString().split("T")[0],
     remarks: ""
   });
+
+  const [editingTxId, setEditingTxId] = useState(null);
+  const [editForm, setEditForm] = useState({ quantity: 0, transaction_type: "In", created_at: "" });
 
   // Report Date Range Filter States
   const [startDate, setStartDate] = useState(
@@ -112,6 +116,25 @@ export default function InventoryManagement() {
       alert("Transaction deleted successfully and stock count rolled back!");
     } else {
       alert("Deletion failed: " + res.message);
+    }
+  }
+
+  function handleStartEdit(tx) {
+    setEditingTxId(tx.id);
+    setEditForm({
+      quantity: tx.quantity,
+      transaction_type: tx.transaction_type,
+      created_at: new Date(tx.created_at).toISOString().split("T")[0]
+    });
+  }
+
+  async function handleSaveEdit(txId) {
+    const res = await updateInventoryTransaction(txId, editForm, selectedBranch);
+    if (res.success) {
+      alert("Transaction updated successfully and stock adjusted!");
+      setEditingTxId(null);
+    } else {
+      alert("Update failed: " + res.message);
     }
   }
 
@@ -524,33 +547,94 @@ export default function InventoryManagement() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredPantryTransactions.map(tx => (
-                        <tr key={tx.id} style={styles.tr}>
-                          <td style={styles.td}>{new Date(tx.created_at).toLocaleDateString()}</td>
-                          <td style={styles.td}><strong>{tx.inventory_items?.name}</strong></td>
-                          <td style={styles.td}>
-                            <span style={{ 
-                              ...styles.badge, 
-                              background: tx.transaction_type === "In" ? "#22c55e22" : "#3b82f622", 
-                              color: tx.transaction_type === "In" ? "#22c55e" : "#3b82f6" 
-                            }}>
-                              {tx.transaction_type === "In" ? "Refill Arrived" : "Consumed / Returned"}
-                            </span>
-                          </td>
-                          <td style={styles.td}>{tx.quantity}</td>
-                          <td style={styles.td}>{tx.inventory_items?.unit}</td>
-                          {activeRole === "Super Admin" && (
+                      {filteredPantryTransactions.map(tx => {
+                        const isEditing = editingTxId === tx.id;
+                        return (
+                          <tr key={tx.id} style={styles.tr}>
                             <td style={styles.td}>
-                              <button 
-                                style={{ ...styles.secondaryBtn, color: "#ef4444", borderColor: "#fecaca", padding: "4px 8px", fontSize: "12px", background: "#fef2f2" }}
-                                onClick={() => handleDeleteTransaction(tx.id)}
-                              >
-                                Delete
-                              </button>
+                              {isEditing ? (
+                                <input 
+                                  type="date" 
+                                  style={{ ...styles.input, padding: "5px", fontSize: "12px", width: "120px" }} 
+                                  value={editForm.created_at} 
+                                  onChange={e => setEditForm({ ...editForm, created_at: e.target.value })} 
+                                />
+                              ) : (
+                                new Date(tx.created_at).toLocaleDateString()
+                              )}
                             </td>
-                          )}
-                        </tr>
-                      ))}
+                            <td style={styles.td}><strong>{tx.inventory_items?.name}</strong></td>
+                            <td style={styles.td}>
+                              {isEditing ? (
+                                <select 
+                                  style={{ ...styles.input, padding: "5px", fontSize: "12px", width: "160px" }} 
+                                  value={editForm.transaction_type} 
+                                  onChange={e => setEditForm({ ...editForm, transaction_type: e.target.value })}
+                                >
+                                  <option value="In">Refill Arrived</option>
+                                  <option value="Out">Consumed / Returned</option>
+                                </select>
+                              ) : (
+                                <span style={{ 
+                                  ...styles.badge, 
+                                  background: tx.transaction_type === "In" ? "#22c55e22" : "#3b82f622", 
+                                  color: tx.transaction_type === "In" ? "#22c55e" : "#3b82f6" 
+                                }}>
+                                  {tx.transaction_type === "In" ? "Refill Arrived" : "Consumed / Returned"}
+                                </span>
+                              )}
+                            </td>
+                            <td style={styles.td}>
+                              {isEditing ? (
+                                <input 
+                                  type="number" 
+                                  style={{ ...styles.input, padding: "5px", fontSize: "12px", width: "80px" }} 
+                                  value={editForm.quantity} 
+                                  onChange={e => setEditForm({ ...editForm, quantity: Number(e.target.value) })} 
+                                />
+                              ) : (
+                                tx.quantity
+                              )}
+                            </td>
+                            <td style={styles.td}>{tx.inventory_items?.unit}</td>
+                            {activeRole === "Super Admin" && (
+                              <td style={styles.td}>
+                                {isEditing ? (
+                                  <div style={{ display: "flex", gap: "5px" }}>
+                                    <button 
+                                      style={{ ...styles.primaryBtn, padding: "4px 8px", fontSize: "12px", background: "#22c55e", border: "none" }}
+                                      onClick={() => handleSaveEdit(tx.id)}
+                                    >
+                                      Save
+                                    </button>
+                                    <button 
+                                      style={{ ...styles.secondaryBtn, padding: "4px 8px", fontSize: "12px" }}
+                                      onClick={() => setEditingTxId(null)}
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div style={{ display: "flex", gap: "5px" }}>
+                                    <button 
+                                      style={{ ...styles.secondaryBtn, color: "#3b82f6", borderColor: "#bfdbfe", padding: "4px 8px", fontSize: "12px", background: "#eff6ff" }}
+                                      onClick={() => handleStartEdit(tx)}
+                                    >
+                                      Edit
+                                    </button>
+                                    <button 
+                                      style={{ ...styles.secondaryBtn, color: "#ef4444", borderColor: "#fecaca", padding: "4px 8px", fontSize: "12px", background: "#fef2f2" }}
+                                      onClick={() => handleDeleteTransaction(tx.id)}
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                   {filteredPantryTransactions.length === 0 && (

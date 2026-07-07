@@ -443,3 +443,66 @@ export async function deleteInventoryTransaction(txId) {
     return { success: false, message: error.message || 'Failed to delete transaction.', error };
   }
 }
+
+export async function updateInventoryTransaction(txId, updates) {
+  try {
+    // 1. Fetch original transaction detail
+    const { data: tx, error: txError } = await supabase
+      .from('inventory_transactions')
+      .select('*')
+      .eq('id', txId)
+      .single();
+
+    if (txError) throw txError;
+
+    // 2. Fetch current stock balance
+    const { data: current } = await supabase
+      .from('inventory_stock')
+      .select('id, closing_stock')
+      .eq('branch_id', tx.branch_id)
+      .eq('item_id', tx.item_id)
+      .maybeSingle();
+
+    // 3. Calculate stock adjustments
+    const originalType = tx.transaction_type;
+    const originalQty = Number(tx.quantity);
+    
+    const newType = updates.transaction_type;
+    const newQty = Number(updates.quantity);
+
+    // Rollback original transaction
+    const rollback = originalType === 'In' ? -originalQty : originalQty;
+    // Apply new transaction
+    const apply = newType === 'In' ? newQty : -newQty;
+
+    const netChange = rollback + apply;
+    const newStock = current ? Number(current.closing_stock) + netChange : Math.max(0, apply);
+
+    // 4. Update stock balance
+    if (current) {
+      const { error: stockError } = await supabase
+        .from('inventory_stock')
+        .update({ closing_stock: Math.max(0, newStock), updated_at: new Date().toISOString() })
+        .eq('id', current.id);
+      if (stockError) throw stockError;
+    }
+
+    // 5. Update the transaction record
+    const { data, error: updateError } = await supabase
+      .from('inventory_transactions')
+      .update({
+        quantity: newQty,
+        transaction_type: newType,
+        created_at: new Date(updates.created_at).toISOString()
+      })
+      .eq('id', txId)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
+
+    return { success: true, data, message: 'Transaction updated and stock adjusted.', error: null };
+  } catch (error) {
+    return { success: false, data: null, message: error.message || 'Failed to update transaction.', error };
+  }
+}
