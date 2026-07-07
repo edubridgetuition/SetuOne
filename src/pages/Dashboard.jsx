@@ -12,6 +12,7 @@ export default function Dashboard() {
   const {
     session,
     setActiveView,
+    activeRole,
     dashboardWidgetsList,
     activeDashboardLayout,
     loadDashboardWidgets,
