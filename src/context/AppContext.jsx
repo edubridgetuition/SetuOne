@@ -132,7 +132,15 @@ import {
   fetchNotificationTemplates as apiFetchNotificationTemplates,
   saveNotificationTemplate as apiSaveNotificationTemplate,
   fetchRecurringJobs as apiFetchRecurringJobs,
-  saveRecurringJob as apiSaveRecurringJob
+  saveRecurringJob as apiSaveRecurringJob,
+
+  // Dashboard Builder imports
+  fetchAvailableWidgets as apiFetchAvailableWidgets,
+  fetchUserDashboardLayout as apiFetchUserDashboardLayout,
+  saveDashboardLayout as apiSaveDashboardLayout,
+  resetDashboardLayout as apiResetDashboardLayout,
+  duplicateDashboard as apiDuplicateDashboard,
+  fetchWidgetData as apiFetchWidgetData
 } from "../lib";
 
 export function AppProvider({ children }) {
@@ -200,6 +208,10 @@ export function AppProvider({ children }) {
   const [auditLogsList, setAuditLogsList] = useState([]);
   const [notificationTemplatesList, setNotificationTemplatesList] = useState([]);
   const [recurringSchedulerJobsList, setRecurringSchedulerJobsList] = useState([]);
+
+  // Dashboard Builder States
+  const [dashboardWidgetsList, setDashboardWidgetsList] = useState([]);
+  const [activeDashboardLayout, setActiveDashboardLayout] = useState(null);
   
   const [loading, setLoading] = useState(true);
 
@@ -245,6 +257,7 @@ export function AppProvider({ children }) {
         name: profile.full_name,
         companyId: profile.company_id,
         branchId: profile.branch_id,
+        departmentId: profile.department_id,
         tenantId: profile.companies?.tenant_id
       });
       setActiveRole(profile.roles?.name || "Employee");
@@ -1250,6 +1263,71 @@ export function AppProvider({ children }) {
     return res;
   }
 
+  // DASHBOARD BUILDER API PIPELINE
+  async function loadDashboardWidgets() {
+    const res = await apiFetchAvailableWidgets();
+    if (res.success) {
+      setDashboardWidgetsList(res.data);
+    }
+    return res;
+  }
+
+  async function loadUserDashboardLayout() {
+    if (!session) return null;
+    const res = await apiFetchUserDashboardLayout(
+      session.companyId, 
+      activeRole, 
+      session.departmentId, 
+      session.id
+    );
+    if (res.success) {
+      setActiveDashboardLayout(res.data);
+    }
+    return res;
+  }
+
+  async function saveUserDashboardLayout(layouts) {
+    if (!session) return null;
+    const res = await apiSaveDashboardLayout(
+      session.companyId, 
+      activeRole, 
+      session.departmentId, 
+      session.id, 
+      layouts
+    );
+    if (res.success) {
+      await loadUserDashboardLayout();
+      await apiWriteAuditLog({
+        module: 'Dashboard Builder',
+        tableName: 'public.dashboard_layouts',
+        recordId: res.data.id,
+        action: 'UPDATE',
+        newData: res.data,
+        changedBy: session.id
+      }, session.companyId);
+    }
+    return res;
+  }
+
+  async function resetUserDashboardLayout() {
+    if (!activeDashboardLayout) return null;
+    const res = await apiResetDashboardLayout(activeDashboardLayout.id);
+    if (res.success) {
+      await loadUserDashboardLayout();
+    }
+    return res;
+  }
+
+  async function duplicateDashboardLayout(targetRoleName) {
+    if (!activeDashboardLayout || !session) return null;
+    return await apiDuplicateDashboard(activeDashboardLayout.id, targetRoleName, session.companyId);
+  }
+
+  async function fetchWidgetDataPayload(widgetKey) {
+    if (!session) return null;
+    return await apiFetchWidgetData(widgetKey, session.companyId);
+  }
+
   const tenantData = useMemo(() => tenants[activeTenant], [activeTenant]);
 
   if (loading) return (
@@ -1310,7 +1388,11 @@ export function AppProvider({ children }) {
 
       // Admin Settings values
       systemSettings, brandingSettings, masterDefinitionsList, numberSeriesList, approvalWorkflowsList, featureFlagsList, holidayCalendarList, workingDaysData, customFieldDefinitionsList, auditLogsList, notificationTemplatesList, recurringSchedulerJobsList,
-      loadSystemSettings, saveSystemSettings, loadBrandingSettings, saveBrandingSettings, loadMasterDefinitions, createMasterDefinition, createMasterValue, loadNumberSeries, saveNumberSeries, loadApprovalWorkflows, saveApprovalWorkflow, loadFeatureFlags, toggleFeatureFlag, loadHolidayCalendar, createHoliday, loadWorkingDays, saveWorkingDays, loadCustomFieldDefinitions, saveCustomField, loadAuditLogs, loadNotificationTemplates, saveNotificationTemplate, loadRecurringSchedulerJobs, saveRecurringSchedulerJob
+      loadSystemSettings, saveSystemSettings, loadBrandingSettings, saveBrandingSettings, loadMasterDefinitions, createMasterDefinition, createMasterValue, loadNumberSeries, saveNumberSeries, loadApprovalWorkflows, saveApprovalWorkflow, loadFeatureFlags, toggleFeatureFlag, loadHolidayCalendar, createHoliday, loadWorkingDays, saveWorkingDays, loadCustomFieldDefinitions, saveCustomField, loadAuditLogs, loadNotificationTemplates, saveNotificationTemplate, loadRecurringSchedulerJobs, saveRecurringSchedulerJob,
+
+      // Dashboard Builder values
+      dashboardWidgetsList, activeDashboardLayout,
+      loadDashboardWidgets, loadUserDashboardLayout, saveUserDashboardLayout, resetUserDashboardLayout, duplicateDashboardLayout, fetchWidgetDataPayload
     }}>
       {children}
     </AppContext.Provider>

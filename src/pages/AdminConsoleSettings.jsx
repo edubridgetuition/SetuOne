@@ -39,7 +39,12 @@ export default function AdminConsoleSettings() {
     saveNotificationTemplate,
     recurringSchedulerJobsList,
     loadRecurringSchedulerJobs,
-    saveRecurringSchedulerJob
+    saveRecurringSchedulerJob,
+
+    // Dashboard Builder states & actions
+    dashboardWidgetsList,
+    loadDashboardWidgets,
+    duplicateDashboardLayout
   } = useApp();
 
   const [activeTab, setActiveTab] = useState("Company");
@@ -56,6 +61,9 @@ export default function AdminConsoleSettings() {
   const [customFieldForm, setCustomFieldForm] = useState({ moduleName: "Ticket", fieldName: "", fieldLabel: "", fieldType: "Text", dropdownText: "", isRequired: false, minLen: 0, maxLen: 100 });
   const [notifTempForm, setNotifTempForm] = useState({ templateKey: "", channel: "EMAIL", subject: "", bodyText: "", variablesText: "" });
   const [recurringJobForm, setRecurringJobForm] = useState({ jobName: "", jobType: "Report Delivery", cronExpression: "0 0 * * 1" });
+  
+  // Dashboard Templates clone form
+  const [cloneForm, setCloneForm] = useState({ targetRole: "Admin Manager" });
 
   useEffect(() => {
     loadSystemSettings();
@@ -70,6 +78,7 @@ export default function AdminConsoleSettings() {
     loadAuditLogs();
     loadNotificationTemplates();
     loadRecurringSchedulerJobs();
+    loadDashboardWidgets();
   }, []);
 
   // Update form inputs when data loads
@@ -174,6 +183,16 @@ export default function AdminConsoleSettings() {
     setRecurringJobForm({ jobName: "", jobType: "Report Delivery", cronExpression: "0 0 * * 1" });
   }
 
+  async function handleCloneDashboard(e) {
+    e.preventDefault();
+    const res = await duplicateDashboardLayout(cloneForm.targetRole);
+    if (res && res.success) {
+      alert(`Dashboard layout successfully cloned to target role: ${cloneForm.targetRole}`);
+    } else {
+      alert("Error duplicating dashboard template.");
+    }
+  }
+
   // Backup configuration export
   function exportSystemConfig() {
     const config = {
@@ -214,6 +233,7 @@ export default function AdminConsoleSettings() {
               { key: "Custom Fields", label: "Metadata & Custom Fields" },
               { key: "Templates", label: "Alert Templates" },
               { key: "Jobs", label: "Schedulers" },
+              { key: "Dashboards", label: "Dashboard Templates" },
               { key: "Logs", label: "Audit Trails" }
             ].map(tab => (
               <button
@@ -610,7 +630,48 @@ export default function AdminConsoleSettings() {
             </div>
           )}
 
-          {/* TAB 8: CHANGE AUDIT TRAIL LOGS */}
+          {/* TAB 8: DASHBOARD TEMPLATES */}
+          {activeTab === "Dashboards" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+              <div style={styles.descBox}>
+                <div style={styles.muted} style={{ marginBottom: "12px" }}>Available Dynamic Widgets Catalog</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
+                  {dashboardWidgetsList.map(w => (
+                    <div key={w.id} style={{ background: "#fff", border: "1px solid #cbd5e1", padding: "14px", borderRadius: "4px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <strong style={{ fontSize: "0.82rem" }}>{w.widget_name}</strong>
+                        <span style={{ fontSize: "0.65rem", padding: "3px 8px", background: "#f1f5f9", borderRadius: "20px", fontWeight: "bold" }}>
+                          {w.widget_category}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "6px" }}>Key: <code>{w.widget_key}</code></div>
+                      <div style={{ fontSize: "0.72rem", marginTop: "4px" }}>Refresh Interval: <strong>{w.refresh_interval_seconds}s</strong></div>
+                      {w.is_required && <div style={{ fontSize: "0.68rem", color: "#ef4444", marginTop: "4px" }}>⚠️ Locked (Cannot be removed)</div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Duplicate/Clone layout form */}
+              <form onSubmit={handleCloneDashboard} style={styles.form}>
+                <div style={styles.muted}>Clone Layout Template to another role</div>
+                <div style={{ display: "flex", gap: "16px", alignItems: "flex-end" }}>
+                  <div style={{ ...styles.formGroup, flex: 1 }}>
+                    <label style={styles.label}>Target Role</label>
+                    <select style={styles.input} value={cloneForm.targetRole} onChange={e => setCloneForm({ targetRole: e.target.value })}>
+                      <option value="Admin Manager">Admin Manager</option>
+                      <option value="Vendor">Vendor</option>
+                      <option value="Security Supervisor">Security Supervisor</option>
+                      <option value="Housekeeping Supervisor">Housekeeping Supervisor</option>
+                    </select>
+                  </div>
+                  <button style={styles.primaryBtn} type="submit">Clone Layout Template</button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* TAB 9: CHANGE AUDIT TRAIL LOGS */}
           {activeTab === "Logs" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
               <div style={styles.panelTitle} style={{ fontSize: "0.85rem" }}>Database Configuration Audit Logs</div>
