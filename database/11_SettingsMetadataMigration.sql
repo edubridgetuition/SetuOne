@@ -1,5 +1,6 @@
 -- SetuOne Database Schema - Dynamic Metadata & Enterprise Admin Console Migration (11_SettingsMetadataMigration.sql)
 -- Target Platform: Supabase / PostgreSQL SQL Editor
+-- Description: Idempotent script with dropped policy pre-checks to allow re-runs.
 
 -- 1. System settings & financial controls
 CREATE TABLE IF NOT EXISTS public.system_settings (
@@ -232,6 +233,36 @@ ALTER TABLE public.custom_field_definitions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notification_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.recurring_scheduler_jobs ENABLE ROW LEVEL SECURITY;
+
+-- Clean existing policies to prevent collision conflicts on re-runs
+DROP POLICY IF EXISTS "Allow public select system_settings" ON public.system_settings;
+DROP POLICY IF EXISTS "Allow public select branding_settings" ON public.branding_settings;
+DROP POLICY IF EXISTS "Allow public select master_definitions" ON public.master_definitions;
+DROP POLICY IF EXISTS "Allow public select master_values" ON public.master_values;
+DROP POLICY IF EXISTS "Allow public select number_series" ON public.number_series;
+DROP POLICY IF EXISTS "Allow public select approval_workflows" ON public.approval_workflows;
+DROP POLICY IF EXISTS "Allow public select approval_levels" ON public.approval_levels;
+DROP POLICY IF EXISTS "Allow public select feature_flags" ON public.feature_flags;
+DROP POLICY IF EXISTS "Allow public select holiday_calendar" ON public.holiday_calendar;
+DROP POLICY IF EXISTS "Allow public select working_days" ON public.working_days;
+DROP POLICY IF EXISTS "Allow public select custom_field_definitions" ON public.custom_field_definitions;
+DROP POLICY IF EXISTS "Allow public select notification_templates" ON public.notification_templates;
+DROP POLICY IF EXISTS "Allow public select recurring_scheduler_jobs" ON public.recurring_scheduler_jobs;
+
+DROP POLICY IF EXISTS "Allow write access for all admin actions system_settings" ON public.system_settings;
+DROP POLICY IF EXISTS "Allow write access for all admin actions branding_settings" ON public.branding_settings;
+DROP POLICY IF EXISTS "Allow write access for all admin actions master_definitions" ON public.master_definitions;
+DROP POLICY IF EXISTS "Allow write access for all admin actions master_values" ON public.master_values;
+DROP POLICY IF EXISTS "Allow write access for all admin actions number_series" ON public.number_series;
+DROP POLICY IF EXISTS "Allow write access for all admin actions approval_workflows" ON public.approval_workflows;
+DROP POLICY IF EXISTS "Allow write access for all admin actions approval_levels" ON public.approval_levels;
+DROP POLICY IF EXISTS "Allow write access for all admin actions feature_flags" ON public.feature_flags;
+DROP POLICY IF EXISTS "Allow write access for all admin actions holiday_calendar" ON public.holiday_calendar;
+DROP POLICY IF EXISTS "Allow write access for all admin actions working_days" ON public.working_days;
+DROP POLICY IF EXISTS "Allow write access for all admin actions custom_field_definitions" ON public.custom_field_definitions;
+DROP POLICY IF EXISTS "Allow write access for all admin actions audit_logs" ON public.audit_logs;
+DROP POLICY IF EXISTS "Allow write access for all admin actions notification_templates" ON public.notification_templates;
+DROP POLICY IF EXISTS "Allow write access for all admin actions recurring_scheduler_jobs" ON public.recurring_scheduler_jobs;
 
 -- Allow all users to read settings and configurations
 CREATE POLICY "Allow public select system_settings" ON public.system_settings FOR SELECT USING (TRUE);
