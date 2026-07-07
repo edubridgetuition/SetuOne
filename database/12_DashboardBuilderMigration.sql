@@ -42,7 +42,7 @@ INSERT INTO public.dashboard_widgets (widget_key, widget_name, widget_category, 
 CREATE TABLE public.dashboard_layouts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
-    role_name TEXT REFERENCES public.roles(name) ON DELETE CASCADE, -- layout per role
+    role_name TEXT, -- layout per role (removed foreign key constraint to prevent reference errors)
     department_id UUID REFERENCES public.master_values(id) ON DELETE SET NULL, -- layout per department
     user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE, -- layout overrides per user
     desktop_layout JSONB NOT NULL DEFAULT '[]'::jsonb, -- array of { widget_key, x, y, w, h }
