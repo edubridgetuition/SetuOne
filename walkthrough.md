@@ -1,4 +1,4 @@
-# SetuOne ERP Migration Walkthrough - Phase 9 & 10 Completed
+# SetuOne ERP Migration Walkthrough - Phase 9, 10 & 11 Completed
 
 This walkthrough summarizes the implementation, database synchronization steps, and interface upgrades.
 
@@ -16,6 +16,11 @@ This walkthrough summarizes the implementation, database synchronization steps, 
 * **Atomic Number Series**: Custom serial numbers formatting (prefixes, suffixes, FY resets) with live format preview widgets.
 * **System Backup & Recovery**: Custom configuration export/import console download backups.
 * **Security Change Audit Logs**: Detailed IP address, table references, and action audit trail (`audit_logs`) tracking setting changes.
+
+### 3. Phase 11: Dynamic Dashboard Builder
+* **Responsive Layouts**: Responsive CSS-grid drag-and-drop workspace supporting customizable width/height scaling.
+* **Cascading Templates**: Persist layouts via a cascading fallback chain: Company Default ➡️ Role Default ➡️ Department Default ➡️ User Override.
+* **Widgets Toolbox**: Drawer grouped by categories containing refresh intervals and locks parameters.
 
 ---
 
