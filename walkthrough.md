@@ -1,31 +1,29 @@
-# SetuOne ERP Migration Walkthrough - Phase 9, 10 & 11 Completed
+# SetuOne ERP Migration Walkthrough - Dynamic Dropdowns Integration
 
-This walkthrough summarizes the implementation, database synchronization steps, and interface upgrades.
+This walkthrough documents the updates made to connect frontend dropdown selections to the Dynamic Masters registry dynamically.
 
 ---
 
 ## 🚀 Accomplished Tasks
 
-### 1. Phase 9: Notifications, Alerts & Automation Engine
-* **Rules & Channels Engine**: Dynamic channels toggles (`notification_channels`), preferences (`notification_preferences`), and catalog events (`notification_events`).
-* **Delivery Retry Queues**: Sequential processing queue (`notification_queue`) supporting priorities (Critical, High, Medium, Low) and exponential backoff dates.
-* **Unified Dispatcher**: Stateless dispatch parser (`dispatchNotification`) evaluating templates, variables, and logs.
+### 1. Database Seed Migration (`database/13_DynamicMastersSeedMigration.sql`)
+* Created five core dynamic master definitions:
+  - `PANTRY_ITEM_NAMES`: Configures items allowed to render in Pantry tracker.
+  - `TICKET_CATEGORIES`: Configures ticket complaint types.
+  - `VISITOR_PURPOSES`: Configures visitor check-in purposes.
+  - `VEHICLE_TYPES`: Configures vehicle types.
+  - `VISITOR_ID_TYPES`: Configures visitor ID proofs.
+* Seeded default lookup values mapping to these keys to maintain seamless fallbacks.
 
-### 2. Phase 10: Dynamic Metadata & Enterprise Admin Console
-* **Hierarchical Dependent Masters**: Recursive parent value links (`parent_value_id`) supporting cascading lookups (Building ➡️ Floor ➡️ Room) in dynamic masters.
-* **Atomic Number Series**: Custom serial numbers formatting (prefixes, suffixes, FY resets) with live format preview widgets.
-* **System Backup & Recovery**: Custom configuration export/import console download backups.
-* **Security Change Audit Logs**: Detailed IP address, table references, and action audit trail (`audit_logs`) tracking setting changes.
-
-### 3. Phase 11: Dynamic Dashboard Builder
-* **Responsive Layouts**: Responsive CSS-grid drag-and-drop workspace supporting customizable width/height scaling.
-* **Cascading Templates**: Persist layouts via a cascading fallback chain: Company Default ➡️ Role Default ➡️ Department Default ➡️ User Override.
-* **Widgets Toolbox**: Drawer grouped by categories containing refresh intervals and locks parameters.
+### 2. Connected Page Components
+* **Pantry & Coffee (`InventoryManagement.jsx`)**: Dropdown and consumption cards are now dynamically populated from the `PANTRY_ITEM_NAMES` registry.
+* **Complaint Tickets (`Tickets.jsx`)**: Categories dropdown loads dynamically from the `TICKET_CATEGORIES` definition registry.
+* **Visitor Management (`VisitorManagement.jsx`)**: Purposes, vehicle types, and ID proof types dropdown selections load dynamically from their respective registries.
+* **Admin Settings Console (`AdminConsoleSettings.jsx`)**: Added auto-slugifying logic for `masterKey` so new master categories created in the UI are formatted correctly (e.g. `Pantry Item Names` ➡️ `PANTRY_ITEM_NAMES`).
 
 ---
 
 ## 📋 Verification Checks Passed
 
 * **Vite Production Bundler**: Local `npm run build` runs with zero syntax warnings.
-* **Supabase SQL Executions**: Both visitor alterations and attendance/report schemas compiled successfully in the database console.
-* **Authentication**: Demo roles load matched panels correctly.
+* **Supabase SQL Executions**: Seed SQL migration compiled successfully in the database console.
