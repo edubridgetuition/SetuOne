@@ -23,7 +23,8 @@ export default function InventoryManagement() {
     recordPayment,
     inventoryTransactions,
     loadInventoryTransactions,
-    logStockTransaction
+    logStockTransaction,
+    masterDefinitionsList
   } = useApp();
 
   const [selectedBranch, setSelectedBranch] = useState("");
@@ -180,8 +181,13 @@ export default function InventoryManagement() {
   }
 
   // Daily and Monthly Pantry analytics calculations
+  const pantryDef = masterDefinitionsList?.find(d => d.master_key === "PANTRY_ITEM_NAMES");
+  const pantryAllowedNames = pantryDef 
+    ? pantryDef.master_values.map(val => val.value_label) 
+    : ["Water Bottle (20L)", "Water Jug", "Coffee Beans", "Milk Packet"];
+
   const pantryItems = inventoryItems.filter(i => 
-    ["Water Bottle (20L)", "Water Jug", "Coffee Beans", "Milk Packet"].includes(i.name)
+    pantryAllowedNames.includes(i.name)
   );
 
   const getPantryStats = (itemName) => {
@@ -416,7 +422,7 @@ export default function InventoryManagement() {
 
               {/* Consumption Analytics Cards Grid */}
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "20px" }}>
-                {["Water Bottle (20L)", "Water Jug", "Coffee Beans", "Milk Packet"].map(name => {
+                {pantryAllowedNames.map(name => {
                   const stat = getPantryStats(name);
                   return (
                     <div key={name} style={{ ...styles.descBox, marginBottom: 0 }}>

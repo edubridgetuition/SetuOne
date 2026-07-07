@@ -12,7 +12,8 @@ export default function VisitorManagement() {
     checkOutVisitor,
     uploadVisitorPhoto,
     searchVisitors,
-    assignees
+    assignees,
+    masterDefinitionsList
   } = useApp();
 
   const [activeTab, setActiveTab] = useState("Inside");
@@ -24,15 +25,30 @@ export default function VisitorManagement() {
   const [checkoutRemarks, setCheckoutRemarks] = useState("Meeting Completed");
   const [photoInput, setPhotoInput] = useState("");
 
+  const purpDef = masterDefinitionsList?.find(d => d.master_key === "VISITOR_PURPOSES");
+  const visitorPurposes = purpDef 
+    ? purpDef.master_values.map(val => val.value_label) 
+    : ["Meeting", "Interview", "Vendor Service", "Delivery", "Maintenance", "AMC Visit", "Audit", "Guest"];
+
+  const idDef = masterDefinitionsList?.find(d => d.master_key === "VISITOR_ID_TYPES");
+  const visitorIdTypes = idDef 
+    ? idDef.master_values.map(val => val.value_label) 
+    : ["Aadhaar", "Driving License", "Passport", "PAN", "Company ID"];
+
+  const vehDef = masterDefinitionsList?.find(d => d.master_key === "VEHICLE_TYPES");
+  const vehicleTypes = vehDef 
+    ? vehDef.master_values.map(val => val.value_label) 
+    : ["None", "Car", "Bike", "Truck", "Tempo", "Cab"];
+
   const [checkInForm, setCheckInForm] = useState({
     name: "",
     hostId: "",
     mobile: "",
-    purpose: "Meeting",
-    idType: "Aadhaar",
+    purpose: visitorPurposes[0] || "Meeting",
+    idType: visitorIdTypes[0] || "Aadhaar",
     idNumber: "",
     visitorType: "Walk In",
-    vehicleType: "Car",
+    vehicleType: vehicleTypes[0] || "Car",
     vehicleNo: ""
   });
 
@@ -58,6 +74,19 @@ export default function VisitorManagement() {
     }
   }, [assignees]);
 
+  // Sync default form options once dynamic masters load
+  useEffect(() => {
+    if (visitorPurposes.length > 0 && !visitorPurposes.includes(checkInForm.purpose)) {
+      setCheckInForm(prev => ({ ...prev, purpose: visitorPurposes[0] }));
+    }
+    if (visitorIdTypes.length > 0 && !visitorIdTypes.includes(checkInForm.idType)) {
+      setCheckInForm(prev => ({ ...prev, idType: visitorIdTypes[0] }));
+    }
+    if (vehicleTypes.length > 0 && !vehicleTypes.includes(checkInForm.vehicleType)) {
+      setCheckInForm(prev => ({ ...prev, vehicleType: vehicleTypes[0] }));
+    }
+  }, [visitorPurposes, visitorIdTypes, vehicleTypes]);
+
   async function handleCheckIn(e) {
     e.preventDefault();
     if (!checkInForm.hostId) {
@@ -71,11 +100,11 @@ export default function VisitorManagement() {
         name: "",
         hostId: assignees[0]?.id || "",
         mobile: "",
-        purpose: "Meeting",
-        idType: "Aadhaar",
+        purpose: visitorPurposes[0] || "Meeting",
+        idType: visitorIdTypes[0] || "Aadhaar",
         idNumber: "",
         visitorType: "Walk In",
-        vehicleType: "Car",
+        vehicleType: vehicleTypes[0] || "Car",
         vehicleNo: ""
       });
       setActiveTab("Inside");
@@ -268,7 +297,7 @@ export default function VisitorManagement() {
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Purpose of Visit</label>
                   <select style={styles.input} value={checkInForm.purpose} onChange={e => setCheckInForm({ ...checkInForm, purpose: e.target.value })}>
-                    {["Meeting", "Interview", "Vendor Service", "Delivery", "Maintenance", "AMC Visit", "Audit", "Guest"].map(p => (
+                    {visitorPurposes.map(p => (
                       <option key={p} value={p}>{p}</option>
                     ))}
                   </select>
@@ -276,7 +305,7 @@ export default function VisitorManagement() {
                 <div style={styles.formGroup}>
                   <label style={styles.label}>ID Proof Type</label>
                   <select style={styles.input} value={checkInForm.idType} onChange={e => setCheckInForm({ ...checkInForm, idType: e.target.value })}>
-                    {["Aadhaar", "Driving License", "Passport", "PAN", "Company ID"].map(id => (
+                    {visitorIdTypes.map(id => (
                       <option key={id} value={id}>{id}</option>
                     ))}
                   </select>
@@ -288,7 +317,7 @@ export default function VisitorManagement() {
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Vehicle Type</label>
                   <select style={styles.input} value={checkInForm.vehicleType} onChange={e => setCheckInForm({ ...checkInForm, vehicleType: e.target.value })}>
-                    {["None", "Car", "Bike", "Truck", "Tempo", "Cab"].map(v => (
+                    {vehicleTypes.map(v => (
                       <option key={v} value={v}>{v}</option>
                     ))}
                   </select>

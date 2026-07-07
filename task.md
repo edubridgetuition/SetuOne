@@ -1,0 +1,4 @@
+- [x] Connect Pantry & Coffee dropdown to dynamic inventory items listing.
+- [x] Connect Ticket Category dropdown to Dynamic Masters value registry.
+- [x] Connect Visitor Purpose and Vehicle Type dropdowns to Dynamic Masters value registry.
+- [x] Verify Vite build compilation is successful.

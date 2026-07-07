@@ -120,7 +120,8 @@ export default function AdminConsoleSettings() {
 
   async function handleAddMaster(e) {
     e.preventDefault();
-    await createMasterDefinition(masterForm);
+    const slugKey = masterForm.masterName.toUpperCase().trim().replace(/[^A-Z0-9_]/g, "_");
+    await createMasterDefinition({ ...masterForm, masterKey: slugKey });
     alert("Master definition created!");
     setMasterForm({ masterKey: "", masterName: "", parentDefinitionId: "" });
   }

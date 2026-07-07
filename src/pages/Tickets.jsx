@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useApp } from "../context/appContextCore";
 import { fetchTicketTimeline } from "../lib";
 import { TICKET_PRIORITY, TICKET_STATUS } from "../constants";
@@ -22,7 +22,7 @@ const statusColors = {
 const statuses = ["Open", "Assigned", "In Progress", "Completed", "Escalated", "Closed"];
 
 export default function Tickets() {
-  const { tickets, locations, assignees, createTicket, updateTicket, session, activeRole } = useApp();
+  const { tickets, locations, assignees, createTicket, updateTicket, session, activeRole, masterDefinitionsList } = useApp();
   const [showForm, setShowForm] = useState(false);
   const [statusFilter, setStatusFilter] = useState("All");
   const [search, setSearch] = useState("");
@@ -32,8 +32,13 @@ export default function Tickets() {
   const [timeline, setTimeline] = useState([]);
   const [loadingTimeline, setLoadingTimeline] = useState(false);
 
+  const catDef = masterDefinitionsList?.find(d => d.master_key === "TICKET_CATEGORIES");
+  const ticketCategories = catDef 
+    ? catDef.master_values.map(val => val.value_label) 
+    : ["Electrical Complaint","Plumbing Complaint","HVAC Complaint","Civil Complaint","Housekeeping Complaint","IT Complaint"];
+
   const [actionForm, setActionForm] = useState({ assignedToId:"", status:"Assigned", remarks:"" });
-  const [form, setForm] = useState({ category:"Electrical Complaint", locationId:"", priority:"Medium", description:"" });
+  const [form, setForm] = useState({ category: ticketCategories[0] || "Electrical Complaint", locationId:"", priority:"Medium", description:"" });
 
   const visibleTickets = useMemo(() => tickets.filter(t => {
     if (activeRole === "Vendor") return t.assignedTo !== "Unassigned";
@@ -53,6 +58,13 @@ export default function Tickets() {
       setForm(prev => ({ ...prev, locationId: locations[0].id }));
     }
   }, [locations, form.locationId]);
+
+  // Sync default category when dynamic master values load
+  useEffect(() => {
+    if (ticketCategories.length > 0 && !ticketCategories.includes(form.category)) {
+      setForm(prev => ({ ...prev, category: ticketCategories[0] }));
+    }
+  }, [ticketCategories]);
 
   // Load ticket state settings
   useEffect(() => {
@@ -135,7 +147,7 @@ export default function Tickets() {
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Category</label>
                   <select style={styles.input} value={form.category} onChange={e => setForm({...form, category:e.target.value})}>
-                    {["Electrical Complaint","Plumbing Complaint","HVAC Complaint","Civil Complaint","Housekeeping Complaint","IT Complaint"].map(c => <option key={c}>{c}</option>)}
+                    {ticketCategories.map(c => <option key={c}>{c}</option>)}
                   </select>
                 </div>
                 <div style={styles.formGroup}>
