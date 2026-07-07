@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SetuOne ERP - Phase 8 & 9 Comprehensive Manual</title>
+  <!-- Google Fonts for premium typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <!-- MermaidJS for Flowcharts -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script>mermaid.initialize({ startOnLoad: true, theme: 'neutral' });</script>
+  
+  <style>
+    :root {
+      --primary: #0038a8;
+      --primary-hover: #002b80;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --success: #22c55e;
+      --amber: #f59e0b;
+      --danger: #ef4444;
+      --gradient: linear-gradient(135deg, #0038a8 0%, #1e40af 100%);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      line-height: 1.6;
+      padding: 0;
+    }
+
+    /* Sidebar Navigation Layout */
+    .wrapper {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    aside {
+      width: 300px;
+      background-color: #0f172a;
+      color: #fff;
+      padding: 40px 24px;
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      overflow-y: auto;
+      border-right: 1px solid #1e293b;
+      z-index: 10;
+    }
+
+    .brand {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #38bdf8;
+      margin-bottom: 40px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-sub {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .nav-item a {
+      color: #94a3b8;
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 500;
+      display: block;
+      padding: 12px 16px;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .nav-item a:hover, .nav-item.active a {
+      color: #fff;
+      background-color: rgba(56, 189, 248, 0.15);
+      border-left: 4px solid #38bdf8;
+    }
+
+    /* Main Container layout */
+    main {
+      margin-left: 300px;
+      flex: 1;
+      padding: 60px 80px;
+      max-width: 1200px;
+      background-color: var(--bg);
+    }
+
+    header {
+      margin-bottom: 50px;
+      padding-bottom: 30px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    header h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.5px;
+    }
+
+    header p {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      margin-top: 8px;
+    }
+
+    section {
+      margin-bottom: 60px;
+      scroll-margin-top: 40px;
+    }
+
+    section h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.6rem;
+      color: var(--primary);
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--border);
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 30px;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    /* Step lists designed for non-technical users */
+    .step-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .step {
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    .step-num {
+      background: var(--gradient);
+      color: #fff;
+      font-weight: 700;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 0.9rem;
+      box-shadow: 0 2px 4px rgba(0,56,168,0.2);
+    }
+
+    .step-content strong {
+      display: block;
+      color: var(--text);
+      font-size: 1rem;
+      margin-bottom: 6px;
+    }
+
+    .step-content p {
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    .mermaid {
+      background: #f8fafc;
+      padding: 24px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      margin: 20px 0;
+      display: flex;
+      justify-content: center;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      background-color: #f1f5f9;
+      color: #475569;
+    }
+
+    .pill.success { background-color: #dcfce7; color: #15803d; }
+    .pill.amber { background-color: #fef3c7; color: #b45309; }
+    .pill.primary { background-color: #dbeafe; color: #1d4ed8; }
+
+    pre {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 20px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: 'Consolas', 'Courier New', monospace;
+      font-size: 0.85rem;
+      margin-top: 15px;
+      border: 1px solid #1e293b;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      aside { width: 100%; height: auto; position: relative; }
+      .wrapper { flex-direction: column; }
+      main { margin-left: 0; padding: 40px 24px; }
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="wrapper">
+    <!-- Sidebar -->
+    <aside>
+      <div class="brand">
+        <div>
+          🚀 SetuOne Manual
+          <div class="brand-sub">Phases 8 & 9 Compendium</div>
+        </div>
+      </div>
+      <ul class="nav-list">
+        <li class="nav-item"><a href="#intro">Overview & Summary</a></li>
+        <li class="nav-item"><a href="#phase8-flow">Phase 8 Flow Charts</a></li>
+        <li class="nav-item"><a href="#phase8-guide">Phase 8 User Manual</a></li>
+        <li class="nav-item"><a href="#phase8-report">Phase 8 SQL Mappings</a></li>
+        <li class="nav-item"><a href="#phase9-flow">Phase 9 Flow Charts</a></li>
+        <li class="nav-item"><a href="#phase9-guide">Phase 9 User Manual</a></li>
+        <li class="nav-item"><a href="#phase9-report">Phase 9 SQL Mappings</a></li>
+        <li class="nav-item"><a href="#verify">Manager Testing Steps</a></li>
+      </ul>
+    </aside>
+
+    <!-- Main Content -->
+    <main>
+      <header>
+        <h1>SetuOne ERP - Comprehensive Phase 8 & 9 Document</h1>
+        <p>A non-technical explanation, user guide, flowchart, and technical database query map of the Reports & Analytics engine and Automation pipeline.</p>
+      </header>
+
+      <!-- Introduction section -->
+      <section id="intro">
+        <h2>📌 1. Introduction & Phase Summaries</h2>
+        <div class="grid-2">
+          <div class="card">
+            <h3 style="color: var(--primary); font-size: 1.1rem; margin-bottom: 12px;">📊 Phase 8: Dynamic Reports</h3>
+            <p style="font-size: 0.92rem; color: var(--text-muted);">
+              Transforms static worksheets into a configurable matrix. Managers can choose exactly which fields to see, save search parameters as templates (e.g. Weekly Attendance Audit), drill down from top summary cards, and export logs to Excel/CSV.
+            </p>
+          </div>
+          <div class="card">
+            <h3 style="color: var(--primary); font-size: 1.1rem; margin-bottom: 12px;">🤖 Phase 9: Automation Engine</h3>
+            <p style="font-size: 0.92rem; color: var(--text-muted);">
+              A background automation engine monitoring thresholds and schedules. Trigger-based notifications route alerts (Low stock warnings, PPM schedules alerts, warranty expiration reminders) automatically to target department recipient groups.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Phase 8 Chart Flow -->
+      <section id="phase8-flow">
+        <h2>🔄 2. Phase 8: Reports Flow Diagrams</h2>
+        <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 20px;">
+          This visual chart shows how a user dynamically modifies report filters and formats, and how the system fetches and processes it.
+        </p>
+        <div class="mermaid">
+          graph TD
+              User[User: Clicks open reports view] -->|1. Drill-down click| KPI[KPI Ribbon Card / e.g. Open Tickets]
+              KPI -->|2. Auto-filters dataset| Query[Query Processor ReportBuilder]
+              Query -->|3. Toggle checkbox columns| Table[Dynamic UI Data Grid / Reports.jsx]
+              Table -->|4. Save custom configuration| DB[Saved Filters / public.saved_report_filters]
+              Table -->|5. Click Export| Exporter[Excel/CSV file generation & Download]
+        </div>
+      </section>
+
+      <!-- Phase 8 User Guide -->
+      <section id="phase8-guide">
+        <h2>📖 3. Phase 8: Non-Technical User Manual</h2>
+        <div class="card">
+          <ul class="step-list">
+            <li class="step">
+              <div class="step-num">1</div>
+              <div class="step-content">
+                <strong>Click Top Summary Ribbons (Drill Down)</strong>
+                <p>Clicking cards like "Open Tickets" or "Today Visitors" immediately filters the report workspace to that module. You don't need to manually configure dates or categories.</p>
+              </div>
+            </li>
+            <li class="step">
+              <div class="step-num">2</div>
+              <div class="step-content">
+                <strong>Choose Columns Display (Dynamic Grid)</strong>
+                <p>Check/uncheck checkboxes under "Select Fields". Columns in the table below will instantly vanish or appear. This lets you construct custom report views (e.g. view tickets without priority details).</p>
+              </div>
+            </li>
+            <li class="step">
+              <div class="step-num">3</div>
+              <div class="step-content">
+                <strong>Save Search Template</strong>
+                <p>Once you are happy with your filters and selected columns, type a name in "Saved Reports Filters" box (e.g. `June Complaint Audit`) and click "Save Current". Next time, click the template to instantly load it.</p>
+              </div>
+            </li>
+            <li class="step">
+              <div class="step-num">4</div>
+              <div class="step-content">
+                <strong>Export Spreadsheet</strong>
+                <p>Click the green "Export CSV" button. Your browser will instantly download a spreadsheet file of the active table.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Phase 8 Report mappings -->
+      <section id="phase8-report">
+        <h2>💻 4. Phase 8: Technical Report Database Maps</h2>
+        <div class="card">
+          <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">
+            Here are the database connections used to feed the dynamic reports table:
+          </p>
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div>
+              <span class="pill primary">Table: public.saved_report_filters</span>
+              <p style="font-size: 0.85rem; margin-top: 6px;">Stores user-specific customized search state parameters.</p>
+              <pre>SELECT filter_name, report_type, filters_payload 
+FROM public.saved_report_filters 
+WHERE profile_id = auth.uid();</pre>
+            </div>
+            <div>
+              <span class="pill primary">Table: public.report_templates</span>
+              <p style="font-size: 0.85rem; margin-top: 6px;">Holds company-wide configured reporting templates (e.g. Weekly Facility Roster).</p>
+              <pre>SELECT template_name, config_payload 
+FROM public.report_templates 
+WHERE company_id = 'company-uuid-context';</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Phase 9 Chart Flow -->
+      <section id="phase9-flow">
+        <h2>🔄 5. Phase 9: Automation Engine Flow Diagrams</h2>
+        <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 20px;">
+          This visual chart details how an event (like stock levels dropping below reorder thresholds) is captured by the rules engine, queued, and dispatched.
+        </p>
+        <div class="mermaid">
+          graph TD
+              Event[Event Trigger / e.g. LOW_STOCK, PPM_DUE] -->|1. Scan Rules| Rules[Rule Engine / notification_rules]
+              Rules -->|2. Check conditions payload| Conditions[Condition Evaluator / stock <= 10]
+              Conditions -->|3. Get template & group| Recipients[Recipient Group / Purchase Team]
+              Recipients -->|4. Queue dispatch item| Queue[Priority Queue / notification_queue]
+              Queue -->|5. Process priorities| Dispatcher[dispatchNotification helper]
+              Dispatcher -->|6. Send alert| Channel[Email / In-App alert sent]
+              Dispatcher -->|7. Audit check| Logs[Automation Logs / automation_logs]
+        </div>
+      </section>
+
+      <!-- Phase 9 User Guide -->
+      <section id="phase9-guide">
+        <h2>📖 6. Phase 9: Non-Technical User Manual</h2>
+        <div class="card">
+          <ul class="step-list">
+            <li class="step">
+              <div class="step-num">1</div>
+              <div class="step-content">
+                <strong>Create Alert Templates</strong>
+                <p>Navigate to "Email Templates". Write custom alerts subjects and body text. Use tags like <code>{{employee_name}}</code> or <code>{{item_name}}</code> to let the system fill details automatically.</p>
+              </div>
+            </li>
+            <li class="step">
+              <div class="step-num">2</div>
+              <div class="step-content">
+                <strong>Group Target Stakeholders</strong>
+                <p>In "Recipient Groups", create a group like `Admin Officers` and insert target email addresses. You don't have to input individual emails every time you configure a rule.</p>
+              </div>
+            </li>
+            <li class="step">
+              <div class="step-num">3</div>
+              <div class="step-content">
+                <strong>Activate Rules Constraints</strong>
+                <p>In "Automation Rules", configure triggers (e.g. Trigger 'Low Stock Alert' when closing stock goes below reorder level). Map this to the templates and groups you created.</p>
+              </div>
+            </li>
+            <li class="step">
+              <div class="step-num">4</div>
+              <div class="step-content">
+                <strong>Monitor Dispatch Audit Logs</strong>
+                <p>Go to the "Automation Audit logs" tab to review system-triggered logs. You will see which notifications succeeded, which channel was selected, and latency delay stats.</p>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <!-- Phase 9 Mappings -->
+      <section id="phase9-report">
+        <h2>💻 7. Phase 9: Technical Automation Schema Mappings</h2>
+        <div class="card">
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div>
+              <span class="pill success">Table: public.notification_rules</span>
+              <p style="font-size: 0.85rem; margin-top: 6px;">Houses constraints, conditions, version counts, and maintenance pauses.</p>
+              <pre>SELECT rule_name, trigger_type, condition_payload, is_paused 
+FROM public.notification_rules 
+WHERE is_active = true;</pre>
+            </div>
+            <div>
+              <span class="pill success">Table: public.notification_queue</span>
+              <p style="font-size: 0.85rem; margin-top: 6px;">Priority queue buffer storing dispatches.</p>
+              <pre>SELECT recipient, subject, body_text, priority, status 
+FROM public.notification_queue 
+WHERE status = 'Pending' 
+ORDER BY priority DESC, created_at ASC;</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Manager verification steps -->
+      <section id="verify">
+        <h2>🚀 8. Steps for Managers to Verify Features</h2>
+        <div class="card" style="border-left: 4px solid var(--success);">
+          <div style="font-weight: 700; font-size: 1.1rem; color: #15803d; margin-bottom: 12px;">✅ Phase 8 Verification Steps:</div>
+          <ol style="margin-left: 20px; font-size: 0.92rem; line-height: 1.8; color: var(--text-muted);">
+            <li>Log in as manager and select <strong>Reports</strong> tab.</li>
+            <li>Click <strong>Open Tickets</strong> card at the top ribbon. Check if report filters update.</li>
+            <li>Uncheck columns in selector checkboxes. Check if table layout updates instantly.</li>
+            <li>Input a filter name in the right sidebar, click <strong>Save Current</strong>. Refresh page and click the saved filter card. Check if old configurations load back.</li>
+            <li>Click <strong>Export CSV</strong>. Check if your browser triggers download.</li>
+          </ol>
+
+          <div style="font-weight: 700; font-size: 1.1rem; color: #15803d; margin-top: 30px; margin-bottom: 12px;">✅ Phase 9 Verification Steps:</div>
+          <ol style="margin-left: 20px; font-size: 0.92rem; line-height: 1.8; color: var(--text-muted);">
+            <li>Select <strong>User Roles ➡️ Automation Rules</strong> tab in sidebar.</li>
+            <li>Go to <strong>Email Templates</strong> tab. Create a test template (e.g. `Water warning`).</li>
+            <li>Go to <strong>Recipient Groups</strong>. Create a group (e.g. `Maintenance Heads`).</li>
+            <li>Go to <strong>Automation Rules</strong>. Link your template, group, set condition values, and click <strong>Activate Rule</strong>. Check if rule shows in bottom table.</li>
+            <li>Go to <strong>My Alerts Preferences</strong>. Try toggling checkmarks to verify settings update.</li>
+            <li>Click blue <strong>Trigger Scheduler Check</strong> button on right panel. Go to <strong>Automation Audit logs</strong> tab. Check if simulated logs appear in list.</li>
+          </ol>
+        </div>
+      </section>
+    </main>
+  </div>
+
+</body>
+</html>
