@@ -1,6 +1,6 @@
-# SetuOne ERP Migration Walkthrough - Dynamic Dropdowns, Catalog Visibility, Inline Edits & Dashboard Sync
+# SetuOne ERP Migration Walkthrough - Dynamic Dropdowns, Catalog Visibility, Inline Edits & Dashboard Calculations
 
-This walkthrough documents the updates made to connect frontend dropdown selections to the Dynamic Masters registry dynamically, ensure catalog items with zero stock display correctly, add transaction editing & deletion capabilities, and sync dashboard stats with filters.
+This walkthrough documents the updates made to connect frontend dropdown selections to the Dynamic Masters registry dynamically, ensure catalog items with zero stock display correctly, add transaction editing & deletion capabilities, and configure dashboard calculations.
 
 ---
 
@@ -28,10 +28,11 @@ This walkthrough documents the updates made to connect frontend dropdown selecti
 * **Inline Edit Mode**: Clicking `Edit` replaces row cells with editable input fields (Quantity, Action Type, Log Date) along with `Save` and `Cancel` buttons.
 * **Smart Stock Correction**: When a transaction is edited, the system calculates the delta (difference) between the old configuration and the new configuration, then corrects the current stock balance automatically.
 
-### 4. Dashboard Card Filter Synchronization (`InventoryManagement.jsx`)
-* **Metric Sync**: Linked the card's main large metric directly to the **selected date range filters** (From Date / To Date) instead of a hardcoded current balance. If you filter for June 1 to June 30, the card will display the consumption total for June.
-* **Text Adjustment**: Removed the word **`Left`** from the card's main quantity display to prevent confusion (since it now shows total consumption over the selected period instead of remaining stock).
-* **Footer Dynamic Month calculation**: The `Month:` total in the footer is calculated dynamically using the month of the selected end date (e.g. if the filter is set to June, the month total displays June's count; if set to July, it displays July's count).
+### 4. Dashboard Card Metric Calculations (`InventoryManagement.jsx`)
+* **Main Card Value**: Displays the **current calendar month's total OUTWARD (Consumption)** quantity (independent of the table's date range filters).
+* **Today Count (Footer)**: Displays **today's total INWARD (Refill Arrived)** quantity.
+* **Month Count (Footer)**: Displays the **last calendar month's total OUTWARD (Consumption)** quantity.
+* **Text Adjustment**: Removed the word `Left` from the card value display to show direct quantities.
 
 ---
 
