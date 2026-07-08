@@ -33,6 +33,20 @@ export default function Reports() {
   const [reportType, setReportType] = useState("Attendance");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const handleStartDateChange = (val) => {
+    if (endDate && val > endDate) {
+      alert("Error: Start Date cannot be later than End Date!");
+      return;
+    }
+    setStartDate(val);
+  };
+  const handleEndDateChange = (val) => {
+    if (startDate && val < startDate) {
+      alert("Error: End Date cannot be earlier than Start Date!");
+      return;
+    }
+    setEndDate(val);
+  };
   const [sortOrder, setSortOrder] = useState("desc");
   const [selectedColumns, setSelectedColumns] = useState([]);
   
@@ -177,12 +191,12 @@ export default function Reports() {
 
               <div style={styles.formGroup}>
                 <label style={styles.label}>Start Date</label>
-                <input type="date" style={styles.input} value={startDate} onChange={e => setStartDate(e.target.value)} />
+                <input type="date" style={styles.input} value={startDate} onChange={e => handleStartDateChange(e.target.value)} />
               </div>
 
               <div style={styles.formGroup}>
                 <label style={styles.label}>End Date</label>
-                <input type="date" style={styles.input} value={endDate} onChange={e => setEndDate(e.target.value)} />
+                <input type="date" style={styles.input} value={endDate} onChange={e => handleEndDateChange(e.target.value)} />
               </div>
 
               <div style={styles.formGroup}>

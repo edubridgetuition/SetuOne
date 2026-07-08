@@ -106,6 +106,20 @@ export default function InventoryManagement() {
     new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0] // 7 days ago
   );
   const [endDate, setEndDate] = useState(new Date().toISOString().split("T")[0]);
+  const handleStartDateChange = (val) => {
+    if (endDate && val > endDate) {
+      alert("Error: Start Date cannot be later than End Date!");
+      return;
+    }
+    setStartDate(val);
+  };
+  const handleEndDateChange = (val) => {
+    if (startDate && val < startDate) {
+      alert("Error: End Date cannot be earlier than Start Date!");
+      return;
+    }
+    setEndDate(val);
+  };
   const [reportCategory, setReportCategory] = useState("All");
 
   // Initialize
@@ -198,6 +212,10 @@ export default function InventoryManagement() {
   }
 
   async function handleSaveEdit(txId) {
+    if (!editForm.quantity || editForm.quantity < 1) {
+      alert("Error: Quantity must be at least 1!");
+      return;
+    }
     const res = await updateInventoryTransaction(txId, editForm, selectedBranch);
     if (res.success) {
       alert("Transaction updated successfully and stock adjusted!");
@@ -629,11 +647,11 @@ export default function InventoryManagement() {
                     </div>
                     <div style={{ display: "flex", flexDirection: "column" }}>
                       <label style={styles.label}>From Date</label>
-                      <input style={styles.input} type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+                      <input style={styles.input} type="date" value={startDate} onChange={e => handleStartDateChange(e.target.value)} />
                     </div>
                     <div style={{ display: "flex", flexDirection: "column" }}>
                       <label style={styles.label}>To Date</label>
-                      <input style={styles.input} type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                      <input style={styles.input} type="date" value={endDate} onChange={e => handleEndDateChange(e.target.value)} />
                     </div>
                     <button 
                       onClick={handleExportCSV}
@@ -697,6 +715,7 @@ export default function InventoryManagement() {
                               {isEditing ? (
                                 <input 
                                   type="number" 
+                                  min="1"
                                   style={{ ...styles.input, padding: "5px", fontSize: "12px", width: "80px" }} 
                                   value={editForm.quantity} 
                                   onChange={e => setEditForm({ ...editForm, quantity: Number(e.target.value) })} 
