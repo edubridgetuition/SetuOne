@@ -51,6 +51,10 @@ This walkthrough documents the updates made to connect frontend dropdown selecti
   - Fixed `undefined` context exports for `dashboardWidgetsList` and `activeDashboardLayout` that caused the Vercel site to go blank.
   - Added missing widget CRUD function destructuring inside `AdminConsoleSettings.jsx`.
 
+### 6. Navigation Enhancements (`Layout.jsx`)
+* **Clickable Breadcrumb**: The **`Home`** link in the header breadcrumbs is now clickable. Clicking it immediately redirects the user to the main/home **Dashboard** page.
+* **Hover Interaction**: Hovering over "Home" changes its color to the corporate blue highlight with a smooth transition.
+
 ---
 
 ## 📋 Verification Checks Passed
