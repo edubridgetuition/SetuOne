@@ -10,3 +10,4 @@ export * from './attendanceRepository';
 export * from './reportRepository';
 export * from './notificationRepository';
 export * from './adminRepository';
+export * from './energyRepository';

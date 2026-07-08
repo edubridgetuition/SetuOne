@@ -149,7 +149,17 @@ duplicateDashboard as apiDuplicateDashboard,
 fetchWidgetData as apiFetchWidgetData,
 createDashboardWidget as apiCreateDashboardWidget,
 updateDashboardWidget as apiUpdateDashboardWidget,
-archiveDashboardWidget as apiArchiveDashboardWidget
+archiveDashboardWidget as apiArchiveDashboardWidget,
+
+// Energy imports
+fetchMeters as apiFetchMeters,
+fetchMeterDetails as apiFetchMeterDetails,
+fetchReadings as apiFetchReadings,
+uploadMeterImage as apiUploadMeterImage,
+processOCR as apiProcessOCR,
+confirmReading as apiConfirmReading,
+calculateConsumption as apiCalculateConsumption,
+fetchConsumptionHistory as apiFetchConsumptionHistory
 } from "../lib";
 
 export function AppProvider({ children }) {
@@ -223,6 +233,13 @@ export function AppProvider({ children }) {
   // Dashboard Builder States
   const [dashboardWidgetsList, setDashboardWidgetsList] = useState([]);
   const [activeDashboardLayout, setActiveDashboardLayout] = useState(null);
+
+  // Energy States
+  const [energyMeters, setEnergyMeters] = useState([]);
+  const [selectedMeter, setSelectedMeter] = useState(null);
+  const [meterReadings, setMeterReadings] = useState([]);
+  const [consumptionHistory, setConsumptionHistory] = useState([]);
+  const [energyDashboard, setEnergyDashboard] = useState(null);
   
   const [loading, setLoading] = useState(true);
 
@@ -248,7 +265,8 @@ export function AppProvider({ children }) {
         fetchLocations(),
         fetchAssignees(),
         loadMasterDefinitions(),
-        loadCustomFieldDefinitions()
+        loadCustomFieldDefinitions(),
+        loadMeters()
       ]);
 
       if (ticketsRes.success) setTickets(ticketsRes.data);
@@ -1421,6 +1439,59 @@ export function AppProvider({ children }) {
     return await apiFetchWidgetData(widgetKey, session.companyId);
   }
 
+  // Energy Actions
+  async function loadMeters() {
+    if (!session) return;
+    const res = await apiFetchMeters(session.companyId);
+    if (res.success) {
+      setEnergyMeters(res.data || []);
+      if (res.data && res.data.length > 0 && !selectedMeter) {
+        setSelectedMeter(res.data[0]);
+      }
+    }
+  }
+
+  async function loadReadings(meterId) {
+    const res = await apiFetchReadings(meterId);
+    if (res.success) {
+      setMeterReadings(res.data || []);
+    }
+  }
+
+  async function uploadMeterImage(file) {
+    return await apiUploadMeterImage(file);
+  }
+
+  async function confirmReading(readingData) {
+    if (!session) return { success: false, message: "No active session." };
+    const payload = {
+      ...readingData,
+      uploaded_by: session.id
+    };
+    const res = await apiConfirmReading(payload);
+    if (res.success) {
+      await loadReadings(readingData.meter_id);
+      await loadConsumption(readingData.meter_id);
+      await apiWriteAuditLog({
+        module: 'Energy Monitoring',
+        tableName: 'public.energy_meter_readings',
+        recordId: res.data.id,
+        action: 'INSERT',
+        newData: res.data,
+        changedBy: session.id
+      }, session.companyId);
+    }
+    return res;
+  }
+
+  async function loadConsumption(meterId = null) {
+    if (!session) return;
+    const res = await apiFetchConsumptionHistory(session.companyId, meterId);
+    if (res.success) {
+      setConsumptionHistory(res.data || []);
+    }
+  }
+
   const tenantData = useMemo(() => tenants[activeTenant], [activeTenant]);
 
   if (loading) return (
@@ -1483,10 +1554,14 @@ export function AppProvider({ children }) {
       systemSettings, brandingSettings, masterDefinitionsList, numberSeriesList, approvalWorkflowsList, featureFlagsList, holidayCalendarList, workingDaysData, customFieldDefinitionsList, auditLogsList, notificationTemplatesList, recurringSchedulerJobsList,
       loadSystemSettings, saveSystemSettings, loadBrandingSettings, saveBrandingSettings, loadMasterDefinitions, createMasterDefinition, createMasterValue, loadNumberSeries, saveNumberSeries, loadApprovalWorkflows, saveApprovalWorkflow, loadFeatureFlags, toggleFeatureFlag, loadHolidayCalendar, createHoliday, loadWorkingDays, saveWorkingDays, loadCustomFieldDefinitions, saveCustomField, loadAuditLogs, loadNotificationTemplates, saveNotificationTemplate, loadRecurringSchedulerJobs, saveRecurringSchedulerJob,
 
-      // Dashboard Builder values
+       // Dashboard Builder values
       dashboardWidgetsList, activeDashboardLayout,
       loadDashboardWidgets, loadUserDashboardLayout, saveUserDashboardLayout, resetUserDashboardLayout, duplicateDashboardLayout, fetchWidgetDataPayload,
-      createDashboardWidget, updateDashboardWidget, archiveDashboardWidget
+      createDashboardWidget, updateDashboardWidget, archiveDashboardWidget,
+
+      // Energy values
+      energyMeters, selectedMeter, setSelectedMeter, meterReadings, consumptionHistory, energyDashboard,
+      loadMeters, loadReadings, uploadMeterImage, confirmReading, loadConsumption
     }}>
       {children}
     </AppContext.Provider>

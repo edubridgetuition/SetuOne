@@ -16,6 +16,7 @@ import Attendance from "./pages/Attendance";
 import Reports from "./pages/Reports";
 import AutomationSettings from "./pages/AutomationSettings";
 import AdminConsoleSettings from "./pages/AdminConsoleSettings";
+import EnergyMonitoring from "./pages/EnergyMonitoring";
 
 function AppContent() {
   const { session, activeView } = useApp();
@@ -37,6 +38,7 @@ function AppContent() {
       case "reports": return <Reports />;
       case "automation": return <AutomationSettings />;
       case "admin_console": return <AdminConsoleSettings />;
+      case "energy": return <EnergyMonitoring />;
       default: return <GenericPage view={activeView} />;
     }
   };

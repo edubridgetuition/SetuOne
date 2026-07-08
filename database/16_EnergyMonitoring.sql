@@ -1,26 +1,3 @@
-# Implementation Plan - Enterprise Energy Monitoring & AI OCR System
-
-This plan details the technical architecture, database schemas, repository files, context structures, and UI layout to integrate a complete **Enterprise Energy Monitoring** system, following the specified multi-meter design, OCR recognition flow, notification engine, and reporting features.
-
----
-
-## User Review Required
-
-> [!IMPORTANT]
-> - **Enterprise RLS Security**: We have removed all `OR TRUE` bypass filters. The RLS policies now utilize the system's helper function `public.get_user_company(auth.uid())` to strictly isolate energy meter data and logs by company.
-> - **Seeding & Confict Guard**: Seeding logic uses `WHERE NOT EXISTS` combined with dynamic suffixes mapping to each company's ID to prevent key duplication conflicts during re-runs.
-> - **Calculated Cost & Validation in View**: The View handles negative readings by setting both `consumption_units` and `calculated_cost` to `NULL`, and flagging `reading_valid = FALSE` for debugging.
-> - **No Code Changes Yet**: We will save this plan and wait for your explicit approval before modifying any code files.
-
----
-
-## Proposed Changes
-
-### 1. Database Schema (`database/16_EnergyMonitoring.sql`)
-We will create three SQL structures: `energy_meters` table, `energy_meter_readings` table, and `energy_consumption_summary` view.
-
-#### [NEW] [16_EnergyMonitoring.sql](file:///d:/SetuOne/database/16_EnergyMonitoring.sql)
-```sql
 -- Table 1: energy_meters
 CREATE TABLE IF NOT EXISTS public.energy_meters (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -122,6 +99,12 @@ JOIN public.energy_meters m ON o.meter_id = m.id;
 ALTER TABLE public.energy_meters ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.energy_meter_readings ENABLE ROW LEVEL SECURITY;
 
+-- Drop previous policies to prevent duplicates on migration re-run
+DROP POLICY IF EXISTS "Allow select energy_meters based on company_id" ON public.energy_meters;
+DROP POLICY IF EXISTS "Allow write energy_meters based on company_id" ON public.energy_meters;
+DROP POLICY IF EXISTS "Allow select energy_readings based on company_id" ON public.energy_meter_readings;
+DROP POLICY IF EXISTS "Allow write energy_readings based on company_id" ON public.energy_meter_readings;
+
 -- Dynamic Tenant RLS Policies using public.get_user_company helper
 CREATE POLICY "Allow select energy_meters based on company_id" ON public.energy_meters FOR SELECT 
 USING (company_id = public.get_user_company(auth.uid()));
@@ -167,60 +150,3 @@ FROM public.companies c
 WHERE NOT EXISTS (
     SELECT 1 FROM public.energy_meters WHERE meter_code = 'MTR-HVAC-' || substring(c.id::text, 1, 6)
 );
-```
-
----
-
-### 2. OCR Repository (`src/lib/energyRepository.js`)
-Implement methods returning standard success payloads `{ success: true, data: null, error: null, message: "" }`.
-
-#### [NEW] [energyRepository.js](file:///d:/SetuOne/src/lib/energyRepository.js)
-* **`fetchMeters(companyId)`**: Load active meters.
-* **`fetchMeterDetails(meterId)`**: Load exact specs.
-* **`fetchReadings(meterId)`**: Load readings.
-* **`uploadMeterImage(file)`**: Upload document.
-* **`processOCR(imagePath)`**: Extensible wrapper interface supporting pluggable OCR provider strategies.
-* **`confirmReading(readingData)`**: Save data.
-* **`calculateConsumption(meterId, start, end)`**: Fetch for charts.
-* **`fetchConsumptionHistory(meterId, companyId)`**: Fetch from calculations view.
-
----
-
-### 3. Context Integration (`AppContext.jsx`)
-Expose state variables and actions.
-
-#### [MODIFY] [AppContext.jsx](file:///d:/SetuOne/src/context/AppContext.jsx)
-* **Register States**: `energyMeters`, `selectedMeter`, `meterReadings`, `consumptionHistory`, `energyDashboard`.
-* **Expose Actions**: `loadMeters()`, `loadReadings()`, `uploadMeterImage()`, `confirmReading()`, `loadConsumption()`.
-
----
-
-### 4. Routing & View Setup (`src/App.jsx`)
-#### [MODIFY] [App.jsx](file:///d:/SetuOne/src/App.jsx)
-* Import `EnergyMonitoring` from `./pages/EnergyMonitoring`.
-* Add navigation routing switch case:
-  `case "energy": return <EnergyMonitoring />;`
-
----
-
-### 5. UI Page Component (`src/pages/EnergyMonitoring.jsx`)
-Construct the main interactive view.
-
-#### [NEW] [EnergyMonitoring.jsx](file:///d:/SetuOne/src/pages/EnergyMonitoring.jsx)
-* **Meter Selector Cards**: Supports dynamic meter lists.
-* **Reading Upload Panels**: Separate Morning (8 AM) & Evening (8 PM) slots.
-* **AI OCR scan overlay**: Glow animations, progress loaders, laser scanning lines, confidence metrics, and edit/save validations.
-* **Consumption summary table**: Ledger rows matching data view with photo links, downloaded exports (PDF/CSV/Excel), and locks.
-* **Charts**: Multi-timeframe charts.
-
----
-
-## Verification Plan
-
-### Automated Tests
-* Production build compile: `npm run build`
-
-### Manual Verification
-* Access "Energy Monitoring" panel. Check that the 3 seeded meters render.
-* Upload morning photo, observe laser scan animation, edit extracted value, and confirm.
-* Repeat for evening, check that the SQL View computes correct difference consumption units, and verify CSV exports.
