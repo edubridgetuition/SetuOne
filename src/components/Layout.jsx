@@ -1,4 +1,4 @@
-﻿import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useApp } from "../context/appContextCore";
 import { menuBar } from "../data/menuBar";
 import {
@@ -193,7 +193,14 @@ function getModuleIcon(key) {
       <main style={s.mainWrap}>
         <section style={s.pageHeader}>
   <div style={s.breadcrumb}>
-    <span style={s.breadcrumbMuted}>Home</span>
+    <span 
+      style={{ ...s.breadcrumbMuted, cursor: "pointer", transition: "color 0.2s" }} 
+      onClick={() => setActiveView("dashboard")}
+      onMouseEnter={(e) => e.target.style.color = "#0038a8"}
+      onMouseLeave={(e) => e.target.style.color = s.breadcrumbMuted.color}
+    >
+      Home
+    </span>
     <span style={s.breadcrumbSep}>›</span>
     <span style={s.breadcrumbActive}>{activeModule?.label || "Dashboard"}</span>
   </div>
