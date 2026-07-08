@@ -202,7 +202,29 @@ function getModuleIcon(key) {
       Home
     </span>
     <span style={s.breadcrumbSep}>›</span>
-    <span style={s.breadcrumbActive}>{activeModule?.label || "Dashboard"}</span>
+    
+    {activeView === "dashboard" ? (
+      <span style={s.breadcrumbActive}>Dashboard</span>
+    ) : (
+      <>
+        {activeSubLabel !== activeModule?.label ? (
+          <>
+            <span 
+              style={{ ...s.breadcrumbMuted, cursor: "pointer", transition: "color 0.2s" }} 
+              onClick={() => setActiveView(activeModule?.subItems[0]?.key)}
+              onMouseEnter={(e) => e.target.style.color = "#0038a8"}
+              onMouseLeave={(e) => e.target.style.color = s.breadcrumbMuted.color}
+            >
+              {activeModule?.label}
+            </span>
+            <span style={s.breadcrumbSep}>›</span>
+            <span style={s.breadcrumbActive}>{activeSubLabel}</span>
+          </>
+        ) : (
+          <span style={s.breadcrumbActive}>{activeModule?.label}</span>
+        )}
+      </>
+    )}
   </div>
 </section>
         <section style={s.content}>{children}</section>
