@@ -159,7 +159,9 @@ uploadMeterImage as apiUploadMeterImage,
 processOCR as apiProcessOCR,
 confirmReading as apiConfirmReading,
 calculateConsumption as apiCalculateConsumption,
-fetchConsumptionHistory as apiFetchConsumptionHistory
+fetchConsumptionHistory as apiFetchConsumptionHistory,
+updateEnergyReading as apiUpdateEnergyReading,
+deleteEnergyReading as apiDeleteEnergyReading
 } from "../lib";
 
 export function AppProvider({ children }) {
@@ -1492,6 +1494,46 @@ export function AppProvider({ children }) {
     }
   }
 
+  async function updateEnergyReading(readingId, updates) {
+    if (!session) return { success: false, message: "No active session." };
+    const payload = {
+      ...updates,
+      edited_by: session.id,
+      edited_at: new Date().toISOString()
+    };
+    const res = await apiUpdateEnergyReading(readingId, payload);
+    if (res.success && selectedMeter) {
+      await loadReadings(selectedMeter.id);
+      await loadConsumption(selectedMeter.id);
+      await apiWriteAuditLog({
+        module: 'Energy Monitoring',
+        tableName: 'public.energy_meter_readings',
+        recordId: res.data.id,
+        action: 'UPDATE',
+        newData: res.data,
+        changedBy: session.id
+      }, session.companyId);
+    }
+    return res;
+  }
+
+  async function deleteEnergyReading(readingId) {
+    if (!session) return { success: false, message: "No active session." };
+    const res = await apiDeleteEnergyReading(readingId);
+    if (res.success && selectedMeter) {
+      await loadReadings(selectedMeter.id);
+      await loadConsumption(selectedMeter.id);
+      await apiWriteAuditLog({
+        module: 'Energy Monitoring',
+        tableName: 'public.energy_meter_readings',
+        recordId: readingId,
+        action: 'DELETE',
+        changedBy: session.id
+      }, session.companyId);
+    }
+    return res;
+  }
+
   const tenantData = useMemo(() => tenants[activeTenant], [activeTenant]);
 
   if (loading) return (
@@ -1561,7 +1603,7 @@ export function AppProvider({ children }) {
 
       // Energy values
       energyMeters, selectedMeter, setSelectedMeter, meterReadings, consumptionHistory, energyDashboard,
-      loadMeters, loadReadings, uploadMeterImage, confirmReading, loadConsumption
+      loadMeters, loadReadings, uploadMeterImage, confirmReading, loadConsumption, updateEnergyReading, deleteEnergyReading
     }}>
       {children}
     </AppContext.Provider>

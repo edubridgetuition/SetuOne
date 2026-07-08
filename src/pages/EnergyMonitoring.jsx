@@ -19,6 +19,7 @@ import {
 export default function EnergyMonitoring() {
   const {
     session,
+    activeRole,
     energyMeters,
     selectedMeter,
     setSelectedMeter,
@@ -28,11 +29,59 @@ export default function EnergyMonitoring() {
     loadReadings,
     uploadMeterImage,
     confirmReading,
-    loadConsumption
+    loadConsumption,
+    updateEnergyReading,
+    deleteEnergyReading
   } = useApp();
 
   const [activeTab, setActiveTab] = useState("dashboard"); // dashboard, ledger, charts
   
+  // Inline edit state
+  const [editingReadingId, setEditingReadingId] = useState(null);
+  const [editForm, setEditForm] = useState({ confirmed_value: "", remarks: "" });
+
+  const handleStartEdit = (item) => {
+    if (item.is_locked) {
+      const ok = window.confirm("This reading is locked. Are you sure you want to unlock it for editing?");
+      if (!ok) return;
+    }
+    setEditingReadingId(item.reading_id);
+    setEditForm({
+      confirmed_value: item.current_reading,
+      remarks: item.remarks || ""
+    });
+  };
+
+  const handleSaveEdit = async (readingId) => {
+    if (!editForm.confirmed_value || isNaN(editForm.confirmed_value)) {
+      alert("Please enter a valid reading!");
+      return;
+    }
+    const res = await updateEnergyReading(readingId, {
+      confirmed_value: Number(editForm.confirmed_value),
+      reading_value: Number(editForm.confirmed_value),
+      remarks: editForm.remarks,
+      is_locked: true
+    });
+    if (res.success) {
+      alert("Reading updated successfully!");
+      setEditingReadingId(null);
+    } else {
+      alert("Failed to update: " + res.message);
+    }
+  };
+
+  const handleDelete = async (readingId) => {
+    const ok = window.confirm("Are you sure you want to delete this reading? This will recalculate subsequent consumption lines.");
+    if (!ok) return;
+    const res = await deleteEnergyReading(readingId);
+    if (res.success) {
+      alert("Reading deleted successfully!");
+    } else {
+      alert("Failed to delete: " + res.message);
+    }
+  };
+
   // OCR Scan States
   const [selectedSlot, setSelectedSlot] = useState("Morning");
   const [uploadSource, setUploadSource] = useState("Manual"); // Camera, Gallery
@@ -599,43 +648,92 @@ Document Registry ID: ${docId || "Pending Upload"}`);
               <table style={s.table}>
                 <thead>
                   <tr>
-                    {["Date", "Slot", "Current (KWh)", "Previous (KWh)", "Consumption (Units)", "Cost (₹)", "Status", "Lock"].map(h => (
+                    {["Date", "Slot", "Current (KWh)", "Previous (KWh)", "Consumption (Units)", "Cost (₹)", "Status", "Lock", ...((activeRole === "Super Admin" || activeRole === "Admin Manager") ? ["Actions"] : [])].map(h => (
                       <th key={h} style={s.th}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredLedger.map(item => (
-                    <tr key={item.reading_id} style={s.tr}>
-                      <td style={s.td}><strong>{new Date(item.reading_datetime).toLocaleDateString()}</strong></td>
-                      <td style={s.td}>{item.reading_slot}</td>
-                      <td style={s.td}>{item.current_reading}</td>
-                      <td style={s.td}>{item.previous_reading}</td>
-                      <td style={s.td}>
-                        <span style={{ 
-                          color: item.reading_valid ? "#111625" : "#ef4444", 
-                          fontWeight: item.reading_valid ? 500 : 700 
-                        }}>
-                          {item.reading_valid ? `${item.consumption_units} KWh` : "Error (Neg)"}
-                        </span>
-                      </td>
-                      <td style={s.td}>
-                        {item.reading_valid ? `₹${Number(item.calculated_cost).toLocaleString()}` : "N/A"}
-                      </td>
-                      <td style={s.td}>
-                        <span style={{ 
-                          ...s.badge, 
-                          background: item.reading_status === "Confirmed" ? "#dcfce7" : "#fef3c7", 
-                          color: item.reading_status === "Confirmed" ? "#15803d" : "#d97706" 
-                        }}>
-                          {item.reading_status}
-                        </span>
-                      </td>
-                      <td style={s.td}>
-                        {item.is_locked ? <MdLock style={{ color: "#ef4444" }} /> : <MdLockOpen style={{ color: "#22c55e" }} />}
-                      </td>
-                    </tr>
-                  ))}
+                  {filteredLedger.map(item => {
+                    const isEditing = editingReadingId === item.reading_id;
+                    return (
+                      <tr key={item.reading_id} style={s.tr}>
+                        <td style={s.td}><strong>{new Date(item.reading_datetime).toLocaleDateString()}</strong></td>
+                        <td style={s.td}>{item.reading_slot}</td>
+                        <td style={s.td}>
+                          {isEditing ? (
+                            <input 
+                              type="number" 
+                              style={{ ...s.input, width: "110px", padding: "5px" }} 
+                              value={editForm.confirmed_value} 
+                              onChange={e => setEditForm({ ...editForm, confirmed_value: e.target.value })} 
+                            />
+                          ) : (
+                            item.current_reading
+                          )}
+                        </td>
+                        <td style={s.td}>{item.previous_reading}</td>
+                        <td style={s.td}>
+                          <span style={{ 
+                            color: item.reading_valid ? "#111625" : "#ef4444", 
+                            fontWeight: item.reading_valid ? 500 : 700 
+                          }}>
+                            {item.reading_valid ? `${item.consumption_units} KWh` : "Error (Neg)"}
+                          </span>
+                        </td>
+                        <td style={s.td}>
+                          {item.reading_valid ? `₹${Number(item.calculated_cost).toLocaleString()}` : "N/A"}
+                        </td>
+                        <td style={s.td}>
+                          <span style={{ 
+                            ...s.badge, 
+                            background: item.reading_status === "Confirmed" ? "#dcfce7" : "#fef3c7", 
+                            color: item.reading_status === "Confirmed" ? "#15803d" : "#d97706" 
+                          }}>
+                            {item.reading_status}
+                          </span>
+                        </td>
+                        <td style={s.td}>
+                          {item.is_locked ? <MdLock style={{ color: "#ef4444" }} /> : <MdLockOpen style={{ color: "#22c55e" }} />}
+                        </td>
+                        {(activeRole === "Super Admin" || activeRole === "Admin Manager") && (
+                          <td style={s.td}>
+                            {isEditing ? (
+                              <div style={{ display: "flex", gap: "5px" }}>
+                                <button 
+                                  style={{ ...s.primaryBtn, padding: "4px 8px", fontSize: "11px", background: "#22c55e", width: "auto" }} 
+                                  onClick={() => handleSaveEdit(item.reading_id)}
+                                >
+                                  Save
+                                </button>
+                                <button 
+                                  style={{ ...s.secondaryBtn, padding: "4px 8px", fontSize: "11px", width: "auto" }} 
+                                  onClick={() => setEditingReadingId(null)}
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <div style={{ display: "flex", gap: "5px" }}>
+                                <button 
+                                  style={{ ...s.secondaryBtn, padding: "4px 8px", fontSize: "11px", width: "auto" }} 
+                                  onClick={() => handleStartEdit(item)}
+                                >
+                                  Edit
+                                </button>
+                                <button 
+                                  style={{ ...s.primaryBtn, padding: "4px 8px", fontSize: "11px", background: "#ef4444", width: "auto" }} 
+                                  onClick={() => handleDelete(item.reading_id)}
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
                   {filteredLedger.length === 0 && (
                     <tr>
                       <td colSpan={8} style={{ ...s.td, textAlign: "center", padding: "40px 0", color: "#64748b" }}>

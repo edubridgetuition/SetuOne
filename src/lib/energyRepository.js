@@ -183,3 +183,35 @@ export async function fetchConsumptionHistory(companyId, meterId = null) {
     return response(false, null, err);
   }
 }
+
+// 9. Update existing energy reading
+export async function updateEnergyReading(readingId, updates) {
+  try {
+    const { data, error } = await supabase
+      .from('energy_meter_readings')
+      .update(updates)
+      .eq('id', readingId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return response(true, data, null, 'Reading updated successfully.');
+  } catch (err) {
+    return response(false, null, err);
+  }
+}
+
+// 10. Delete energy reading
+export async function deleteEnergyReading(readingId) {
+  try {
+    const { data, error } = await supabase
+      .from('energy_meter_readings')
+      .delete()
+      .eq('id', readingId);
+
+    if (error) throw error;
+    return response(true, data, null, 'Reading deleted successfully.');
+  } catch (err) {
+    return response(false, null, err);
+  }
+}
