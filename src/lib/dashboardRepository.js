@@ -6,7 +6,7 @@ export async function fetchAvailableWidgets() {
     const { data, error } = await supabase
       .from('dashboard_widgets')
       .select('*')
-      .eq('is_active', true)
+      .eq('is_archived', false)
       .order('widget_category', { ascending: true });
 
     if (error) throw error;
@@ -182,6 +182,52 @@ export async function fetchWidgetData(widgetKey, companyId) {
       summary = { value: 120 };
     }
     return { success: true, data: summary, error: null };
+  } catch (error) {
+    return { success: false, data: null, message: error.message, error };
+  }
+}
+export async function createDashboardWidget(widgetData) {
+  try {
+    const { data, error } = await supabase
+      .from('dashboard_widgets')
+      .insert(widgetData)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { success: true, data, message: 'Widget registered successfully.', error: null };
+  } catch (error) {
+    return { success: false, data: null, message: error.message, error };
+  }
+}
+
+export async function updateDashboardWidget(widgetId, updates) {
+  try {
+    const { data, error } = await supabase
+      .from('dashboard_widgets')
+      .update(updates)
+      .eq('id', widgetId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { success: true, data, message: 'Widget updated successfully.', error: null };
+  } catch (error) {
+    return { success: false, data: null, message: error.message, error };
+  }
+}
+
+export async function archiveDashboardWidget(widgetId) {
+  try {
+    const { data, error } = await supabase
+      .from('dashboard_widgets')
+      .update({ is_archived: true, is_active: false })
+      .eq('id', widgetId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return { success: true, data, message: 'Widget archived successfully.', error: null };
   } catch (error) {
     return { success: false, data: null, message: error.message, error };
   }

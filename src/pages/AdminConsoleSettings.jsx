@@ -64,7 +64,27 @@ export default function AdminConsoleSettings() {
   
   // Dashboard Templates clone form
   const [cloneForm, setCloneForm] = useState({ targetRole: "Admin Manager" });
-
+const [showWidgetDrawer, setShowWidgetDrawer] = useState(false);
+  const [editingWidgetId, setEditingWidgetId] = useState(null);
+  const [showPreview, setShowPreview] = useState(false);
+  const [widgetForm, setWidgetForm] = useState({
+    widget_name: "",
+    widget_key: "",
+    widget_category: "Operations",
+    description: "",
+    default_w: 4,
+    default_h: 3,
+    min_w: 2,
+    min_h: 2,
+    component_name: "GenericWidget",
+    refresh_interval_seconds: 60,
+    visible_roles: [],
+    visible_modules: [],
+    required_permission: "VIEW_DASHBOARD",
+    default_config: "{}",
+    is_required: false,
+    is_active: true
+  });
   useEffect(() => {
     loadSystemSettings();
     loadBrandingSettings();
@@ -193,6 +213,85 @@ export default function AdminConsoleSettings() {
       alert("Error duplicating dashboard template.");
     }
   }
+const resetWidgetForm = () => {
+    setEditingWidgetId(null);
+    setShowPreview(false);
+    setWidgetForm({
+      widget_name: "",
+      widget_key: "",
+      widget_category: "Operations",
+      description: "",
+      default_w: 4,
+      default_h: 3,
+      min_w: 2,
+      min_h: 2,
+      component_name: "GenericWidget",
+      refresh_interval_seconds: 60,
+      visible_roles: [],
+      visible_modules: [],
+      required_permission: "VIEW_DASHBOARD",
+      default_config: "{}",
+      is_required: false,
+      is_active: true
+    });
+  };
+  const handleSaveWidget = async (e) => {
+    e.preventDefault();
+    let parsedConfig = {};
+    try {
+      parsedConfig = JSON.parse(widgetForm.default_config);
+    } catch (err) {
+      alert("Invalid JSON format in Default Config field!");
+      return;
+    }
+    const payload = {
+      ...widgetForm,
+      default_config: parsedConfig
+    };
+    let res;
+    if (editingWidgetId) {
+      res = await updateDashboardWidget(editingWidgetId, payload);
+    } else {
+      res = await createDashboardWidget(payload);
+    }
+    if (res.success) {
+      alert("Widget configuration saved successfully!");
+      setShowWidgetDrawer(false);
+      resetWidgetForm();
+    } else {
+      alert("Action failed: " + res.message);
+    }
+  };
+  const handleEditWidgetClick = (w) => {
+    setEditingWidgetId(w.id);
+    setWidgetForm({
+      ...w,
+      default_config: JSON.stringify(w.default_config || {})
+    });
+    setShowWidgetDrawer(true);
+  };
+  const handleArchiveWidgetClick = async (wId) => {
+    if (!window.confirm("Are you sure you want to archive/remove this widget? This will hide it from layout drawer without breaking active dashboards.")) return;
+    const res = await archiveDashboardWidget(wId);
+    if (res.success) {
+      alert("Widget archived successfully!");
+    }
+  };
+  const handleDuplicateWidget = (w) => {
+    const randomSuffix = Math.random().toString(36).substring(2, 7).toUpperCase();
+    const uniqueKey = `${w.widget_key}_COPY_${randomSuffix}`;
+    setEditingWidgetId(null);
+    setWidgetForm({
+      ...w,
+      widget_key: uniqueKey,
+      widget_name: `${w.widget_name} (Copy)`,
+      default_config: JSON.stringify(w.default_config || {})
+    });
+    setShowWidgetDrawer(true);
+  };
+  const handleToggleActive = async (w) => {
+    await updateDashboardWidget(w.id, { is_active: !w.is_active });
+  };
 
   // Backup configuration export
   function exportSystemConfig() {
@@ -631,23 +730,46 @@ export default function AdminConsoleSettings() {
             </div>
           )}
 
-          {/* TAB 8: DASHBOARD TEMPLATES */}
+                    {/* TAB 8: DASHBOARD TEMPLATES */}
           {activeTab === "Dashboards" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={styles.panelTitle}>Dashboard Templates & Widgets Manager</div>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <button 
+                    onClick={() => { resetWidgetForm(); setShowWidgetDrawer(true); }}
+                    style={{ ...styles.primaryBtn, background: "#22c55e", borderColor: "#22c55e" }}
+                  >
+                    ➕ Register Widget
+                  </button>
+                  <button onClick={() => alert("CSV Export coming soon")} style={styles.secondaryBtn}>Export Catalog</button>
+                  <button onClick={loadDashboardWidgets} style={styles.secondaryBtn}>🔄 Refresh</button>
+                </div>
+              </div>
+
               <div style={styles.descBox}>
                 <div style={styles.muted} style={{ marginBottom: "12px" }}>Available Dynamic Widgets Catalog</div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "16px" }}>
                   {dashboardWidgetsList.map(w => (
-                    <div key={w.id} style={{ background: "#fff", border: "1px solid #cbd5e1", padding: "14px", borderRadius: "4px" }}>
+                    <div key={w.id} style={{ background: "#fff", border: "1px solid #cbd5e1", padding: "14px", borderRadius: "4px", position: "relative" }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <strong style={{ fontSize: "0.82rem" }}>{w.widget_name}</strong>
-                        <span style={{ fontSize: "0.65rem", padding: "3px 8px", background: "#f1f5f9", borderRadius: "20px", fontWeight: "bold" }}>
-                          {w.widget_category}
+                        <span style={{ fontSize: "0.65rem", padding: "3px 8px", background: w.is_active ? "#dcfce7" : "#fee2e2", color: w.is_active ? "#15803d" : "#b91c1c", borderRadius: "20px", fontWeight: "bold" }}>
+                          {w.is_active ? "Active" : "Disabled"}
                         </span>
                       </div>
                       <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "6px" }}>Key: <code>{w.widget_key}</code></div>
-                      <div style={{ fontSize: "0.72rem", marginTop: "4px" }}>Refresh Interval: <strong>{w.refresh_interval_seconds}s</strong></div>
-                      {w.is_required && <div style={{ fontSize: "0.68rem", color: "#ef4444", marginTop: "4px" }}>⚠️ Locked (Cannot be removed)</div>}
+                      <div style={{ fontSize: "0.72rem", marginTop: "4px" }}>Component: <strong>{w.component_name}</strong></div>
+                      <div style={{ fontSize: "0.72rem", marginTop: "2px" }}>Grid Size: <strong>{w.default_w}x{w.default_h}</strong> (Min: {w.min_w}x{w.min_h})</div>
+                      
+                      <div style={{ display: "flex", gap: "6px", marginTop: "12px", borderTop: "1px dashed #e2e8f0", paddingTop: "8px" }}>
+                        <button onClick={() => handleEditWidgetClick(w)} style={{ ...styles.secondaryBtn, padding: "2px 6px", fontSize: "11px" }}>Edit</button>
+                        <button onClick={() => handleDuplicateWidget(w)} style={{ ...styles.secondaryBtn, padding: "2px 6px", fontSize: "11px" }}>Duplicate</button>
+                        <button onClick={() => handleToggleActive(w)} style={{ ...styles.secondaryBtn, padding: "2px 6px", fontSize: "11px", color: w.is_active ? "#b91c1c" : "#15803d" }}>
+                          {w.is_active ? "Disable" : "Enable"}
+                        </button>
+                        <button onClick={() => handleArchiveWidgetClick(w.id)} style={{ ...styles.secondaryBtn, padding: "2px 6px", fontSize: "11px", color: "#ef4444", borderColor: "#fecaca" }}>Archive</button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -669,6 +791,115 @@ export default function AdminConsoleSettings() {
                   <button style={styles.primaryBtn} type="submit">Clone Layout Template</button>
                 </div>
               </form>
+
+              {/* Drawer Overlay Panel for Widget registration */}
+              {showWidgetDrawer && (
+                <div style={{ position: "fixed", top: 0, right: 0, width: "420px", height: "100%", background: "#fff", boxShadow: "-4px 0 20px rgba(0,0,0,0.15)", zIndex: 1000, padding: "24px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "16px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #e2e8f0", paddingBottom: "12px" }}>
+                    <h3 style={{ margin: 0, color: "#0038a8" }}>{editingWidgetId ? "Edit Dashboard Widget" : "Register Dashboard Widget"}</h3>
+                    <button onClick={() => setShowWidgetDrawer(false)} style={{ background: "none", border: "none", fontSize: "1.2rem", cursor: "pointer" }}>✖</button>
+                  </div>
+
+                  <form onSubmit={handleSaveWidget} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Widget Name</label>
+                      <input style={styles.input} required value={widgetForm.widget_name} onChange={e => setWidgetForm({ ...widgetForm, widget_name: e.target.value })} />
+                    </div>
+
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Widget Key</label>
+                      <input 
+                        style={styles.input} 
+                        required 
+                        disabled={editingWidgetId !== null}
+                        value={widgetForm.widget_key} 
+                        onChange={e => setWidgetForm({ ...widgetForm, widget_key: e.target.value.toUpperCase().replace(/\s+/g, '_') })} 
+                        placeholder="e.g. TICKETS_GRID"
+                      />
+                    </div>
+
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Category</label>
+                      <select style={styles.input} value={widgetForm.widget_category} onChange={e => setWidgetForm({ ...widgetForm, widget_category: e.target.value })}>
+                        {['Operations', 'Inventory', 'Assets', 'HR', 'Finance', 'Visitors', 'Energy', 'Analytics'].map(c => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>React Component Name</label>
+                      <select style={styles.input} value={widgetForm.component_name} onChange={e => setWidgetForm({ ...widgetForm, component_name: e.target.value })}>
+                        {['TicketsWidget', 'VisitorsWidget', 'PurchaseWidget', 'InventoryWidget', 'AttendanceWidget', 'EnergyWidget', 'VendorsWidget', 'GenericWidget', 'ChartWidget', 'TableWidget'].map(comp => (
+                          <option key={comp} value={comp}>{comp}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "10px" }}>
+                      <div style={{ ...styles.formGroup, flex: 1 }}>
+                        <label style={styles.label}>Default Width</label>
+                        <input style={styles.input} type="number" min="1" max="12" value={widgetForm.default_w} onChange={e => setWidgetForm({ ...widgetForm, default_w: Number(e.target.value) })} />
+                      </div>
+                      <div style={{ ...styles.formGroup, flex: 1 }}>
+                        <label style={styles.label}>Default Height</label>
+                        <input style={styles.input} type="number" min="1" max="10" value={widgetForm.default_h} onChange={e => setWidgetForm({ ...widgetForm, default_h: Number(e.target.value) })} />
+                      </div>
+                    </div>
+
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Refresh Interval (Seconds)</label>
+                      <input style={styles.input} type="number" min="10" value={widgetForm.refresh_interval_seconds} onChange={e => setWidgetForm({ ...widgetForm, refresh_interval_seconds: Number(e.target.value) })} />
+                    </div>
+
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Default Config (JSON String)</label>
+                      <textarea style={{ ...styles.input, fontFamily: "monospace", minHeight: "60px" }} value={widgetForm.default_config} onChange={e => setWidgetForm({ ...widgetForm, default_config: e.target.value })} />
+                    </div>
+
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Description</label>
+                      <input style={styles.input} value={widgetForm.description} onChange={e => setWidgetForm({ ...widgetForm, description: e.target.value })} />
+                    </div>
+
+                    <div style={{ display: "flex", gap: "15px", margin: "10px 0" }}>
+                      <label style={{ fontSize: "0.76rem", display: "flex", alignItems: "center", gap: "6px" }}>
+                        <input type="checkbox" checked={widgetForm.is_required} onChange={e => setWidgetForm({ ...widgetForm, is_required: e.target.checked })} />
+                        Locked (Required)
+                      </label>
+                      <label style={{ fontSize: "0.76rem", display: "flex", alignItems: "center", gap: "6px" }}>
+                        <input type="checkbox" checked={widgetForm.is_active} onChange={e => setWidgetForm({ ...widgetForm, is_active: e.target.checked })} />
+                        Active Status
+                      </label>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                      <button style={{ ...styles.primaryBtn, flex: 1 }} type="submit">Save Configuration</button>
+                      <button 
+                        type="button" 
+                        onClick={() => setShowPreview(!showPreview)} 
+                        style={{ ...styles.secondaryBtn, flex: 1, borderColor: "#3b82f6", color: "#3b82f6" }}
+                      >
+                        {showPreview ? "Hide Preview" : "Preview Widget"}
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* Preview section inside the drawer */}
+                  {showPreview && (
+                    <div style={{ marginTop: "15px", border: "1px solid #bfdbfe", background: "#eff6ff", borderRadius: "4px", padding: "14px" }}>
+                      <div style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#1e40af", marginBottom: "8px" }}>Widget Live Preview Card:</div>
+                      <div style={{ background: "#fff", border: "1px solid #cbd5e1", borderRadius: "4px", padding: "12px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                        <div style={{ fontWeight: 600, fontSize: "0.85rem", color: "#0038a8" }}>{widgetForm.widget_name || "New Widget"}</div>
+                        <div style={{ fontSize: "0.7rem", color: "#64748b", margin: "4px 0" }}>Category: {widgetForm.widget_category} | Code component: {widgetForm.component_name}</div>
+                        <div style={{ height: "60px", background: "#f8fafc", borderRadius: "4px", display: "flex", alignItems: "center", justifyItems: "center", justifyContent: "center", fontSize: "0.72rem", color: "#94a3b8", border: "1px dashed #e2e8f0", marginTop: "8px" }}>
+                          [ {widgetForm.default_w} x {widgetForm.default_h} Grid Layout Canvas ]
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

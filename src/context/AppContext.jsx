@@ -141,12 +141,15 @@ import {
   saveRolePermissions as apiSaveRolePermissions,
 
   // Dashboard Builder imports
-  fetchAvailableWidgets as apiFetchAvailableWidgets,
-  fetchUserDashboardLayout as apiFetchUserDashboardLayout,
-  saveDashboardLayout as apiSaveDashboardLayout,
-  resetDashboardLayout as apiResetDashboardLayout,
-  duplicateDashboard as apiDuplicateDashboard,
-  fetchWidgetData as apiFetchWidgetData
+fetchAvailableWidgets as apiFetchAvailableWidgets,
+fetchUserDashboardLayout as apiFetchUserDashboardLayout,
+saveDashboardLayout as apiSaveDashboardLayout,
+resetDashboardLayout as apiResetDashboardLayout,
+duplicateDashboard as apiDuplicateDashboard,
+fetchWidgetData as apiFetchWidgetData,
+createDashboardWidget as apiCreateDashboardWidget,
+updateDashboardWidget as apiUpdateDashboardWidget,
+archiveDashboardWidget as apiArchiveDashboardWidget
 } from "../lib";
 
 export function AppProvider({ children }) {
@@ -1314,7 +1317,54 @@ export function AppProvider({ children }) {
     }
     return res;
   }
+  async function createDashboardWidget(widgetData) {
+    const res = await apiCreateDashboardWidget(widgetData);
+    if (res.success && session) {
+      await loadDashboardWidgets();
+      await apiWriteAuditLog({
+        module: 'Dashboard Catalog',
+        tableName: 'public.dashboard_widgets',
+        recordId: res.data.id,
+        action: 'INSERT',
+        newData: res.data,
+        changedBy: session.id
+      }, session.companyId);
+    }
+    return res;
+  }
 
+  async function updateDashboardWidget(widgetId, updates) {
+    const res = await apiUpdateDashboardWidget(widgetId, updates);
+    if (res.success && session) {
+      await loadDashboardWidgets();
+      await apiWriteAuditLog({
+        module: 'Dashboard Catalog',
+        tableName: 'public.dashboard_widgets',
+        recordId: res.data.id,
+        action: 'UPDATE',
+        newData: res.data,
+        changedBy: session.id
+      }, session.companyId);
+    }
+    return res;
+  }
+
+  async function archiveDashboardWidget(widgetId) {
+    const res = await apiArchiveDashboardWidget(widgetId);
+    if (res.success && session) {
+      await loadDashboardWidgets();
+      await apiWriteAuditLog({
+        module: 'Dashboard Catalog',
+        tableName: 'public.dashboard_widgets',
+        recordId: res.data.id,
+        action: 'SOFT_DELETE_ARCHIVE',
+        newData: res.data,
+        changedBy: session.id
+      }, session.companyId);
+    }
+    return res;
+  }
+  
   async function loadUserDashboardLayout() {
     if (!session) return null;
     const res = await apiFetchUserDashboardLayout(
