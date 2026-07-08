@@ -1,71 +1,55 @@
-# SetuOne ERP Migration Walkthrough - Dynamic Dropdowns, Catalog Visibility, Inline Edits & Dashboard Widget Catalog
+# SetuOne ERP Migration Walkthrough - Enterprise Energy Monitoring System
 
-This walkthrough documents the updates made to connect frontend dropdown selections to the Dynamic Masters registry dynamically, ensure catalog items with zero stock display correctly, add transaction editing & deletion capabilities, and construct a database-driven dashboard widget catalog manager with dropdown selections, soft archival, and audit logs.
+This walkthrough documents the successful integration of the **Enterprise Energy Monitoring & AI OCR System**, designed to handle unlimited hardware meters, OCR scan simulations, database-level lag views, and RLS tenant security controls.
 
 ---
 
 ## 🚀 Accomplished Tasks
 
-### 1. Database Seed Migrations
-* **Dynamic Masters (`database/13_DynamicMastersSeedMigration.sql`)**: Seeded core dynamic master definitions (`PANTRY_ITEM_NAMES`, `TICKET_CATEGORIES`, `VISITOR_PURPOSES`, `VEHICLE_TYPES`, `VISITOR_ID_TYPES`) and defaults.
-* **Double-Registry Configuration (`database/14_PantryDashboardCardsMigration.sql`)**: Registered a new dynamic master definition `PANTRY_DASHBOARD_CARDS` (Pantry Dashboard Cards) and seeded it with:
-  - `Water Bottle (20L)`
-  - `Water Jug`
-  - `Coffee Beans`
-  - `Milk Packet`
-  *(Sugar is excluded from this list by default).*
-* **Soft Archival Column (`database/15_DashboardWidgetArchivalMigration.sql`)**: Created the `is_archived` column in the `dashboard_widgets` table to allow soft deletes.
+### 1. Database Seed Migration (`database/16_EnergyMonitoring.sql`)
+* **`energy_meters` Table**: Stores core hardware properties (unit type, installation date, capacity, status, serial numbers, and custom tariff rates like `₹8.50/Unit` per meter).
+* **Foreign Keys**:
+  - `branch_id UUID REFERENCES public.branches(id)`
+  - `building_id UUID REFERENCES public.buildings(id)`
+  - `location_id UUID REFERENCES public.locations(id)`
+* **`energy_meter_readings` Table**:
+  - Each upload (Morning, Evening, Hourly) is registered as a separate individual row (SAP/Siemens model).
+  - Slots are specified by `reading_slot` (`Morning`, `Evening`) and modes are set by `capture_mode` (`Manual`, `OCR`, `IoT`).
+  - Stores debug values: `ocr_raw_text` (e.g. `I234S` text outputs) and `ocr_provider` (e.g. `Tesseract`, `Google Vision`).
+  - Exposes workflow flags: `reading_status` (`Pending OCR`, `Pending Confirmation`, `Confirmed`), `is_locked` (disables editing once confirmed), and `photo_document_id UUID REFERENCES public.documents(id)`.
+* **Dynamic Cost & Validation View (`public.energy_consumption_summary`)**:
+  - Automatically fetches preceding readings per meter via SQL window function `LAG()`.
+  - Calculates dynamic difference units (`consumption_units`) and cost (`calculated_cost`).
+  - Sets cost/consumption to `NULL` and flags `reading_valid = FALSE` if consecutive readings contain descending values (negative consumption checks).
+* **Enterprise RLS Security**: Strict tenant isolation matching user profiles (`company_id = public.get_user_company(auth.uid())`), without any RLS bypasses.
+* **Conflict-Safe Multi-Company Seeding**: Seeding logic uses `WHERE NOT EXISTS` combined with dynamic suffixes mapping to each company's ID to prevent key duplication conflicts during re-runs.
 
-### 2. Connected Page Components
-* **Pantry & Coffee (`InventoryManagement.jsx`)**: Dropdown and consumption cards are now dynamically populated from the database.
-* **Catalog Visibility Fix (`InventoryManagement.jsx`)**: Updated the Stock Balance ledger table to map directly from all registered catalog items (`displayStockBalances`). Registered items with `0` initial stock balances show up immediately.
-* **Complaint Tickets (`Tickets.jsx`)**: Categories dropdown loads dynamically from the `TICKET_CATEGORIES` definition registry.
-* **Visitor Management (`VisitorManagement.jsx`)**: Purposes, vehicle types, and ID proof types dropdown selections load dynamically from their respective registries.
-* **Admin Settings Console (`AdminConsoleSettings.jsx`)**: Added auto-slugifying logic for `masterKey` so new master categories created in the UI are formatted correctly (e.g. `Pantry Item Names` ➡️ `PANTRY_ITEM_NAMES`).
+### 2. Repository Layer (`src/lib/energyRepository.js`)
+* Implements robust backend integrations returning standard success/error objects:
+  - `fetchMeters(companyId)`
+  - `fetchMeterDetails(meterId)`
+  - `fetchReadings(meterId)`
+  - `uploadMeterImage(file)`
+  - `processOCR(imagePath)`
+  - `confirmReading(readingData)`
+  - `calculateConsumption(meterId, start, end)`
+  - `fetchConsumptionHistory(meterId, companyId)`
 
-### 3. Super Admin Transaction Rollback & Inline Edits (`InventoryManagement.jsx`)
-* Exclusively for the **Super Admin** role, added an **`Edit`** and **`Delete`** button in the Consolidated Consumption Report table.
-* **Delete Action**: Deleting a pantry consumption transaction automatically adjusts (rolls back) the closing stock of the item in the database (e.g. deleting a Consumed entry adds the quantity back to stock, deleting a Refill entry subtracts it).
-* **Inline Edit Mode**: Clicking `Edit` replaces row cells with editable input fields (Quantity, Action Type, Log Date) along with `Save` and `Cancel` buttons.
-* **Smart Stock Correction**: When a transaction is edited, the system calculates the delta (difference) between the old configuration and the new configuration, then corrects the current stock balance automatically.
+### 3. Context & Routing Integrations (`AppContext.jsx`, `App.jsx`)
+* Registered state properties: `energyMeters`, `selectedMeter`, `meterReadings`, `consumptionHistory`, `energyDashboard`.
+* Exposed core actions: `loadMeters()`, `loadReadings()`, `uploadMeterImage()`, `confirmReading()`, `loadConsumption()`.
+* Automatically loads energy meters on session login.
+* Mapped view switch route: `"energy" ➡️ <EnergyMonitoring />`.
 
-### 4. Double-Registry Dashboard Separation (`InventoryManagement.jsx`)
-* **Dynamic Separation**:
-  - The **Pantry Log Dropdown** list is driven by `PANTRY_ITEM_NAMES` (includes Sugar).
-  - The **Dashboard Analytics Cards** are driven by `PANTRY_DASHBOARD_CARDS` (excludes Sugar).
-* **Super Admin Control**: The Super Admin can add or remove items from either list directly in the **Admin Console ➡️ Dynamic Masters** panel. No code changes are required to add/remove dashboard cards or dropdown options.
-* **Metric Logic**: Cards show current calendar month's total `In` transactions as the main large value, last month's total `In` transactions as the Month count, and today's total `In` transactions as the Today count.
-
-### 5. Dashboard Widget Catalog Manager (`AdminConsoleSettings.jsx`)
-* **Top Bar Controls**: Added `+ Register Widget`, `Export Catalog`, and `Refresh` buttons to the Dashboard Templates tab.
-* **CRUD Panel Actions**:
-  - **Edit**: Updates the widget configuration.
-  - **Duplicate**: Clones configuration settings and appends a short, unique key suffix to prevent database collisions.
-  - **Soft Archive**: Safely flags widgets as archived (`is_archived = true`), removing them from layout drawers while keeping active user layouts intact.
-  - **Status Toggle**: Easily enables/disables widgets from the UI.
-* **Widget Key Dropdown & Custom Option**: Converted the `Widget Key` input to a dropdown mapping all standard backend data sources (`OPEN_TICKETS`, `TODAYS_VISITORS`, `PENDING_PURCHASE`, etc.) to prevent spelling errors, with an optional `-- Custom Key / New Source --` fallback for typing a custom code key.
-* **Component Dropdown Selection**: Converted the React component field to a dropdown listing valid system components (`TicketsWidget`, `InventoryWidget`, etc.).
-* **Preview Card**: Added a preview panel inside the drawer showing how the widget card will render with selected grid dimensions.
-* **Audit Trail integration**: Triggered automatic insertions into the `audit_logs` table for all widget CRUD operations (Creation, Update, Archive, Toggle status).
-* **Code Bug Fixes**:
-  - Fixed `undefined` context exports for `dashboardWidgetsList` and `activeDashboardLayout` that caused the Vercel site to go blank.
-  - Added missing widget CRUD function destructuring inside `AdminConsoleSettings.jsx`.
-
-### 6. Navigation Enhancements (`Layout.jsx`)
-* **Clickable Breadcrumb**: The **`Home`** link in the header breadcrumbs is now clickable. Clicking it immediately redirects the user to the main/home **Dashboard** page.
-* **Hover Interaction**: Hovering over "Home" changes its color to the corporate blue highlight with a smooth transition.
-* **Multi-Level Breadcrumbs**: Breadcrumbs dynamically expand up to 3 levels (e.g. `Home › Maintenance › PPM Schedule`) for sub-menu screens, and the middle level redirects back to the main category view.
-
-### 7. Layout Query Robustness Fixes (`dashboardRepository.js`)
-* **Preventing Duplicate Layout Crashes**: Reconfigured database retrieval calls in `fetchUserDashboardLayout` to order results by `updated_at DESC` and limit to `1` prior to evaluating `.maybeSingle()`. This prevents Postgrest crashes (`PGRST116: More than one row returned`) when users have multiple active custom layout mappings.
-
-### 8. Visual / UX Error Preventions & Validations
-* **Negative Quantity Prevention (`InventoryManagement.jsx`)**: Added both client-side constraints (`min="1"`) and validation handlers on inline transaction edits, preventing negative or zero inputs.
-* **Date Sequence Checks (`InventoryManagement.jsx`, `Reports.jsx`)**: Enforced automatic warnings restricting start dates from being set after end dates in both inventory logs and reports parameters.
+### 4. Interactive Page Layout (`src/pages/EnergyMonitoring.jsx`)
+* **Meter Selector Cards**: Supports dynamic meter lists (Grid, Generator, HVAC, etc.).
+* **AI OCR scan overlay**: Displays preview photos, green laser sweep scanner lines, progress loaders, confidence metrics, and confirm/edit controls.
+* **Cost Summary Cards**: Shows Morning, Evening, Consumption Units, and dynamic Tariff Billing Cost (₹).
+* **Ledger Table**: Renders consumption rows, photo document links, manual log forms, lock icons, and downloard exports (CSV/Excel).
+* **SVG Graphs**: Interactive weekly/monthly consumption analysis.
 
 ---
 
 ## 📋 Verification Checks Passed
 
-* **Vite Production Bundler**: Local `npm run build` runs with zero syntax warnings.
-* **Supabase SQL Executions**: Seed SQL migrations compiled successfully in the database console.
+* **Vite Production Bundler**: Local `npm run build` runs with zero syntax warnings or import compilation failures.
