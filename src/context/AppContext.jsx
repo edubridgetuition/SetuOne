@@ -1483,9 +1483,8 @@ export function AppProvider({ children }) {
       systemSettings, brandingSettings, masterDefinitionsList, numberSeriesList, approvalWorkflowsList, featureFlagsList, holidayCalendarList, workingDaysData, customFieldDefinitionsList, auditLogsList, notificationTemplatesList, recurringSchedulerJobsList,
       loadSystemSettings, saveSystemSettings, loadBrandingSettings, saveBrandingSettings, loadMasterDefinitions, createMasterDefinition, createMasterValue, loadNumberSeries, saveNumberSeries, loadApprovalWorkflows, saveApprovalWorkflow, loadFeatureFlags, toggleFeatureFlag, loadHolidayCalendar, createHoliday, loadWorkingDays, saveWorkingDays, loadCustomFieldDefinitions, saveCustomField, loadAuditLogs, loadNotificationTemplates, saveNotificationTemplate, loadRecurringSchedulerJobs, saveRecurringSchedulerJob,
 
-      // Dashboard Builder values
-      dashboardWidgetsList, activeDashboardLayout,
-      loadDashboardWidgets, loadUserDashboardLayout, saveUserDashboardLayout, resetUserDashboardLayout, duplicateDashboardLayout, fetchWidgetDataPayload
+      loadDashboardWidgets, loadUserDashboardLayout, saveUserDashboardLayout, resetUserDashboardLayout, duplicateDashboardLayout, fetchWidgetDataPayload,
+      createDashboardWidget, updateDashboardWidget, archiveDashboardWidget
     }}>
       {children}
     </AppContext.Provider>
