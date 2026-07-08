@@ -47,6 +47,9 @@ This walkthrough documents the updates made to connect frontend dropdown selecti
 * **Component Dropdown Selection**: Converted the React component field to a dropdown listing valid system components (`TicketsWidget`, `InventoryWidget`, etc.).
 * **Preview Card**: Added a preview panel inside the drawer showing how the widget card will render with selected grid dimensions.
 * **Audit Trail integration**: Triggered automatic insertions into the `audit_logs` table for all widget CRUD operations (Creation, Update, Archive, Toggle status).
+* **Code Bug Fixes**:
+  - Fixed `undefined` context exports for `dashboardWidgetsList` and `activeDashboardLayout` that caused the Vercel site to go blank.
+  - Added missing widget CRUD function destructuring inside `AdminConsoleSettings.jsx`.
 
 ---
 
