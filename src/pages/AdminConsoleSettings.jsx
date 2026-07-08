@@ -64,7 +64,8 @@ export default function AdminConsoleSettings() {
   
   // Dashboard Templates clone form
   const [cloneForm, setCloneForm] = useState({ targetRole: "Admin Manager" });
-const [showWidgetDrawer, setShowWidgetDrawer] = useState(false);
+  const [keySelection, setKeySelection] = useState("CUSTOM");
+  const [showWidgetDrawer, setShowWidgetDrawer] = useState(false);
   const [editingWidgetId, setEditingWidgetId] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [widgetForm, setWidgetForm] = useState({
@@ -216,6 +217,7 @@ const [showWidgetDrawer, setShowWidgetDrawer] = useState(false);
 const resetWidgetForm = () => {
     setEditingWidgetId(null);
     setShowPreview(false);
+    setKeySelection("CUSTOM");
     setWidgetForm({
       widget_name: "",
       widget_key: "",
@@ -264,6 +266,12 @@ const resetWidgetForm = () => {
   };
   const handleEditWidgetClick = (w) => {
     setEditingWidgetId(w.id);
+    const standardKeys = ["OPEN_TICKETS", "TODAYS_VISITORS", "PENDING_PURCHASE", "STOCK_LEVELS", "ATTENDANCE_SUMMARY", "ENERGY_MONITOR", "TOP_VENDORS"];
+    if (standardKeys.includes(w.widget_key)) {
+      setKeySelection(w.widget_key);
+    } else {
+      setKeySelection("CUSTOM");
+    }
     setWidgetForm({
       ...w,
       default_config: JSON.stringify(w.default_config || {})
@@ -281,6 +289,7 @@ const resetWidgetForm = () => {
     const randomSuffix = Math.random().toString(36).substring(2, 7).toUpperCase();
     const uniqueKey = `${w.widget_key}_COPY_${randomSuffix}`;
     setEditingWidgetId(null);
+    setKeySelection("CUSTOM");
     setWidgetForm({
       ...w,
       widget_key: uniqueKey,
@@ -807,16 +816,45 @@ const resetWidgetForm = () => {
                     </div>
 
                     <div style={styles.formGroup}>
-                      <label style={styles.label}>Widget Key</label>
-                      <input 
-                        style={styles.input} 
-                        required 
+                      <label style={styles.label}>Widget Key / Data Source</label>
+                      <select 
+                        style={styles.input}
                         disabled={editingWidgetId !== null}
-                        value={widgetForm.widget_key} 
-                        onChange={e => setWidgetForm({ ...widgetForm, widget_key: e.target.value.toUpperCase().replace(/\s+/g, '_') })} 
-                        placeholder="e.g. TICKETS_GRID"
-                      />
+                        value={keySelection}
+                        onChange={e => {
+                          const val = e.target.value;
+                          setKeySelection(val);
+                          if (val !== "CUSTOM") {
+                            setWidgetForm({ ...widgetForm, widget_key: val });
+                          } else {
+                            setWidgetForm({ ...widgetForm, widget_key: "" });
+                          }
+                        }}
+                      >
+                        <option value="OPEN_TICKETS">Open Tickets Count (OPEN_TICKETS)</option>
+                        <option value="TODAYS_VISITORS">Today's Visitors Pass (TODAYS_VISITORS)</option>
+                        <option value="PENDING_PURCHASE">Pending Procurement (PENDING_PURCHASE)</option>
+                        <option value="STOCK_LEVELS">Inventory Alert Levels (STOCK_LEVELS)</option>
+                        <option value="ATTENDANCE_SUMMARY">Attendance Headcount (ATTENDANCE_SUMMARY)</option>
+                        <option value="ENERGY_MONITOR">Energy & Power Monitor (ENERGY_MONITOR)</option>
+                        <option value="TOP_VENDORS">Top Active Vendors (TOP_VENDORS)</option>
+                        <option value="CUSTOM">-- Custom Key / New Source --</option>
+                      </select>
                     </div>
+
+                    {keySelection === "CUSTOM" && (
+                      <div style={styles.formGroup}>
+                        <label style={styles.label}>Custom Key Name</label>
+                        <input 
+                          style={styles.input} 
+                          required 
+                          disabled={editingWidgetId !== null}
+                          value={widgetForm.widget_key} 
+                          onChange={e => setWidgetForm({ ...widgetForm, widget_key: e.target.value.toUpperCase().replace(/\s+/g, '_') })} 
+                          placeholder="e.g. CUSTOM_PANTRY_STOCK"
+                        />
+                      </div>
+                    )}
 
                     <div style={styles.formGroup}>
                       <label style={styles.label}>Category</label>
