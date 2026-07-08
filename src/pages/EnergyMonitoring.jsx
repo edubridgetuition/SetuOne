@@ -12,7 +12,8 @@ import {
   MdFileDownload,
   MdPrint,
   MdTimeline,
-  MdAttachMoney
+  MdAttachMoney,
+  MdInfo
 } from "react-icons/md";
 
 export default function EnergyMonitoring() {
@@ -45,6 +46,7 @@ export default function EnergyMonitoring() {
   const [rawOcrText, setRawOcrText] = useState("");
   const [remarks, setRemarks] = useState("");
   const [photoDocId, setPhotoDocId] = useState(null);
+  const [ocrProvider, setOcrProvider] = useState("Mock OCR"); // Mock OCR, Tesseract, Google Vision, OpenAI Vision, Azure Vision
 
   // Filter States
   const [filterStartDate, setFilterStartDate] = useState(
@@ -97,16 +99,35 @@ export default function EnergyMonitoring() {
 
       // Simulated OCR value generator based on last reading
       const lastReadingVal = meterReadings.length > 0 ? Number(meterReadings[0].confirmed_value) : Number(selectedMeter?.initial_reading || 12000);
-      // Generate incremental reading (e.g. +10 to +80 KWh since last log)
       const mockRead = Math.floor(lastReadingVal + 15 + Math.random() * 55);
-      const conf = Number((0.94 + Math.random() * 0.05).toFixed(2));
+      
+      // Determine confidence state dynamically to demo all 3 rules
+      const rand = Math.random();
+      let conf = 0.98; // Auto Accept default (95%+)
+      if (rand < 0.3) {
+        conf = 0.76; // Manual Entry (<80%)
+      } else if (rand < 0.6) {
+        conf = 0.88; // Require confirmation (80%-94%)
+      }
       
       setDetectedValue(mockRead.toString());
-      setConfirmedValue(mockRead.toString());
       setOcrConfidence(conf);
+      
+      if (conf >= 0.95) {
+        // Rule 1: Auto Accept
+        setConfirmedValue(mockRead.toString());
+      } else if (conf >= 0.80) {
+        // Rule 2: Require confirmation
+        setConfirmedValue(mockRead.toString());
+      } else {
+        // Rule 3: Manual entry required
+        setConfirmedValue("");
+      }
+
       setRawOcrText(`KWH LCD DISPLAY MATCH FOUND: [${mockRead}]
 Tariff Model: Active (₹${selectedMeter?.tariff_rate || "8.50"}/Unit)
 Confidence Coefficient: ${(conf * 100).toFixed(0)}%
+OCR Engine Selected: ${ocrProvider}
 Device Registry: ${selectedMeter?.meter_code || "Unknown"}
 Document Registry ID: ${docId || "Pending Upload"}`);
       
@@ -132,13 +153,13 @@ Document Registry ID: ${docId || "Pending Upload"}`);
       reading_value: val,
       ocr_value: Number(detectedValue),
       ocr_raw_text: rawOcrText,
-      ocr_provider: "Mock OCR Engine",
+      ocr_provider: ocrProvider,
       confirmed_value: val,
       ocr_confidence: ocrConfidence,
       photo_document_id: photoDocId,
       reading_status: "Confirmed",
       is_locked: true, // Auto lock on user confirmation
-      remarks: remarks || `Auto-captured via OCR Scan at 8 ${selectedSlot === "Morning" ? "AM" : "PM"}`
+      remarks: remarks || `Auto-captured via ${ocrProvider} Scan at 8 ${selectedSlot === "Morning" ? "AM" : "PM"}`
     };
 
     const res = await confirmReading(readingData);
@@ -273,7 +294,7 @@ Document Registry ID: ${docId || "Pending Upload"}`);
                 </div>
                 <div style={s.meterName}>{meter.meter_name}</div>
                 <div style={s.meterMetaGrid}>
-                  <div>Manufacturer: <strong>{meter.manufacturer || "N/A"}</strong></div>
+                  <div>Identifier: <strong>{meter.meter_identifier || "N/A"}</strong></div>
                   <div>Tariff: <strong>₹{meter.tariff_rate}/Unit</strong></div>
                 </div>
               </button>
@@ -440,6 +461,16 @@ Document Registry ID: ${docId || "Pending Upload"}`);
               </div>
             </div>
 
+            {/* OCR Provider Selector Option */}
+            <div style={s.manualBox}>
+              <label style={s.label}>OCR Processing Engine Provider</label>
+              <select style={s.input} value={ocrProvider} onChange={e => setOcrProvider(e.target.value)}>
+                {["Mock OCR", "Tesseract", "Google Vision", "OpenAI Vision", "Azure Vision"].map(eng => (
+                  <option key={eng} value={eng}>{eng}</option>
+                ))}
+              </select>
+            </div>
+
             {/* OCR Processing Overlay modal */}
             {scanStep > 0 && (
               <div style={s.ocrContainer}>
@@ -476,11 +507,26 @@ Document Registry ID: ${docId || "Pending Upload"}`);
                           </div>
                           <div style={{ textAlign: "right" }}>
                             <div style={s.resultsLabel}>Confidence Score</div>
-                            <div style={{ ...s.confidenceBadge, color: ocrConfidence > 0.9 ? "#22c55e" : "#eab308" }}>
+                            <div style={{ ...s.confidenceBadge, color: ocrConfidence >= 0.95 ? "#22c55e" : ocrConfidence >= 0.8 ? "#eab308" : "#ef4444" }}>
                               {(ocrConfidence * 100).toFixed(0)}% Match
                             </div>
                           </div>
                         </div>
+
+                        {/* OCR Rule Notification Banners */}
+                        {ocrConfidence >= 0.95 ? (
+                          <div style={{ ...s.ruleBanner, background: "#dcfce7", color: "#15803d", borderColor: "#86efac" }}>
+                            <MdCheckCircle /> <strong>Auto Accept Rule:</strong> High confidence match. Pre-filled value.
+                          </div>
+                        ) : ocrConfidence >= 0.80 ? (
+                          <div style={{ ...s.ruleBanner, background: "#fef3c7", color: "#b45309", borderColor: "#fde047" }}>
+                            <MdInfo /> <strong>Review Confirmation Rule:</strong> Mid confidence match. Please verify value before confirming.
+                          </div>
+                        ) : (
+                          <div style={{ ...s.ruleBanner, background: "#fee2e2", color: "#b91c1c", borderColor: "#fca5a5" }}>
+                            <MdWarning /> <strong>Manual Input Enforced Rule:</strong> Low confidence match. Scanner reading discarded. Please enter value manually.
+                          </div>
+                        )}
 
                         <div style={s.formGroup}>
                           <label style={s.label}>Confirmed Value (Confirm or Adjust below)</label>
@@ -654,7 +700,7 @@ const s = {
   meterCode: { fontSize: "0.8rem", fontWeight: 600, color: "#64748b" },
   meterType: { fontSize: "0.7rem", color: "#6366f1", background: "#e0e7ff", padding: "2px 6px", borderRadius: "4px", display: "inline-block", marginTop: "4px" },
   meterName: { fontSize: "0.95rem", fontWeight: 700, color: "#1e293b", marginBottom: "8px" },
-  meterMetaGrid: { display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "#64748b" },
+  meterMetaGrid: { display: "flex", flexDirection: "column", gap: "4px", fontSize: "0.75rem", color: "#64748b" },
   
   // Manual Override Form
   manualBox: { background: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "16px" },
@@ -663,8 +709,8 @@ const s = {
   formRow: { display: "flex", gap: "10px" },
   formGroup: { display: "flex", flexDirection: "column", gap: "6px" },
   label: { fontSize: "0.75rem", fontWeight: 600, color: "#64748b" },
-  input: { border: "1px solid #cbd5e1", borderRadius: "6px", padding: "8px 12px", fontSize: "0.85rem", background: "#f8fafc" },
-  primaryBtn: { background: "#6366f1", color: "#fff", border: "none", borderRadius: "6px", padding: "10px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" },
+  input: { border: "1px solid #cbd5e1", borderRadius: "6px", padding: "8px 12px", fontSize: "0.85rem", background: "#f8fafc", width: "100%" },
+  primaryBtn: { background: "#6366f1", color: "#fff", border: "none", borderRadius: "6px", padding: "10px", fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", width: "100%" },
   secondaryBtn: { background: "#fff", color: "#64748b", border: "1px solid #e2e8f0", borderRadius: "6px", padding: "10px", fontWeight: 600, cursor: "pointer" },
 
   // Summary Widgets
@@ -676,6 +722,9 @@ const s = {
   widgetSub: { fontSize: "0.7rem", color: "#94a3b8" },
   statusPillGrid: { display: "flex", flexDirection: "column", gap: "6px" },
   statusPill: { padding: "4px 8px", borderRadius: "4px", fontSize: "0.7rem", fontWeight: 600, textAlign: "center" },
+
+  // Rule Banner
+  ruleBanner: { padding: "12px", border: "1px solid", borderRadius: "6px", fontSize: "0.8rem", display: "flex", alignItems: "center", gap: "8px" },
 
   // Tabs
   tabBar: { display: "flex", borderBottom: "1px solid #e2e8f0", gap: "16px" },
