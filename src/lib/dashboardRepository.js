@@ -26,6 +26,8 @@ export async function fetchUserDashboardLayout(companyId, roleName, departmentId
         .select('*')
         .eq('company_id', companyId)
         .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (data) return { success: true, data, message: 'User override layout loaded.', error: null };
@@ -38,6 +40,8 @@ export async function fetchUserDashboardLayout(companyId, roleName, departmentId
         .select('*')
         .eq('company_id', companyId)
         .eq('department_id', departmentId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (data) return { success: true, data, message: 'Department layout loaded.', error: null };
@@ -50,6 +54,8 @@ export async function fetchUserDashboardLayout(companyId, roleName, departmentId
         .select('*')
         .eq('company_id', companyId)
         .eq('role_name', roleName)
+        .order('updated_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (data) return { success: true, data, message: 'Role default layout loaded.', error: null };
@@ -61,6 +67,8 @@ export async function fetchUserDashboardLayout(companyId, roleName, departmentId
       .select('*')
       .eq('company_id', companyId)
       .eq('is_default', true)
+      .order('updated_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     return { success: true, data: data || null, message: 'Default fallback layout loaded.', error: null };
