@@ -1,3 +1,8 @@
+-- Clean up existing views and tables from previous mock runs
+DROP VIEW IF EXISTS public.energy_consumption_summary CASCADE;
+DROP TABLE IF EXISTS public.energy_meter_readings CASCADE;
+DROP TABLE IF EXISTS public.energy_meters CASCADE;
+
 -- Table 1: energy_meters
 CREATE TABLE IF NOT EXISTS public.energy_meters (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
