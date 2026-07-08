@@ -1,4 +1,4 @@
-# SetuOne ERP Migration Walkthrough - Enterprise Energy Monitoring System
+# SetuOne ERP Migration Walkthrough - Actual Site Energy Monitoring System
 
 This walkthrough documents the successful integration of the **Enterprise Energy Monitoring & AI OCR System**, designed to handle unlimited hardware meters, OCR scan simulations, database-level lag views, and RLS tenant security controls.
 
@@ -23,6 +23,11 @@ This walkthrough documents the successful integration of the **Enterprise Energy
   - Sets cost/consumption to `NULL` and flags `reading_valid = FALSE` if consecutive readings contain descending values (negative consumption checks).
 * **Enterprise RLS Security**: Strict tenant isolation matching user profiles (`company_id = public.get_user_company(auth.uid())`), without any RLS bypasses.
 * **Conflict-Safe Multi-Company Seeding**: Seeding logic uses `WHERE NOT EXISTS` combined with dynamic suffixes mapping to each company's ID to prevent key duplication conflicts during re-runs.
+* **Seeded Meters List (On2Cook Configuration)**:
+  1. **UGVCL Meter 1** (Meter Code: `UGVCL-01`)
+  2. **UGVCL Meter 2** (Meter Code: `UGVCL-02`)
+  3. **UGVCL Meter 3** (Meter Code: `UGVCL-03`)
+  4. **DG Meter** (Meter Code: `DG-01`)
 
 ### 2. Repository Layer (`src/lib/energyRepository.js`)
 * Implements robust backend integrations returning standard success/error objects:
@@ -42,8 +47,12 @@ This walkthrough documents the successful integration of the **Enterprise Energy
 * Mapped view switch route: `"energy" ➡️ <EnergyMonitoring />`.
 
 ### 4. Interactive Page Layout (`src/pages/EnergyMonitoring.jsx`)
-* **Meter Selector Cards**: Supports dynamic meter lists (Grid, Generator, HVAC, etc.).
+* **Meter Selector Cards**: Supports dynamic meter lists (UGVCL Meter 1, UGVCL Meter 2, UGVCL Meter 3, DG Meter).
 * **AI OCR scan overlay**: Displays preview photos, green laser sweep scanner lines, progress loaders, confidence metrics, and confirm/edit controls.
+* **OCR Confidence Rules**:
+  - Auto-accepts reading if confidence is 95%+
+  - Requires confirmation if confidence is 80%-94%
+  - Requires manual entry text if confidence is under 80%
 * **Cost Summary Cards**: Shows Morning, Evening, Consumption Units, and dynamic Tariff Billing Cost (₹).
 * **Ledger Table**: Renders consumption rows, photo document links, manual log forms, lock icons, and downloard exports (CSV/Excel).
 * **SVG Graphs**: Interactive weekly/monthly consumption analysis.
