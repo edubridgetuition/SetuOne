@@ -1,6 +1,6 @@
-# SetuOne ERP Migration Walkthrough - Dynamic Dropdowns, Catalog Visibility, Inline Edits & Double-Registry
+# SetuOne ERP Migration Walkthrough - Dynamic Dropdowns, Catalog Visibility, Inline Edits & Dashboard Widget Catalog
 
-This walkthrough documents the updates made to connect frontend dropdown selections to the Dynamic Masters registry dynamically, ensure catalog items with zero stock display correctly, add transaction editing & deletion capabilities, and separate dashboard cards from dropdown items.
+This walkthrough documents the updates made to connect frontend dropdown selections to the Dynamic Masters registry dynamically, ensure catalog items with zero stock display correctly, add transaction editing & deletion capabilities, and construct a database-driven dashboard widget catalog manager with dropdown selections, soft archival, and audit logs.
 
 ---
 
@@ -14,6 +14,7 @@ This walkthrough documents the updates made to connect frontend dropdown selecti
   - `Coffee Beans`
   - `Milk Packet`
   *(Sugar is excluded from this list by default).*
+* **Soft Archival Column (`database/15_DashboardWidgetArchivalMigration.sql`)**: Created the `is_archived` column in the `dashboard_widgets` table to allow soft deletes.
 
 ### 2. Connected Page Components
 * **Pantry & Coffee (`InventoryManagement.jsx`)**: Dropdown and consumption cards are now dynamically populated from the database.
@@ -34,6 +35,18 @@ This walkthrough documents the updates made to connect frontend dropdown selecti
   - The **Dashboard Analytics Cards** are driven by `PANTRY_DASHBOARD_CARDS` (excludes Sugar).
 * **Super Admin Control**: The Super Admin can add or remove items from either list directly in the **Admin Console ➡️ Dynamic Masters** panel. No code changes are required to add/remove dashboard cards or dropdown options.
 * **Metric Logic**: Cards show current calendar month's total `In` transactions as the main large value, last month's total `In` transactions as the Month count, and today's total `In` transactions as the Today count.
+
+### 5. Dashboard Widget Catalog Manager (`AdminConsoleSettings.jsx`)
+* **Top Bar Controls**: Added `+ Register Widget`, `Export Catalog`, and `Refresh` buttons to the Dashboard Templates tab.
+* **CRUD Panel Actions**:
+  - **Edit**: Updates the widget configuration.
+  - **Duplicate**: Clones configuration settings and appends a short, unique key suffix to prevent database collisions.
+  - **Soft Archive**: Safely flags widgets as archived (`is_archived = true`), removing them from layout drawers while keeping active user layouts intact.
+  - **Status Toggle**: Easily enables/disables widgets from the UI.
+* **Widget Key Dropdown & Custom Option**: Converted the `Widget Key` input to a dropdown mapping all standard backend data sources (`OPEN_TICKETS`, `TODAYS_VISITORS`, `PENDING_PURCHASE`, etc.) to prevent spelling errors, with an optional `-- Custom Key / New Source --` fallback for typing a custom code key.
+* **Component Dropdown Selection**: Converted the React component field to a dropdown listing valid system components (`TicketsWidget`, `InventoryWidget`, etc.).
+* **Preview Card**: Added a preview panel inside the drawer showing how the widget card will render with selected grid dimensions.
+* **Audit Trail integration**: Triggered automatic insertions into the `audit_logs` table for all widget CRUD operations (Creation, Update, Archive, Toggle status).
 
 ---
 
