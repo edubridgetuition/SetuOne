@@ -54,9 +54,14 @@ This walkthrough documents the updates made to connect frontend dropdown selecti
 ### 6. Navigation Enhancements (`Layout.jsx`)
 * **Clickable Breadcrumb**: The **`Home`** link in the header breadcrumbs is now clickable. Clicking it immediately redirects the user to the main/home **Dashboard** page.
 * **Hover Interaction**: Hovering over "Home" changes its color to the corporate blue highlight with a smooth transition.
+* **Multi-Level Breadcrumbs**: Breadcrumbs dynamically expand up to 3 levels (e.g. `Home › Maintenance › PPM Schedule`) for sub-menu screens, and the middle level redirects back to the main category view.
 
 ### 7. Layout Query Robustness Fixes (`dashboardRepository.js`)
 * **Preventing Duplicate Layout Crashes**: Reconfigured database retrieval calls in `fetchUserDashboardLayout` to order results by `updated_at DESC` and limit to `1` prior to evaluating `.maybeSingle()`. This prevents Postgrest crashes (`PGRST116: More than one row returned`) when users have multiple active custom layout mappings.
+
+### 8. Visual / UX Error Preventions & Validations
+* **Negative Quantity Prevention (`InventoryManagement.jsx`)**: Added both client-side constraints (`min="1"`) and validation handlers on inline transaction edits, preventing negative or zero inputs.
+* **Date Sequence Checks (`InventoryManagement.jsx`, `Reports.jsx`)**: Enforced automatic warnings restricting start dates from being set after end dates in both inventory logs and reports parameters.
 
 ---
 
