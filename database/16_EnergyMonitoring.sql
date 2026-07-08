@@ -138,30 +138,30 @@ WITH CHECK (meter_id IN (
     WHERE company_id = public.get_user_company(auth.uid())
 ));
 
--- Seed default On2Cook meters dynamically FOR EACH COMPANY (Conflict Safe)
-INSERT INTO public.energy_meters (company_id, meter_name, meter_code, meter_identifier, meter_type, serial_number, is_active)
-SELECT c.id, 'UGVCL Meter 1', 'UGVCL-01', 'MTR-ID-UGVCL1-' || substring(c.id::text, 1, 4), 'UGVCL', 'SN-GRID-8812-' || substring(c.id::text, 1, 4), true 
+-- Seed default On2Cook meters dynamically FOR EACH COMPANY (Conflict Safe & Real Hardware Mapped)
+INSERT INTO public.energy_meters (company_id, meter_name, meter_code, meter_identifier, meter_type, serial_number, initial_reading, is_active)
+SELECT c.id, 'UGVCL Meter 1', 'UGVCL-01', 'UC109576', 'UGVCL', 'UC109576', 167127, true 
 FROM public.companies c
 WHERE NOT EXISTS (
     SELECT 1 FROM public.energy_meters WHERE meter_code = 'UGVCL-01' AND company_id = c.id
 );
 
-INSERT INTO public.energy_meters (company_id, meter_name, meter_code, meter_identifier, meter_type, serial_number, is_active)
-SELECT c.id, 'UGVCL Meter 2', 'UGVCL-02', 'MTR-ID-UGVCL2-' || substring(c.id::text, 1, 4), 'UGVCL', 'SN-GRID-5541-' || substring(c.id::text, 1, 4), true 
+INSERT INTO public.energy_meters (company_id, meter_name, meter_code, meter_identifier, meter_type, serial_number, initial_reading, is_active)
+SELECT c.id, 'UGVCL Meter 2', 'UGVCL-02', 'UC109575', 'UGVCL', 'UC109575', 136173, true 
 FROM public.companies c
 WHERE NOT EXISTS (
     SELECT 1 FROM public.energy_meters WHERE meter_code = 'UGVCL-02' AND company_id = c.id
 );
 
-INSERT INTO public.energy_meters (company_id, meter_name, meter_code, meter_identifier, meter_type, serial_number, is_active)
-SELECT c.id, 'UGVCL Meter 3', 'UGVCL-03', 'MTR-ID-UGVCL3-' || substring(c.id::text, 1, 4), 'UGVCL', 'SN-GRID-9921-' || substring(c.id::text, 1, 4), true 
+INSERT INTO public.energy_meters (company_id, meter_name, meter_code, meter_identifier, meter_type, serial_number, initial_reading, is_active)
+SELECT c.id, 'UGVCL Meter 3', 'UGVCL-03', 'UC109577', 'UGVCL', 'UC109577', 68700, true 
 FROM public.companies c
 WHERE NOT EXISTS (
     SELECT 1 FROM public.energy_meters WHERE meter_code = 'UGVCL-03' AND company_id = c.id
 );
 
-INSERT INTO public.energy_meters (company_id, meter_name, meter_code, meter_identifier, meter_type, serial_number, is_active)
-SELECT c.id, 'DG Meter', 'DG-01', 'MTR-ID-DG1-' || substring(c.id::text, 1, 4), 'Generator', 'SN-DG-2284-' || substring(c.id::text, 1, 4), true 
+INSERT INTO public.energy_meters (company_id, meter_name, meter_code, meter_identifier, meter_type, serial_number, initial_reading, is_active)
+SELECT c.id, 'DG Meter', 'DG-01', 'DG12345', 'Generator', 'DG12345', 0, true 
 FROM public.companies c
 WHERE NOT EXISTS (
     SELECT 1 FROM public.energy_meters WHERE meter_code = 'DG-01' AND company_id = c.id
