@@ -44,7 +44,10 @@ export default function AdminConsoleSettings() {
     // Dashboard Builder states & actions
     dashboardWidgetsList,
     loadDashboardWidgets,
-    duplicateDashboardLayout
+    duplicateDashboardLayout,
+    createDashboardWidget,
+    updateDashboardWidget,
+    archiveDashboardWidget
   } = useApp();
 
   const [activeTab, setActiveTab] = useState("Company");
