@@ -22,7 +22,7 @@ CREATE POLICY "Allow write energy_ocr_profiles for Super Admin" ON public.energy
 FOR ALL USING (
     EXISTS (
         SELECT 1 FROM public.profiles 
-        WHERE id = auth.uid() AND role IN ('Super Admin', 'Admin Manager')
+        WHERE id = auth.uid() AND role_name IN ('Super Admin', 'Admin Manager')
     )
 );
 
