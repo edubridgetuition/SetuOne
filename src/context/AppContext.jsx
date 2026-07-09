@@ -161,7 +161,8 @@ confirmReading as apiConfirmReading,
 calculateConsumption as apiCalculateConsumption,
 fetchConsumptionHistory as apiFetchConsumptionHistory,
 updateEnergyReading as apiUpdateEnergyReading,
-deleteEnergyReading as apiDeleteEnergyReading
+deleteEnergyReading as apiDeleteEnergyReading,
+updateEnergyMeter as apiUpdateEnergyMeter
 } from "../lib";
 
 export function AppProvider({ children }) {
@@ -1534,6 +1535,26 @@ export function AppProvider({ children }) {
     return res;
   }
 
+  async function updateEnergyMeter(meterId, updates) {
+    if (!session) return { success: false, message: "No active session." };
+    const res = await apiUpdateEnergyMeter(meterId, updates);
+    if (res.success) {
+      await loadMeters();
+      if (selectedMeter && selectedMeter.id === meterId) {
+        setSelectedMeter(res.data);
+      }
+      await apiWriteAuditLog({
+        module: 'Energy Monitoring',
+        tableName: 'public.energy_meters',
+        recordId: meterId,
+        action: 'UPDATE',
+        newData: res.data,
+        changedBy: session.id
+      }, session.companyId);
+    }
+    return res;
+  }
+
   const tenantData = useMemo(() => tenants[activeTenant], [activeTenant]);
 
   if (loading) return (
@@ -1603,7 +1624,7 @@ export function AppProvider({ children }) {
 
       // Energy values
       energyMeters, selectedMeter, setSelectedMeter, meterReadings, consumptionHistory, energyDashboard,
-      loadMeters, loadReadings, uploadMeterImage, confirmReading, loadConsumption, updateEnergyReading, deleteEnergyReading
+      loadMeters, loadReadings, uploadMeterImage, confirmReading, loadConsumption, updateEnergyReading, deleteEnergyReading, updateEnergyMeter
     }}>
       {children}
     </AppContext.Provider>

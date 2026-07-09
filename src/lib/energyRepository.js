@@ -215,3 +215,20 @@ export async function deleteEnergyReading(readingId) {
     return response(false, null, err);
   }
 }
+
+// 11. Update energy meter configuration
+export async function updateEnergyMeter(meterId, updates) {
+  try {
+    const { data, error } = await supabase
+      .from('energy_meters')
+      .update(updates)
+      .eq('id', meterId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return response(true, data, null, 'Meter updated successfully.');
+  } catch (err) {
+    return response(false, null, err);
+  }
+}

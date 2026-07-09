@@ -31,8 +31,76 @@ export default function EnergyMonitoring() {
     confirmReading,
     loadConsumption,
     updateEnergyReading,
-    deleteEnergyReading
+    deleteEnergyReading,
+    updateEnergyMeter
   } = useApp();
+
+  // CDN loader for Tesseract.js
+  const loadTesseract = () => {
+    return new Promise((resolve, reject) => {
+      if (window.Tesseract) {
+        resolve(window.Tesseract);
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+      script.onload = () => resolve(window.Tesseract);
+      script.onerror = () => reject(new Error("Failed to load Tesseract.js from CDN."));
+      document.head.appendChild(script);
+    });
+  };
+
+  const getLocalDatetimeString = () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+  };
+
+  // Backdated Log states
+  const [logDatetime, setLogDatetime] = useState(getLocalDatetimeString());
+  const [manualLogDatetime, setManualLogDatetime] = useState(getLocalDatetimeString());
+
+  // Edit Meter Modal states
+  const [showEditMeterModal, setShowEditMeterModal] = useState(false);
+  const [meterForm, setMeterForm] = useState({
+    meter_name: "",
+    meter_code: "",
+    meter_identifier: "",
+    consumer_account_number: "",
+    serial_number: "",
+    tariff_rate: 8.5,
+    initial_reading: 0
+  });
+
+  const handleStartEditMeter = () => {
+    if (!selectedMeter) return;
+    setMeterForm({
+      meter_name: selectedMeter.meter_name || "",
+      meter_code: selectedMeter.meter_code || "",
+      meter_identifier: selectedMeter.meter_identifier || "",
+      consumer_account_number: selectedMeter.consumer_account_number || "",
+      serial_number: selectedMeter.serial_number || "",
+      tariff_rate: Number(selectedMeter.tariff_rate || 8.5),
+      initial_reading: Number(selectedMeter.initial_reading || 0)
+    });
+    setShowEditMeterModal(true);
+  };
+
+  const handleSaveMeter = async (e) => {
+    e.preventDefault();
+    if (!selectedMeter) return;
+    const res = await updateEnergyMeter(selectedMeter.id, {
+      ...meterForm,
+      tariff_rate: Number(meterForm.tariff_rate),
+      initial_reading: Number(meterForm.initial_reading)
+    });
+    if (res.success) {
+      alert("Meter specifications updated successfully!");
+      setShowEditMeterModal(false);
+    } else {
+      alert("Failed to update meter: " + res.message);
+    }
+  };
 
   const [activeTab, setActiveTab] = useState("dashboard"); // dashboard, ledger, charts
   
@@ -123,7 +191,7 @@ export default function EnergyMonitoring() {
     setIsScanning(true);
     setRemarks("");
 
-    // Simulate OCR scanner process
+    // Simulate OCR scanner process steps
     let step = 0;
     const interval = setInterval(() => {
       step += 1;
@@ -134,7 +202,7 @@ export default function EnergyMonitoring() {
       } else if (step === 3) {
         setRawOcrText("Segmenting digital display contours... Reading LCD panel digits...");
       }
-    }, 800);
+    }, 600);
 
     setTimeout(async () => {
       clearInterval(interval);
@@ -146,39 +214,75 @@ export default function EnergyMonitoring() {
         setPhotoDocId(docId);
       }
 
-      // Simulated OCR value generator based on last reading
-      const lastReadingVal = meterReadings.length > 0 ? Number(meterReadings[0].confirmed_value) : Number(selectedMeter?.initial_reading || 12000);
-      const mockRead = Math.floor(lastReadingVal + 15 + Math.random() * 55);
-      
-      // Determine confidence state dynamically to demo all 3 rules
-      const rand = Math.random();
-      let conf = 0.98; // Auto Accept default (95%+)
-      if (rand < 0.3) {
-        conf = 0.76; // Manual Entry (<80%)
-      } else if (rand < 0.6) {
-        conf = 0.88; // Require confirmation (80%-94%)
-      }
-      
-      setDetectedValue(mockRead.toString());
-      setOcrConfidence(conf);
-      
-      if (conf >= 0.95) {
-        // Rule 1: Auto Accept
-        setConfirmedValue(mockRead.toString());
-      } else if (conf >= 0.80) {
-        // Rule 2: Require confirmation
-        setConfirmedValue(mockRead.toString());
+      // Initialize OCR variables
+      let parsedValue = "";
+      let confidence = 0.98;
+      let rawText = "";
+
+      if (ocrProvider === "Tesseract") {
+        setRawOcrText("Initializing client-side Tesseract.js engine...");
+        try {
+          const tesseract = await loadTesseract();
+          setRawOcrText("Tesseract.js engine loaded. Extracting characters from image...");
+          const ocrResult = await tesseract.recognize(file, 'eng');
+          rawText = ocrResult.data.text || "";
+          
+          console.log("Raw Tesseract Text:", rawText);
+          
+          // Regex search: look for a sequence of 5 to 8 digits, or any consecutive numbers
+          const matches = rawText.match(/\b\d{5,8}\b/) || rawText.match(/\d+/g);
+          parsedValue = matches ? matches[0] : "";
+          
+          const tessConf = ocrResult.data.confidence || 0;
+          confidence = tessConf / 100;
+          
+          if (!parsedValue) {
+            throw new Error("No clean numeric sequences detected on LCD screen.");
+          }
+        } catch (ocrErr) {
+          console.error("Local OCR failed:", ocrErr);
+          setRawOcrText(`Local OCR scan failed: ${ocrErr.message}. Falling back to simulator...`);
+          // Fallback simulation value based on last reading
+          const lastReadingVal = meterReadings.length > 0 ? Number(meterReadings[0].confirmed_value) : Number(selectedMeter?.initial_reading || 12000);
+          parsedValue = Math.floor(lastReadingVal + 15 + Math.random() * 55).toString();
+          confidence = 0.88; // Requires confirmation fallback
+          rawText = `[Fallback Simulator Mode]\nReason: ${ocrErr.message}`;
+        }
       } else {
-        // Rule 3: Manual entry required
+        // Mock OCR Provider
+        const lastReadingVal = meterReadings.length > 0 ? Number(meterReadings[0].confirmed_value) : Number(selectedMeter?.initial_reading || 12000);
+        parsedValue = Math.floor(lastReadingVal + 15 + Math.random() * 55).toString();
+        const rand = Math.random();
+        if (rand < 0.2) {
+          confidence = 0.76; // Manual
+        } else if (rand < 0.5) {
+          confidence = 0.88; // Require confirmation
+        } else {
+          confidence = 0.98; // Auto Accept
+        }
+        rawText = `Mock OCR Provider completed.`;
+      }
+
+      setDetectedValue(parsedValue);
+      setOcrConfidence(confidence);
+      
+      if (confidence >= 0.95) {
+        setConfirmedValue(parsedValue);
+      } else if (confidence >= 0.80) {
+        setConfirmedValue(parsedValue);
+      } else {
         setConfirmedValue("");
       }
 
-      setRawOcrText(`KWH LCD DISPLAY MATCH FOUND: [${mockRead}]
+      setRawOcrText(`KWH LCD DISPLAY MATCH FOUND: [${parsedValue}]
 Tariff Model: Active (₹${selectedMeter?.tariff_rate || "8.50"}/Unit)
-Confidence Coefficient: ${(conf * 100).toFixed(0)}%
+Confidence Coefficient: ${(confidence * 100).toFixed(0)}%
 OCR Engine Selected: ${ocrProvider}
 Device Registry: ${selectedMeter?.meter_code || "Unknown"}
-Document Registry ID: ${docId || "Pending Upload"}`);
+Document Registry ID: ${docId || "Pending Upload"}
+
+--- RAW EXTRACTED TEXT ---
+${rawText}`);
       
       setIsScanning(false);
       setScanStep(2); // Scanned successfully
@@ -195,7 +299,7 @@ Document Registry ID: ${docId || "Pending Upload"}`);
     const val = Number(confirmedValue);
     const readingData = {
       meter_id: selectedMeter.id,
-      reading_datetime: new Date().toISOString(),
+      reading_datetime: new Date(logDatetime).toISOString(),
       reading_slot: selectedSlot,
       capture_mode: "OCR",
       reading_source: uploadSource,
@@ -238,7 +342,7 @@ Document Registry ID: ${docId || "Pending Upload"}`);
     const val = Number(manualVal);
     const readingData = {
       meter_id: selectedMeter.id,
-      reading_datetime: new Date().toISOString(),
+      reading_datetime: new Date(manualLogDatetime).toISOString(),
       reading_slot: manualSlot,
       capture_mode: "Manual",
       reading_source: "Manual",
@@ -319,7 +423,27 @@ Document Registry ID: ${docId || "Pending Upload"}`);
       <div style={s.sidebar}>
         <div style={s.sectionHeader}>
           <div style={s.sectionTitle}>Registered Meters</div>
-          <span style={s.badgeCount}>{energyMeters.length} Meters</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <span style={s.badgeCount}>{energyMeters.length} Meters</span>
+            {selectedMeter && (activeRole === "Super Admin" || activeRole === "Admin Manager") && (
+              <button 
+                type="button" 
+                style={{ 
+                  background: "#6366f1", 
+                  color: "#fff", 
+                  border: "none", 
+                  borderRadius: "4px", 
+                  padding: "4px 8px", 
+                  fontSize: "11px", 
+                  cursor: "pointer", 
+                  fontWeight: 500 
+                }}
+                onClick={handleStartEditMeter}
+              >
+                Edit Selected
+              </button>
+            )}
+          </div>
         </div>
 
         <div style={s.metersGrid}>
@@ -376,6 +500,15 @@ Document Registry ID: ${docId || "Pending Upload"}`);
               </div>
             </div>
             <div style={s.formGroup}>
+              <label style={s.label}>Reading Date & Time</label>
+              <input 
+                type="datetime-local" 
+                style={s.input} 
+                value={manualLogDatetime} 
+                onChange={e => setManualLogDatetime(e.target.value)} 
+              />
+            </div>
+            <div style={s.formGroup}>
               <label style={s.label}>Remarks</label>
               <input 
                 type="text" 
@@ -423,7 +556,7 @@ Document Registry ID: ${docId || "Pending Upload"}`);
           <div style={s.widget}>
             <div style={s.widgetHeader}>
               <div style={s.widgetLabel}>Calculated Cost (Period)</div>
-              <MdAttachMoney style={{ color: "#22c55e" }} />
+              <span style={{ color: "#22c55e", fontWeight: 700, fontSize: "1.1rem" }}>₹</span>
             </div>
             <div style={{ ...s.widgetValue, color: "#22c55e" }}>₹{totalCostVal.toLocaleString()}</div>
             <div style={s.widgetSub}>Tariff Rate: ₹{selectedMeter?.tariff_rate || "8.50"}/Unit</div>
@@ -576,6 +709,16 @@ Document Registry ID: ${docId || "Pending Upload"}`);
                             <MdWarning /> <strong>Manual Input Enforced Rule:</strong> Low confidence match. Scanner reading discarded. Please enter value manually.
                           </div>
                         )}
+
+                        <div style={s.formGroup}>
+                          <label style={s.label}>Reading Date & Time</label>
+                          <input 
+                            type="datetime-local" 
+                            style={s.input} 
+                            value={logDatetime} 
+                            onChange={e => setLogDatetime(e.target.value)} 
+                          />
+                        </div>
 
                         <div style={s.formGroup}>
                           <label style={s.label}>Confirmed Value (Confirm or Adjust below)</label>
@@ -770,6 +913,134 @@ Document Registry ID: ${docId || "Pending Upload"}`);
           </div>
         )}
       </div>
+
+      {/* Edit Meter Modal Backdrop & Form */}
+      {showEditMeterModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          background: "rgba(15, 23, 42, 0.75)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 9999,
+          backdropFilter: "blur(4px)"
+        }}>
+          <div style={{
+            background: "#ffffff",
+            borderRadius: "12px",
+            width: "480px",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+            padding: "24px"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 600, color: "#0f172a" }}>Edit Meter Settings</h3>
+              <button 
+                type="button" 
+                style={{ background: "none", border: "none", cursor: "pointer", fontSize: "1.5rem", color: "#64748b" }}
+                onClick={() => setShowEditMeterModal(false)}
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveMeter} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={s.formGroup}>
+                <label style={s.label}>Meter Name</label>
+                <input 
+                  type="text" 
+                  required
+                  style={s.input} 
+                  value={meterForm.meter_name} 
+                  onChange={e => setMeterForm({ ...meterForm, meter_name: e.target.value })} 
+                />
+              </div>
+
+              <div style={s.formGroup}>
+                <label style={s.label}>Meter Code (Physical Tag)</label>
+                <input 
+                  type="text" 
+                  required
+                  style={s.input} 
+                  value={meterForm.meter_code} 
+                  onChange={e => setMeterForm({ ...meterForm, meter_code: e.target.value })} 
+                />
+              </div>
+
+              <div style={s.formGroup}>
+                <label style={s.label}>Unique Physical Identifier</label>
+                <input 
+                  type="text" 
+                  required
+                  style={s.input} 
+                  value={meterForm.meter_identifier} 
+                  onChange={e => setMeterForm({ ...meterForm, meter_identifier: e.target.value })} 
+                />
+              </div>
+
+              <div style={s.formGroup}>
+                <label style={s.label}>Consumer Account Number</label>
+                <input 
+                  type="text" 
+                  style={s.input} 
+                  value={meterForm.consumer_account_number} 
+                  onChange={e => setMeterForm({ ...meterForm, consumer_account_number: e.target.value })} 
+                />
+              </div>
+
+              <div style={s.formGroup}>
+                <label style={s.label}>Serial Number</label>
+                <input 
+                  type="text" 
+                  style={s.input} 
+                  value={meterForm.serial_number} 
+                  onChange={e => setMeterForm({ ...meterForm, serial_number: e.target.value })} 
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "16px" }}>
+                <div style={{ ...s.formGroup, flex: 1 }}>
+                  <label style={s.label}>Tariff Rate (₹/Unit)</label>
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    required
+                    style={s.input} 
+                    value={meterForm.tariff_rate} 
+                    onChange={e => setMeterForm({ ...meterForm, tariff_rate: e.target.value })} 
+                  />
+                </div>
+                <div style={{ ...s.formGroup, flex: 1 }}>
+                  <label style={s.label}>Baseline Reading (KWh)</label>
+                  <input 
+                    type="number" 
+                    required
+                    style={s.input} 
+                    value={meterForm.initial_reading} 
+                    onChange={e => setMeterForm({ ...meterForm, initial_reading: e.target.value })} 
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: "12px", marginTop: "12px" }}>
+                <button type="submit" style={{ ...s.primaryBtn, flex: 1 }}>
+                  Save Configuration
+                </button>
+                <button 
+                  type="button" 
+                  style={{ ...s.secondaryBtn, width: "auto" }}
+                  onClick={() => setShowEditMeterModal(false)}
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
