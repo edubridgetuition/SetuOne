@@ -18,13 +18,8 @@ ALTER TABLE public.energy_meter_ocr_profiles ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Allow read energy_ocr_profiles for everyone authenticated" ON public.energy_meter_ocr_profiles 
 FOR SELECT USING (auth.role() = 'authenticated');
 
-CREATE POLICY "Allow write energy_ocr_profiles for Super Admin" ON public.energy_meter_ocr_profiles 
-FOR ALL USING (
-    EXISTS (
-        SELECT 1 FROM public.profiles 
-        WHERE id = auth.uid() AND role_name IN ('Super Admin', 'Admin Manager')
-    )
-);
+CREATE POLICY "Allow write energy_ocr_profiles for authenticated users" ON public.energy_meter_ocr_profiles 
+FOR ALL USING (auth.role() = 'authenticated');
 
 -- Link energy_meters to OCR profiles
 ALTER TABLE public.energy_meters 
