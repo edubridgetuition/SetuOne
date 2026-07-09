@@ -6,16 +6,21 @@ This walkthrough documents the successful integration of the **Enterprise Energy
 
 ## 🚀 Accomplished Tasks
 
-### 1. Database Seed Migration (`database/16_EnergyMonitoring.sql`)
+### 1. Database Seed Migration (`database/16_EnergyMonitoring.sql` & `database/17_EnergyOCRv2.sql` [NEW])
 * **`energy_meters` Table**: Stores core hardware properties (unit type, installation date, capacity, status, serial numbers, and custom tariff rates like `₹8.50/Unit` per meter).
+* **`energy_meter_ocr_profiles` Table [NEW]**:
+  - Dynamically registers specifications for each meter type (e.g. `UGVCL Smart Meter`, `DG Generator Meter`).
+  - Configures `min_digits`, `max_digits`, `regex_pattern`, and smart validation `allowed_multiplier` dynamically.
 * **Foreign Keys**:
   - `branch_id UUID REFERENCES public.branches(id)`
   - `building_id UUID REFERENCES public.buildings(id)`
   - `location_id UUID REFERENCES public.locations(id)`
+  - `ocr_profile_id UUID REFERENCES public.energy_meter_ocr_profiles(id)` [NEW]
 * **`energy_meter_readings` Table**:
   - Each upload (Morning, Evening, Hourly) is registered as a separate individual row (SAP/Siemens model).
   - Slots are specified by `reading_slot` (`Morning`, `Evening`) and modes are set by `capture_mode` (`Manual`, `OCR`, `IoT`).
   - Stores debug values: `ocr_raw_text` (e.g. `I234S` text outputs) and `ocr_provider` (e.g. `Tesseract`, `Google Vision`).
+  - Stores image fingerprint hash (`image_hash VARCHAR(64) UNIQUE`) and audit audit status (`review_status` Enum: `'Approved'`, `'Rejected'`, `'Edited'`) [NEW].
   - Exposes workflow flags: `reading_status` (`Pending OCR`, `Pending Confirmation`, `Confirmed`), `is_locked` (disables editing once confirmed), and `photo_document_id UUID REFERENCES public.documents(id)`.
 * **Dynamic Cost & Validation View (`public.energy_consumption_summary`)**:
   - Automatically fetches preceding readings per meter via SQL window function `LAG()`.
@@ -23,11 +28,6 @@ This walkthrough documents the successful integration of the **Enterprise Energy
   - Sets cost/consumption to `NULL` and flags `reading_valid = FALSE` if consecutive readings contain descending values (negative consumption checks).
 * **Enterprise RLS Security**: Strict tenant isolation matching user profiles (`company_id = public.get_user_company(auth.uid())`), without any RLS bypasses.
 * **Conflict-Safe Multi-Company Seeding**: Seeding logic uses `WHERE NOT EXISTS` combined with dynamic suffixes mapping to each company's ID to prevent key duplication conflicts during re-runs.
-* **Seeded Meters List (On2Cook Configuration)**:
-  1. **UGVCL Meter 1** (Meter Code: `UGVCL-01`)
-  2. **UGVCL Meter 2** (Meter Code: `UGVCL-02`)
-  3. **UGVCL Meter 3** (Meter Code: `UGVCL-03`)
-  4. **DG Meter** (Meter Code: `DG-01`)
 
 ### 2. Repository Layer (`src/lib/energyRepository.js`)
 * Implements robust backend integrations returning standard success/error objects:
@@ -42,26 +42,30 @@ This walkthrough documents the successful integration of the **Enterprise Energy
   - `updateEnergyReading(readingId, updates)`
   - `deleteEnergyReading(readingId)`
   - `updateEnergyMeter(meterId, updates)`
+  - `checkDuplicateHash(hash)` [NEW]
 
 ### 3. Context & Routing Integrations (`AppContext.jsx`, `App.jsx`)
 * Registered state properties: `energyMeters`, `selectedMeter`, `meterReadings`, `consumptionHistory`, `energyDashboard`.
-* Exposed core actions: `loadMeters()`, `loadReadings()`, `uploadMeterImage()`, `confirmReading()`, `loadConsumption()`, `updateEnergyReading()`, `deleteEnergyReading()`, `updateEnergyMeter()`.
+* Exposed core actions: `loadMeters()`, `loadReadings()`, `uploadMeterImage()`, `confirmReading()`, `loadConsumption()`, `updateEnergyReading()`, `deleteEnergyReading()`, `updateEnergyMeter()`, `checkDuplicateHash()`.
 * Automatically loads energy meters on session login.
 * Mapped view switch route: `"energy" ➡️ <EnergyMonitoring />`.
 
 ### 4. Interactive Page Layout (`src/pages/EnergyMonitoring.jsx`)
 * **Meter Selector Cards**: Supports dynamic meter lists (UGVCL Meter 1, UGVCL Meter 2, UGVCL Meter 3, DG Meter).
 * **AI OCR scan overlay**: Displays preview photos, green laser sweep scanner lines, progress loaders, confidence metrics, and confirm/edit controls.
+* **SHA-256 Web Crypto Image Fingerprinting [NEW]**:
+  - Computes the SHA-256 hash of the photograph in the browser using Web Crypto API.
+  - Instantly checks the database. If duplicate detected, alerts: **"This image was already uploaded today. Please upload a fresh photograph."** and blocks the upload.
 * **Tesseract.js Real OCR & Preprocessing Canvas**:
   - Dynamically loads Tesseract.js via CDN directly inside the browser.
-  - Implemented **`preprocessImage` (Luminous Green Backlight Bounding Box Crop) [NEW]**:
+  - Implemented **`preprocessImage` (Luminous Green Backlight Bounding Box Crop)**:
     - Analyzes pixels in real-time, extracts coordinates of green-lit LCD screen bounding area `(minX, maxX, minY, maxY)`.
     - Automatically crops out non-screen stickers (like `0.5 MF GANOVO` or serial tags).
     - Applies grayscale contrast enhancement and binarization on the cropped region before running OCR.
     - Displays processed image preview directly inside the Debugging Logs drawer for manual verification.
-* **OCR Engines Selector Prioritization [NEW]**:
+* **OCR Engines Selector Prioritization**:
   - Changed selector options to PaddleOCR (Best), EasyOCR (High Accuracy), and Tesseract (Local Fallback) with PaddleOCR selected by default.
-* **Smart Range Validation Guard [NEW]**:
+* **Smart Range Validation Guard**:
   - Compares the scanned reading value with the previous reading recorded in the database.
   - If the value is lower (e.g. `5` when previous was `167127`) or exceeds normal consumption limits (`last_reading + 2000`), the system triggers an **Anomaly Validation Alert**:
     > **OCR could not confidently detect the reading. The scanned value (X) falls outside the expected range (Y - Z) based on the last recorded reading. Please confirm or edit the value.**
