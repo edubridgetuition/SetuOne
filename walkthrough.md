@@ -39,23 +39,31 @@ This walkthrough documents the successful integration of the **Enterprise Energy
   - `confirmReading(readingData)`
   - `calculateConsumption(meterId, start, end)`
   - `fetchConsumptionHistory(meterId, companyId)`
+  - `updateEnergyReading(readingId, updates)`
+  - `deleteEnergyReading(readingId)`
+  - `updateEnergyMeter(meterId, updates)` [NEW]
 
 ### 3. Context & Routing Integrations (`AppContext.jsx`, `App.jsx`)
 * Registered state properties: `energyMeters`, `selectedMeter`, `meterReadings`, `consumptionHistory`, `energyDashboard`.
-* Exposed core actions: `loadMeters()`, `loadReadings()`, `uploadMeterImage()`, `confirmReading()`, `loadConsumption()`.
+* Exposed core actions: `loadMeters()`, `loadReadings()`, `uploadMeterImage()`, `confirmReading()`, `loadConsumption()`, `updateEnergyReading()`, `deleteEnergyReading()`, `updateEnergyMeter()`.
 * Automatically loads energy meters on session login.
 * Mapped view switch route: `"energy" ➡️ <EnergyMonitoring />`.
 
 ### 4. Interactive Page Layout (`src/pages/EnergyMonitoring.jsx`)
 * **Meter Selector Cards**: Supports dynamic meter lists (UGVCL Meter 1, UGVCL Meter 2, UGVCL Meter 3, DG Meter).
 * **AI OCR scan overlay**: Displays preview photos, green laser sweep scanner lines, progress loaders, confidence metrics, and confirm/edit controls.
-* **OCR Confidence Rules**:
-  - Auto-accepts reading if confidence is 95%+
-  - Requires confirmation if confidence is 80%-94%
-  - Requires manual entry text if confidence is under 80%
-* **Cost Summary Cards**: Shows Morning, Evening, Consumption Units, and dynamic Tariff Billing Cost (₹).
-* **Ledger Table**: Renders consumption rows, photo document links, manual log forms, lock icons, and downloard exports (CSV/Excel).
-* **SVG Graphs**: Interactive weekly/monthly consumption analysis.
+* **Tesseract.js Real OCR Integration [NEW]**:
+  - Dynamically loads Tesseract.js via CDN directly inside the browser.
+  - Performs local optical character recognition on the uploaded photo, extracts raw string logs, and filters numbers to set confirmed readings automatically.
+  - Implements fail-safe mock fallbacks to prevent runtime blocks on network drops.
+* **Edit Meter Modal [NEW]**:
+  - Added "Edit Selected" button in sidebar.
+  - Opens modal drawer to live update Name, Code, Unique Identifier, Consumer Account Number, Serial Number, Tariff Rate, and Baseline Reading in database.
+* **Backdated Log Date-Time Selectors [NEW]**:
+  - Integrated `datetime-local` inputs inside OCR confirmation card and Manual Log form.
+  - Permits entries to be logged into past datetimes.
+* **Rupee Symbol Updates [NEW]**:
+  - Swapped out dollar icons (`$`) for styled `₹` sign inside Calculated Cost widget.
 
 ---
 
