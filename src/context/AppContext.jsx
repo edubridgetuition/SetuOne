@@ -162,7 +162,8 @@ calculateConsumption as apiCalculateConsumption,
 fetchConsumptionHistory as apiFetchConsumptionHistory,
 updateEnergyReading as apiUpdateEnergyReading,
 deleteEnergyReading as apiDeleteEnergyReading,
-updateEnergyMeter as apiUpdateEnergyMeter
+updateEnergyMeter as apiUpdateEnergyMeter,
+checkDuplicateHash as apiCheckDuplicateHash
 } from "../lib";
 
 export function AppProvider({ children }) {
@@ -1555,6 +1556,11 @@ export function AppProvider({ children }) {
     return res;
   }
 
+  async function checkDuplicateHash(hash) {
+    if (!session) return { success: false, message: "No active session." };
+    return await apiCheckDuplicateHash(hash);
+  }
+
   const tenantData = useMemo(() => tenants[activeTenant], [activeTenant]);
 
   if (loading) return (
@@ -1624,7 +1630,7 @@ export function AppProvider({ children }) {
 
       // Energy values
       energyMeters, selectedMeter, setSelectedMeter, meterReadings, consumptionHistory, energyDashboard,
-      loadMeters, loadReadings, uploadMeterImage, confirmReading, loadConsumption, updateEnergyReading, deleteEnergyReading, updateEnergyMeter
+      loadMeters, loadReadings, uploadMeterImage, confirmReading, loadConsumption, updateEnergyReading, deleteEnergyReading, updateEnergyMeter, checkDuplicateHash
     }}>
       {children}
     </AppContext.Provider>

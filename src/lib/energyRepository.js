@@ -232,3 +232,19 @@ export async function updateEnergyMeter(meterId, updates) {
     return response(false, null, err);
   }
 }
+
+// 12. Check if image hash already exists to prevent duplicate uploads
+export async function checkDuplicateHash(hash) {
+  try {
+    const { data, error } = await supabase
+      .from('energy_meter_readings')
+      .select('id, reading_datetime')
+      .eq('image_hash', hash)
+      .maybeSingle();
+
+    if (error) throw error;
+    return response(true, data, null, 'Duplicate hash check completed.');
+  } catch (err) {
+    return response(false, null, err);
+  }
+}

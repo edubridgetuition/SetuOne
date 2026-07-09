@@ -32,7 +32,8 @@ export default function EnergyMonitoring() {
     loadConsumption,
     updateEnergyReading,
     deleteEnergyReading,
-    updateEnergyMeter
+    updateEnergyMeter,
+    checkDuplicateHash
   } = useApp();
 
   // CDN loader for Tesseract.js
@@ -49,6 +50,22 @@ export default function EnergyMonitoring() {
       document.head.appendChild(script);
     });
   };
+
+  // Web Crypto SHA-256 calculator
+  const calculateSHA256 = async (file) => {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const hashBuffer = await crypto.subtle.digest("SHA-256", arrayBuffer);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return hashHex;
+    } catch (err) {
+      console.error("SHA256 calculation failed:", err);
+      return null;
+    }
+  };
+
+  const [currentImageHash, setCurrentImageHash] = useState("");
 
   const getLocalDatetimeString = () => {
     const now = new Date();
@@ -281,7 +298,7 @@ export default function EnergyMonitoring() {
   };
 
   // Handle Photo selection
-  const handlePhotoSelect = (e, slot) => {
+  const handlePhotoSelect = async (e, slot) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -293,6 +310,21 @@ export default function EnergyMonitoring() {
     setIsScanning(true);
     setRemarks("");
     setOcrRangeWarning(null);
+
+    // Image Fingerprinting Duplicate Check
+    const hash = await calculateSHA256(file);
+    if (hash) {
+      setCurrentImageHash(hash);
+      const dupCheck = await checkDuplicateHash(hash);
+      if (dupCheck.success && dupCheck.data) {
+        alert("This image was already uploaded today. Please upload a fresh photograph.");
+        setScanStep(0);
+        setSelectedFile(null);
+        setPreviewUrl(null);
+        setIsScanning(false);
+        return;
+      }
+    }
 
     // Simulate OCR scanner process steps
     let step = 0;
@@ -455,9 +487,12 @@ ${rawText}`);
       ocr_value: Number(detectedValue),
       ocr_raw_text: rawOcrText,
       ocr_provider: ocrProvider,
+      ocr_engine: ocrProvider,
       confirmed_value: val,
       ocr_confidence: ocrConfidence,
       photo_document_id: photoDocId,
+      image_hash: currentImageHash || null,
+      review_status: val === Number(detectedValue) ? "Approved" : "Edited",
       reading_status: "Confirmed",
       is_locked: true, // Auto lock on user confirmation
       remarks: remarks || `Auto-captured via ${ocrProvider} Scan at 8 ${selectedSlot === "Morning" ? "AM" : "PM"}`
@@ -470,6 +505,7 @@ ${rawText}`);
       setScanStep(0);
       setSelectedFile(null);
       setPreviewUrl(null);
+      setCurrentImageHash("");
     } else {
       alert("Failed to save reading: " + res.message);
     }
