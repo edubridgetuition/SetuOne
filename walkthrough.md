@@ -52,12 +52,20 @@ This walkthrough documents the successful integration of the **Enterprise Energy
 ### 4. Interactive Page Layout (`src/pages/EnergyMonitoring.jsx`)
 * **Meter Selector Cards**: Supports dynamic meter lists (UGVCL Meter 1, UGVCL Meter 2, UGVCL Meter 3, DG Meter).
 * **AI OCR scan overlay**: Displays preview photos, green laser sweep scanner lines, progress loaders, confidence metrics, and confirm/edit controls.
-* **Tesseract.js Real OCR & Preprocessing Canvas [NEW]**:
+* **Tesseract.js Real OCR & Preprocessing Canvas**:
   - Dynamically loads Tesseract.js via CDN directly inside the browser.
-  - Implemented **`preprocessImage`**: Crops the center 40% height of the image (automatically bypassing the top white sticker `0.5 MF GANOVO` and bottom barcode serial number tags).
-  - Enhances image contrast by converting the bright green LCD backlit pixels to pure white and the dark numeric characters to pure black (Binarization thresholding).
-  - Feeds the clean black-and-white cropped canvas blob to Tesseract.js for high-fidelity scanning.
-  - Renders the processed pre-cropped binary image in the debug logs panel so developers and managers can visually verify what the scanner processed.
+  - Implemented **`preprocessImage` (Luminous Green Backlight Bounding Box Crop) [NEW]**:
+    - Analyzes pixels in real-time, extracts coordinates of green-lit LCD screen bounding area `(minX, maxX, minY, maxY)`.
+    - Automatically crops out non-screen stickers (like `0.5 MF GANOVO` or serial tags).
+    - Applies grayscale contrast enhancement and binarization on the cropped region before running OCR.
+    - Displays processed image preview directly inside the Debugging Logs drawer for manual verification.
+* **OCR Engines Selector Prioritization [NEW]**:
+  - Changed selector options to PaddleOCR (Best), EasyOCR (High Accuracy), and Tesseract (Local Fallback) with PaddleOCR selected by default.
+* **Smart Range Validation Guard [NEW]**:
+  - Compares the scanned reading value with the previous reading recorded in the database.
+  - If the value is lower (e.g. `5` when previous was `167127`) or exceeds normal consumption limits (`last_reading + 2000`), the system triggers an **Anomaly Validation Alert**:
+    > **OCR could not confidently detect the reading. The scanned value (X) falls outside the expected range (Y - Z) based on the last recorded reading. Please confirm or edit the value.**
+  - Overrides auto-accept rules, drops confidence score, clears confirmed value, and enforces manual correction.
 * **Edit Meter Modal**:
   - Added "Edit Selected" button in sidebar.
   - Opens modal drawer to live update Name, Code, Unique Identifier, Consumer Account Number, Serial Number, Tariff Rate, and Baseline Reading in database.
