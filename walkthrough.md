@@ -41,7 +41,7 @@ This walkthrough documents the successful integration of the **Enterprise Energy
   - `fetchConsumptionHistory(meterId, companyId)`
   - `updateEnergyReading(readingId, updates)`
   - `deleteEnergyReading(readingId)`
-  - `updateEnergyMeter(meterId, updates)` [NEW]
+  - `updateEnergyMeter(meterId, updates)`
 
 ### 3. Context & Routing Integrations (`AppContext.jsx`, `App.jsx`)
 * Registered state properties: `energyMeters`, `selectedMeter`, `meterReadings`, `consumptionHistory`, `energyDashboard`.
@@ -52,17 +52,19 @@ This walkthrough documents the successful integration of the **Enterprise Energy
 ### 4. Interactive Page Layout (`src/pages/EnergyMonitoring.jsx`)
 * **Meter Selector Cards**: Supports dynamic meter lists (UGVCL Meter 1, UGVCL Meter 2, UGVCL Meter 3, DG Meter).
 * **AI OCR scan overlay**: Displays preview photos, green laser sweep scanner lines, progress loaders, confidence metrics, and confirm/edit controls.
-* **Tesseract.js Real OCR Integration [NEW]**:
+* **Tesseract.js Real OCR & Preprocessing Canvas [NEW]**:
   - Dynamically loads Tesseract.js via CDN directly inside the browser.
-  - Performs local optical character recognition on the uploaded photo, extracts raw string logs, and filters numbers to set confirmed readings automatically.
-  - Implements fail-safe mock fallbacks to prevent runtime blocks on network drops.
-* **Edit Meter Modal [NEW]**:
+  - Implemented **`preprocessImage`**: Crops the center 40% height of the image (automatically bypassing the top white sticker `0.5 MF GANOVO` and bottom barcode serial number tags).
+  - Enhances image contrast by converting the bright green LCD backlit pixels to pure white and the dark numeric characters to pure black (Binarization thresholding).
+  - Feeds the clean black-and-white cropped canvas blob to Tesseract.js for high-fidelity scanning.
+  - Renders the processed pre-cropped binary image in the debug logs panel so developers and managers can visually verify what the scanner processed.
+* **Edit Meter Modal**:
   - Added "Edit Selected" button in sidebar.
   - Opens modal drawer to live update Name, Code, Unique Identifier, Consumer Account Number, Serial Number, Tariff Rate, and Baseline Reading in database.
-* **Backdated Log Date-Time Selectors [NEW]**:
+* **Backdated Log Date-Time Selectors**:
   - Integrated `datetime-local` inputs inside OCR confirmation card and Manual Log form.
   - Permits entries to be logged into past datetimes.
-* **Rupee Symbol Updates [NEW]**:
+* **Rupee Symbol Updates**:
   - Swapped out dollar icons (`$`) for styled `₹` sign inside Calculated Cost widget.
 
 ---
