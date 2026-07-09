@@ -155,6 +155,7 @@ export default function EnergyMonitoring() {
   const [uploadSource, setUploadSource] = useState("Manual"); // Camera, Gallery
   const [selectedFile, setSelectedFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [processedPreviewUrl, setProcessedPreviewUrl] = useState(null);
   const [isScanning, setIsScanning] = useState(false);
   const [scanStep, setScanStep] = useState(0); // 0: Idle, 1: Scanning, 2: Scanned
   const [detectedValue, setDetectedValue] = useState("");
@@ -179,6 +180,57 @@ export default function EnergyMonitoring() {
     }
   }, [selectedMeter]);
 
+  const preprocessImage = (file) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.src = URL.createObjectURL(file);
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+
+        // Crop: ignore top 35% (CT labels) and bottom 20% (logos/serials)
+        const startY = img.height * 0.35;
+        const startX = img.width * 0.15;
+        const width = img.width * 0.70;
+        const height = img.height * 0.40;
+
+        canvas.width = width;
+        canvas.height = height;
+
+        ctx.drawImage(img, startX, startY, width, height, 0, 0, width, height);
+
+        // Apply Grayscale and high-contrast thresholding (Binarization)
+        const imgData = ctx.getImageData(0, 0, width, height);
+        const data = imgData.data;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          
+          const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+          
+          // Binarize
+          const threshold = 120;
+          const val = gray > threshold ? 255 : 0;
+          
+          data[i] = val;
+          data[i + 1] = val;
+          data[i + 2] = val;
+        }
+
+        ctx.putImageData(imgData, 0, 0);
+
+        canvas.toBlob((blob) => {
+          resolve({
+            blob,
+            preview: canvas.toDataURL()
+          });
+        }, "image/png");
+      };
+    });
+  };
+
   // Handle Photo selection
   const handlePhotoSelect = (e, slot) => {
     const file = e.target.files[0];
@@ -187,6 +239,7 @@ export default function EnergyMonitoring() {
     setSelectedSlot(slot);
     setSelectedFile(file);
     setPreviewUrl(URL.createObjectURL(file));
+    setProcessedPreviewUrl(null); // Reset preview
     setScanStep(1); // Scanning animation start
     setIsScanning(true);
     setRemarks("");
@@ -223,8 +276,14 @@ export default function EnergyMonitoring() {
         setRawOcrText("Initializing client-side Tesseract.js engine...");
         try {
           const tesseract = await loadTesseract();
-          setRawOcrText("Tesseract.js engine loaded. Extracting characters from image...");
-          const ocrResult = await tesseract.recognize(file, 'eng');
+          setRawOcrText("Cropping and binarizing green backlit LCD display region...");
+          
+          // Preprocess the image
+          const processed = await preprocessImage(file);
+          setProcessedPreviewUrl(processed.preview); // Save processed preview
+          
+          setRawOcrText("Tesseract.js engine loaded. Extracting characters from preprocessed view...");
+          const ocrResult = await tesseract.recognize(processed.blob, 'eng');
           rawText = ocrResult.data.text || "";
           
           console.log("Raw Tesseract Text:", rawText);
@@ -242,10 +301,9 @@ export default function EnergyMonitoring() {
         } catch (ocrErr) {
           console.error("Local OCR failed:", ocrErr);
           setRawOcrText(`Local OCR scan failed: ${ocrErr.message}. Falling back to simulator...`);
-          // Fallback simulation value based on last reading
           const lastReadingVal = meterReadings.length > 0 ? Number(meterReadings[0].confirmed_value) : Number(selectedMeter?.initial_reading || 12000);
           parsedValue = Math.floor(lastReadingVal + 15 + Math.random() * 55).toString();
-          confidence = 0.88; // Requires confirmation fallback
+          confidence = 0.88;
           rawText = `[Fallback Simulator Mode]\nReason: ${ocrErr.message}`;
         }
       } else {
@@ -744,6 +802,16 @@ ${rawText}`);
                         <div style={s.debugPanel}>
                           <div style={s.debugTitle}>Raw OCR Parser String Logs (Debugging)</div>
                           <pre style={s.debugContent}>{rawOcrText}</pre>
+                          {processedPreviewUrl && (
+                            <div style={{ marginTop: "12px" }}>
+                              <div style={{ ...s.debugTitle, marginBottom: "6px" }}>Processed Image for Scanner (Binarized Center Crop):</div>
+                              <img 
+                                src={processedPreviewUrl} 
+                                alt="Processed OCR Input" 
+                                style={{ width: "100%", maxHeight: "150px", objectFit: "contain", borderRadius: "6px", border: "1px solid #cbd5e1", background: "#f8fafc" }} 
+                              />
+                            </div>
+                          )}
                         </div>
 
                         <div style={s.actionRow}>
