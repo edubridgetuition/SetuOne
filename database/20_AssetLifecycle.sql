@@ -50,12 +50,15 @@ CREATE TABLE IF NOT EXISTS public.asset_transfers (
 -- 4. ENABLE RLS FOR public.asset_transfers
 ALTER TABLE public.asset_transfers ENABLE ROW LEVEL SECURITY;
 
+-- DROP AND RECREATE RLS POLICIES TO PREVENT "ALREADY EXISTS" ERRORS
+DROP POLICY IF EXISTS "Enable read access for all authenticated users" ON public.asset_transfers;
 CREATE POLICY "Enable read access for all authenticated users" 
 ON public.asset_transfers 
 FOR SELECT 
 TO authenticated 
 USING (true);
 
+DROP POLICY IF EXISTS "Enable insert access for authenticated users" ON public.asset_transfers;
 CREATE POLICY "Enable insert access for authenticated users" 
 ON public.asset_transfers 
 FOR INSERT 
