@@ -1,17 +1,47 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { useApp } from "../context/appContextCore";
 import { demoUsers } from "../data/appData";
 
 export default function LoginPage() {
-  const { login } = useApp();
-  const [email, setEmail] = useState("super@facilityops.test");
-  const [password, setPassword] = useState("demo123");
+  const { login, signup } = useApp();
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [companyName, setCompanyName] = useState("");
   const [error, setError] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+
+  // Set default values on mode toggle
+  function toggleMode() {
+    setIsSignUp(!isSignUp);
+    setError("");
+    setSuccessMsg("");
+    setEmail("");
+    setPassword("");
+    setFullName("");
+    setCompanyName("");
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
-    const success = await login(email, password);
-    if (!success) setError("Invalid email or password. Please try again.");
+    setError("");
+    setSuccessMsg("");
+
+    if (isSignUp) {
+      const res = await signup(email, password, fullName, companyName);
+      if (res.success) {
+        setSuccessMsg("Registration successful! You can now sign in using your credentials.");
+        setIsSignUp(false);
+        // Autofill registered email
+        setEmail(email);
+      } else {
+        setError(res.message || "Registration failed. Please try again.");
+      }
+    } else {
+      const success = await login(email, password);
+      if (!success) setError("Invalid email or password. Please try again.");
+    }
   }
 
   async function demoLogin(demoEmail) {
@@ -48,9 +78,13 @@ export default function LoginPage() {
       {/* Right Form Pane */}
       <div style={styles.formPane}>
         <div style={styles.formWrapper}>
-          <span style={styles.formTag}>SIGN IN</span>
-          <h2 style={styles.formTitle}>Welcome back.</h2>
-          <p style={styles.formSubtitle}>Use your work email and password to continue.</p>
+          <span style={styles.formTag}>{isSignUp ? "CREATE ADMIN ACCOUNT" : "SIGN IN"}</span>
+          <h2 style={styles.formTitle}>{isSignUp ? "Get started." : "Welcome back."}</h2>
+          <p style={styles.formSubtitle}>
+            {isSignUp 
+              ? "Register a new client company and administrative user." 
+              : "Use your work email and password to continue."}
+          </p>
 
           {error && (
             <div style={styles.errorBanner}>
@@ -59,31 +93,64 @@ export default function LoginPage() {
             </div>
           )}
 
+          {successMsg && (
+            <div style={{ ...styles.errorBanner, background: "rgba(34,197,94,0.1)", color: "#22c55e", borderColor: "#22c55e" }}>
+              <span>✓</span>
+              <span>{successMsg}</span>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} style={styles.form}>
+            {isSignUp && (
+              <>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>FULL NAME</label>
+                  <input style={styles.input} type="text" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="John Doe" required />
+                </div>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>COMPANY NAME</label>
+                  <input style={styles.input} type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="ABC Ltd." required />
+                </div>
+              </>
+            )}
             <div style={styles.formGroup}>
               <label style={styles.label}>EMAIL</label>
-              <input style={styles.input} type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+              <input style={styles.input} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@company.com" required />
             </div>
             <div style={styles.formGroup}>
               <label style={styles.label}>PASSWORD</label>
-              <input style={styles.input} type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+              <input style={styles.input} type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
             </div>
             <button style={styles.btnLogin} type="submit">
-              Sign in <span>→</span>
+              {isSignUp ? "Sign up" : "Sign in"} <span>→</span>
             </button>
           </form>
 
-          <div style={styles.helperInfo}>
-            Quick demo login:
+          <div style={{ marginTop: "20px", textAlign: "center" }}>
+            <button 
+              type="button" 
+              onClick={toggleMode} 
+              style={{ background: "none", border: "none", color: "#0038a8", fontSize: "0.8rem", cursor: "pointer", fontWeight: 600, textDecoration: "underline" }}
+            >
+              {isSignUp ? "Already have an account? Sign In" : "Don't have an admin account? Sign Up"}
+            </button>
           </div>
-          <div style={styles.demoGrid}>
-            {Object.entries(demoUsers).map(([demoEmail, user]) => (
-              <button key={demoEmail} style={styles.demoBtn} onClick={() => demoLogin(demoEmail)}>
-                <span style={styles.demoRole}>{user.role}</span>
-                <span style={styles.demoName}>{user.name}</span>
-              </button>
-            ))}
-          </div>
+
+          {!isSignUp && (
+            <>
+              <div style={styles.helperInfo}>
+                Quick demo login:
+              </div>
+              <div style={styles.demoGrid}>
+                {Object.entries(demoUsers).map(([demoEmail, user]) => (
+                  <button key={demoEmail} style={styles.demoBtn} onClick={() => demoLogin(demoEmail)}>
+                    <span style={styles.demoRole}>{user.role}</span>
+                    <span style={styles.demoName}>{user.name}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

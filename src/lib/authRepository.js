@@ -10,6 +10,26 @@ export async function login(email, password) {
   }
 }
 
+export async function register(email, password, fullName, companyName) {
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          role: 'Admin Manager',
+          company_name: companyName
+        }
+      }
+    });
+    if (error) throw error;
+    return { success: true, data, message: 'Registration successful.', error: null };
+  } catch (error) {
+    return { success: false, data: null, message: error.message || 'Registration failed.', error };
+  }
+}
+
 export async function logout() {
   try {
     const { error } = await supabase.auth.signOut();

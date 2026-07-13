@@ -6,6 +6,7 @@ import {
   fetchUserProfile, 
   login as authLogin, 
   logout as authLogout,
+  register as authRegister,
   fetchTickets,
   fetchLocations,
   fetchAssignees,
@@ -314,6 +315,10 @@ export function AppProvider({ children }) {
       return true;
     }
     return false;
+  }
+
+  async function signup(email, password, fullName, companyName) {
+    return await authRegister(email, password, fullName, companyName);
   }
 
   async function logout() {
@@ -1573,7 +1578,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{ 
       session, activeTenant, setActiveTenant, activeRole, setActiveRole, 
       activeView, setActiveView, tickets, locations, assignees, tenantData, 
-      login, logout, canAccess, createTicket, updateTicket,
+      login, signup, logout, canAccess, createTicket, updateTicket,
       
       // Asset values
       assets, totalAssetsCount, assetMetadata, loadAssets, loadAssetDetails,
