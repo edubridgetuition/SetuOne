@@ -304,6 +304,18 @@ export function AppProvider({ children }) {
         setSession({ email: authSession.user.email, name: user.name });
         setActiveTenant(user.tenant);
         setActiveRole(user.role);
+      } else {
+        // Dynamic fallback using Supabase Auth raw user metadata
+        setSession({
+          id: authSession.user.id,
+          email: authSession.user.email,
+          name: authSession.user.user_metadata?.full_name || authSession.user.email.split('@')[0],
+          companyId: authSession.user.user_metadata?.company_id || null,
+          branchId: authSession.user.user_metadata?.branch_id || null,
+          tenantId: "orion"
+        });
+        setActiveRole(authSession.user.user_metadata?.role || "Admin Manager");
+        setActiveTenant("orion");
       }
     }
   }
