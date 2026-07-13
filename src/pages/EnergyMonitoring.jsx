@@ -357,6 +357,10 @@ export default function EnergyMonitoring() {
       let confidence = 0.98;
       let rawText = "";
 
+      const lastReadingVal = meterReadings.length > 0 
+        ? Number(meterReadings[0].confirmed_value) 
+        : Number(selectedMeter?.initial_reading ?? 0);
+
       const engineName = ocrProvider.startsWith("PaddleOCR") 
         ? "PaddleOCR" 
         : ocrProvider.startsWith("EasyOCR") 
@@ -393,7 +397,6 @@ export default function EnergyMonitoring() {
         } catch (ocrErr) {
           console.error("Local OCR failed:", ocrErr);
           setRawOcrText(`Local OCR scan failed: ${ocrErr.message}. Falling back to simulator...`);
-          const lastReadingVal = meterReadings.length > 0 ? Number(meterReadings[0].confirmed_value) : Number(selectedMeter?.initial_reading || 12000);
           parsedValue = Math.floor(lastReadingVal + 15 + Math.random() * 55).toString();
           confidence = 0.88;
           rawText = `[Fallback Simulator Mode]\nReason: ${ocrErr.message}`;
@@ -423,7 +426,6 @@ export default function EnergyMonitoring() {
           }
         } catch (simErr) {
           // Secondary fallback
-          const lastReadingVal = meterReadings.length > 0 ? Number(meterReadings[0].confirmed_value) : Number(selectedMeter?.initial_reading || 12000);
           parsedValue = Math.floor(lastReadingVal + 15 + Math.random() * 55).toString();
           confidence = 0.96;
           rawText = `[Simulated ${engineName} pipeline output]`;
@@ -431,10 +433,6 @@ export default function EnergyMonitoring() {
       }
 
       // Smart expected-range anomaly validation checks
-      const lastReadingVal = meterReadings.length > 0 
-        ? Number(meterReadings[0].confirmed_value) 
-        : Number(selectedMeter?.initial_reading || 160000);
-      
       const minExpected = lastReadingVal;
       const maxExpected = lastReadingVal + 2000;
       const numericValue = Number(parsedValue);
