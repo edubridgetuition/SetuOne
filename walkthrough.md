@@ -6,7 +6,7 @@ This walkthrough documents the successful integration of the **Enterprise Energy
 
 ## 🚀 Accomplished Tasks
 
-### 1. Database Seed Migration (`database/16_EnergyMonitoring.sql`, `database/17_EnergyOCRv2.sql`, & `database/18_DynamicSignUp.sql`)
+### 1. Database Seed Migration (`database/16_EnergyMonitoring.sql`, `database/17_EnergyOCRv2.sql`, `database/18_DynamicSignUp.sql`, & `database/19_EnergyVoidDuplicates.sql` [NEW])
 * **`energy_meters` Table**: Stores core hardware properties (unit type, installation date, capacity, status, serial numbers, and custom tariff rates like `₹8.50/Unit` per meter).
 * **`energy_meter_ocr_profiles` Table**:
   - Dynamically registers specifications for each meter type (e.g. `UGVCL Smart Meter`, `DG Generator Meter`).
@@ -24,6 +24,10 @@ This walkthrough documents the successful integration of the **Enterprise Energy
 * **`handle_new_user()` Trigger Function Update (`database/18_DynamicSignUp.sql`)**:
   - Upgraded trigger to dynamically create new **Companies** and default **Branches** if user metadata contains a `company_name` string.
   - Links user profiles seamlessly during client admin registration.
+* **Kolkata Timezone Safe Deduplication & Constraints (`database/19_EnergyVoidDuplicates.sql` [NEW])**:
+  - Added `is_void` boolean column (default false) to mark obsolete readings.
+  - Auto-voids duplicate readings for same day/slot (retains the latest entry).
+  - Created unique partial index constraint checking: `meter_id`, timezone-safe `public.get_kolkata_date(reading_datetime)`, and `reading_slot` when `is_void = FALSE` to prevent duplicate slot uploads on same day.
 * **Enterprise RLS Security**: Strict tenant isolation matching user profiles (`company_id = public.get_user_company(auth.uid())`), without any RLS bypasses.
 * **Conflict-Safe Multi-Company Seeding**: Seeding logic uses `WHERE NOT EXISTS` combined with dynamic suffixes mapping to each company's ID to prevent key duplication conflicts during re-runs.
 
@@ -47,25 +51,25 @@ This walkthrough documents the successful integration of the **Enterprise Energy
   - Submits signup payload to Supabase Auth, which creates the profile and company dynamically on backend database.
 * **Password Eye Toggle Icon**:
   - Embedded `MdVisibility` / `MdVisibilityOff` eye icons inside the password fields on sign-in and signup forms to allow supervisors to preview input passwords.
-* **Super Admin & Tenant Display [NEW]**:
+* **Super Admin & Tenant Display**:
   - For global **Super Admins**, the top right header badge renders the Tenant Name (e.g. `Orion Corporate Park`) instead of any specific company name.
   - For standard company roles, the badge correctly displays their respective company name (e.g. `On2Cook Pvt Ltd`).
-* **Permission Manager Changes [NEW]**:
+* **Permission Manager Changes**:
   - Replaced tenant name labels in the "Company" selector dropdown with correct operating company names (e.g. `On2Cook Pvt Ltd` instead of `Orion Corporate Park`).
-  - Added a green **Save Permissions** button in the actions header. Now, ticking/unticking options doesn't auto-save immediately. It holds the edits in a draft state and commits only upon clicking **Save Permissions**, with confirmation alerts.
-  - Added a **Discard Unsaved Changes** button.
+  - Grouped permissions visually into nested module panels matching the sidebar layout.
+  - Added a green **Save Permissions** button in the actions header, preventing auto-saving checklist modifications instantly.
+  - Added **Reset Defaults** and **Discard Unsaved Changes** buttons.
 * **Meter Selector Cards**: Supports dynamic meter lists (UGVCL Meter 1, UGVCL Meter 2, UGVCL Meter 3, DG Meter).
 * **AI OCR scan overlay**: Displays preview photos, green laser sweep scanner lines, progress loaders, confidence metrics, and confirm/edit controls.
 * **SHA-256 Web Crypto Image Fingerprinting**:
   - Computes the SHA-256 hash of the photograph in the browser using Web Crypto API.
   - Instantly checks the database. If duplicate detected, alerts: **"This image was already uploaded today. Please upload a fresh photograph."** and blocks the upload.
-* **Tesseract.js Real OCR & Preprocessing Canvas**:
-  - Dynamically loads Tesseract.js via CDN directly inside the browser.
-  - Implemented **`preprocessImage` (Luminous Green Backlight Bounding Box Crop)**:
-    - Analyzes pixels in real-time, extracts coordinates of green-lit LCD screen bounding area `(minX, maxX, minY, maxY)`.
-    - Automatically crops out non-screen stickers (like `0.5 MF GANOVO` or serial tags).
-    - Applies grayscale contrast enhancement and binarization on the cropped region before running OCR.
-    - Displays processed image preview directly inside the Debugging Logs drawer for manual verification.
+* **Contrast-Enhanced Adaptive OCR Preprocessing [NEW]**:
+  - **Issue**: Standard static thresholding (`threshold = 120`) was causing LCD cropped regions to completely blackout/whiteout under extreme glare or zoom conditions, leading to local check failures and forced simulated fallback triggers.
+  - **Fix**: Replaced hardcoded static thresholding with **adaptive contrast-enhanced grayscale preprocessing** (boost factor `1.6`). This retains structural edge detail and delegates adaptive binarization to Tesseract's internal Otsu engine.
+* **Whitespace-Insensitive Pattern Matcher (`\d{5,9}`) [NEW]**:
+  - **Issue**: The strict `\b\d{5,8}\b` regex boundary failed when unit text (`"kWh"`) or noise was adjacent to numbers (e.g. `"166500kWh"`).
+  - **Fix**: Strips all whitespaces from raw OCR texts and extracts the sequence of `5` to `9` digits, making the reader robust under real-world camera positioning.
 * **OCR Engines Selector Prioritization**:
   - Changed selector options to PaddleOCR (Best), EasyOCR (High Accuracy), and Tesseract (Local Fallback) with PaddleOCR selected by default.
 * **Smart Range Validation Guard**:
