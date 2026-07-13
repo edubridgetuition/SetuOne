@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { roles, permissionTabs, defaultCompanyPermissions } from "../data/defaultPermissions";
+import { menuBar } from "../data/menuBar";
 
 const companies = [
   { key: "orion", label: "On2Cook Pvt Ltd" },
@@ -28,6 +29,8 @@ export default function PermissionManager() {
   const selectedPermissions = unsavedPermissions?.[company]?.[role] || [];
   const hasChanges = JSON.stringify(permissions) !== JSON.stringify(unsavedPermissions);
 
+  const isKeyPermitted = (key) => permissionTabs.some((tab) => tab.key === key);
+
   function togglePermission(tabKey) {
     setUnsavedPermissions((current) => {
       const companyPermissions = current[company] || {};
@@ -36,6 +39,41 @@ export default function PermissionManager() {
       const nextRolePermissions = rolePermissions.includes(tabKey)
         ? rolePermissions.filter((key) => key !== tabKey)
         : [...rolePermissions, tabKey];
+
+      return {
+        ...current,
+        [company]: {
+          ...companyPermissions,
+          [role]: nextRolePermissions,
+        },
+      };
+    });
+  }
+
+  function toggleGroupAll(groupKey, subKeys, checkAll) {
+    setUnsavedPermissions((current) => {
+      const companyPermissions = current[company] || {};
+      const rolePermissions = companyPermissions[role] || [];
+
+      let nextRolePermissions = [...rolePermissions];
+      
+      // Handle parent key toggle
+      if (isKeyPermitted(groupKey)) {
+        if (checkAll) {
+          if (!nextRolePermissions.includes(groupKey)) nextRolePermissions.push(groupKey);
+        } else {
+          nextRolePermissions = nextRolePermissions.filter(k => k !== groupKey);
+        }
+      }
+
+      // Handle child keys toggles
+      subKeys.forEach(key => {
+        if (checkAll) {
+          if (!nextRolePermissions.includes(key)) nextRolePermissions.push(key);
+        } else {
+          nextRolePermissions = nextRolePermissions.filter(k => k !== key);
+        }
+      });
 
       return {
         ...current,
@@ -139,19 +177,89 @@ export default function PermissionManager() {
           {hasChanges && <span style={{ color: "#ef4444", marginLeft: "10px", fontSize: "12px", fontWeight: "normal" }}>(You have unsaved changes)</span>}
         </div>
 
-        <div style={styles.grid}>
-          {permissionTabs.map((tab) => {
-            const checked = selectedPermissions.includes(tab.key);
+        <div style={styles.groupsContainer}>
+          {menuBar.map((mod) => {
+            const parentPermitted = isKeyPermitted(mod.key);
+            const childrenPermitted = mod.subItems.filter(sub => isKeyPermitted(sub.key) && sub.key !== mod.key);
+            const hasChildren = childrenPermitted.length > 0;
+
+            if (!parentPermitted && !hasChildren) return null;
+
+            // Case 1: Simple module with no child tabs
+            if (!hasChildren && parentPermitted) {
+              const checked = selectedPermissions.includes(mod.key);
+              return (
+                <div key={mod.key} style={styles.groupCardSingle}>
+                  <label style={{ ...styles.permissionCard, ...(checked ? styles.permissionCardActive : {}), width: "100%", margin: 0 }}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => togglePermission(mod.key)}
+                    />
+                    <span style={{ fontSize: "14px", fontWeight: 700 }}>{mod.label}</span>
+                  </label>
+                </div>
+              );
+            }
+
+            // Case 2: Hierarchical module (Main Menu with sub-items)
+            const parentChecked = parentPermitted ? selectedPermissions.includes(mod.key) : false;
+            
+            // Check if all permitted child items are checked
+            const childrenKeys = childrenPermitted.map(sub => sub.key);
+            const allChildrenChecked = childrenKeys.every(k => selectedPermissions.includes(k));
+            const someChildrenChecked = childrenKeys.some(k => selectedPermissions.includes(k));
+            const groupAllChecked = parentPermitted 
+              ? (parentChecked && allChildrenChecked)
+              : allChildrenChecked;
 
             return (
-              <label key={tab.key} style={{ ...styles.permissionCard, ...(checked ? styles.permissionCardActive : {}) }}>
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  onChange={() => togglePermission(tab.key)}
-                />
-                <span>{tab.label}</span>
-              </label>
+              <div key={mod.key} style={styles.groupCard}>
+                <div style={styles.groupHeader}>
+                  <div style={styles.groupHeaderLeft}>
+                    {parentPermitted ? (
+                      <label style={styles.groupHeaderLabel}>
+                        <input
+                          type="checkbox"
+                          checked={parentChecked}
+                          onChange={() => togglePermission(mod.key)}
+                        />
+                        <span>{mod.label}</span>
+                      </label>
+                    ) : (
+                      <span style={styles.groupHeaderTitle}>{mod.label}</span>
+                    )}
+                  </div>
+
+                  <div style={styles.groupHeaderRight}>
+                    <button
+                      type="button"
+                      onClick={() => toggleGroupAll(mod.key, childrenKeys, !groupAllChecked)}
+                      style={styles.groupToggleBtn}
+                    >
+                      {groupAllChecked ? "Deselect Group" : "Select Group"}
+                    </button>
+                    <span style={styles.groupHeaderBadge}>Module Group</span>
+                  </div>
+                </div>
+
+                <div style={styles.childGrid}>
+                  {childrenPermitted.map((sub) => {
+                    const checked = selectedPermissions.includes(sub.key);
+                    const label = permissionTabs.find(t => t.key === sub.key)?.label || sub.label;
+                    return (
+                      <label key={sub.key} style={{ ...styles.permissionCard, ...(checked ? styles.permissionCardActive : {}) }}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => togglePermission(sub.key)}
+                        />
+                        <span>{label}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
             );
           })}
         </div>
@@ -235,12 +343,81 @@ const styles = {
     fontSize: "15px",
     fontWeight: 800,
     color: "#0f172a",
+    marginBottom: "18px",
+  },
+  groupsContainer: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+  },
+  groupCard: {
+    background: "#fff",
+    border: "1px solid #e2e8f0",
+    borderRadius: "10px",
+    padding: "16px",
+  },
+  groupCardSingle: {
+    background: "#fff",
+    border: "1px solid #e2e8f0",
+    borderRadius: "10px",
+    padding: "12px",
+  },
+  groupHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderBottom: "1px solid #f1f5f9",
+    paddingBottom: "10px",
     marginBottom: "14px",
   },
-  grid: {
+  groupHeaderLeft: {
+    display: "flex",
+    alignItems: "center",
+  },
+  groupHeaderRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+  },
+  groupHeaderLabel: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    fontWeight: 800,
+    fontSize: "15px",
+    color: "#0038a8",
+    cursor: "pointer",
+  },
+  groupHeaderTitle: {
+    fontWeight: 800,
+    fontSize: "15px",
+    color: "#475569",
+  },
+  groupToggleBtn: {
+    border: "1px solid #cbd5e1",
+    background: "#fff",
+    color: "#475569",
+    borderRadius: "6px",
+    padding: "4px 8px",
+    fontSize: "11px",
+    fontWeight: 750,
+    cursor: "pointer",
+  },
+  groupHeaderBadge: {
+    fontSize: "10px",
+    background: "#f8fafc",
+    color: "#64748b",
+    border: "1px solid #e2e8f0",
+    padding: "3px 8px",
+    borderRadius: "20px",
+    fontWeight: 700,
+    textTransform: "uppercase",
+  },
+  childGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
     gap: "10px",
+    paddingLeft: "4px",
   },
   permissionCard: {
     border: "1px solid #e2e8f0",
