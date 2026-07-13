@@ -6,7 +6,7 @@ This walkthrough documents the successful integration of the **Enterprise Energy
 
 ## 🚀 Accomplished Tasks
 
-### 1. Database Seed Migration (`database/16_EnergyMonitoring.sql`, `database/17_EnergyOCRv2.sql`, & `database/18_DynamicSignUp.sql` [NEW])
+### 1. Database Seed Migration (`database/16_EnergyMonitoring.sql`, `database/17_EnergyOCRv2.sql`, & `database/18_DynamicSignUp.sql`)
 * **`energy_meters` Table**: Stores core hardware properties (unit type, installation date, capacity, status, serial numbers, and custom tariff rates like `₹8.50/Unit` per meter).
 * **`energy_meter_ocr_profiles` Table**:
   - Dynamically registers specifications for each meter type (e.g. `UGVCL Smart Meter`, `DG Generator Meter`).
@@ -40,15 +40,20 @@ This walkthrough documents the successful integration of the **Enterprise Energy
 * Automatically loads energy meters on session login.
 * Mapped view switch route: `"energy" ➡️ <EnergyMonitoring />`.
 
-### 4. Interactive Page Layout (`src/components/Layout.jsx`, `src/pages/LoginPage.jsx` & `src/pages/EnergyMonitoring.jsx`)
+### 4. Interactive Page Layout (`src/components/Layout.jsx`, `src/pages/LoginPage.jsx`, `src/pages/PermissionManager.jsx`, & `src/pages/EnergyMonitoring.jsx`)
 * **LoginPage Sign Up View**:
   - Added a clean toggle switch to change login layout into a "Sign Up / Register" form.
   - Collects Full Name, Email, Password, and Company Name.
   - Submits signup payload to Supabase Auth, which creates the profile and company dynamically on backend database.
-* **Password Eye Toggle Icon [NEW]**:
+* **Password Eye Toggle Icon**:
   - Embedded `MdVisibility` / `MdVisibilityOff` eye icons inside the password fields on sign-in and signup forms to allow supervisors to preview input passwords.
-* **Company Name Top Header Display [NEW]**:
-  - Updated the header layout shell to dynamically render the user's logged-in `session.companyName` (e.g. `ABC Ltd.`) instead of defaulting to the platform tenant label (`Orion Corporate Park`).
+* **Super Admin & Tenant Display [NEW]**:
+  - For global **Super Admins**, the top right header badge renders the Tenant Name (e.g. `Orion Corporate Park`) instead of any specific company name.
+  - For standard company roles, the badge correctly displays their respective company name (e.g. `On2Cook Pvt Ltd`).
+* **Permission Manager Changes [NEW]**:
+  - Replaced tenant name labels in the "Company" selector dropdown with correct operating company names (e.g. `On2Cook Pvt Ltd` instead of `Orion Corporate Park`).
+  - Added a green **Save Permissions** button in the actions header. Now, ticking/unticking options doesn't auto-save immediately. It holds the edits in a draft state and commits only upon clicking **Save Permissions**, with confirmation alerts.
+  - Added a **Discard Unsaved Changes** button.
 * **Meter Selector Cards**: Supports dynamic meter lists (UGVCL Meter 1, UGVCL Meter 2, UGVCL Meter 3, DG Meter).
 * **AI OCR scan overlay**: Displays preview photos, green laser sweep scanner lines, progress loaders, confidence metrics, and confirm/edit controls.
 * **SHA-256 Web Crypto Image Fingerprinting**:
