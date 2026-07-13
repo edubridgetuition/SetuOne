@@ -42,7 +42,7 @@ export default function Layout({ children }) {
 
   const activeModule = accessibleModules.find((mod) => mod.subItems.some((sub) => sub.key === activeView)) || accessibleModules[0];
   const activeSubLabel = activeModule?.subItems.find((sub) => sub.key === activeView)?.label || "Dashboard";
-  const tenantName = session?.companyName || (activeTenant === "orion" ? "Orion Corporate Park" : "Greenfield School");
+  const tenantName = activeRole === "Super Admin" ? (activeTenant === "orion" ? "Orion Corporate Park" : "Greenfield School") : (session?.companyName || "Orion Corporate Park");
 
   function openLauncher() {
     if (closeTimer.current) clearTimeout(closeTimer.current);

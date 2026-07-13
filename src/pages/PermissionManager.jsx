@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { roles, permissionTabs, defaultCompanyPermissions } from "../data/defaultPermissions";
 
 const companies = [
-  { key: "orion", label: "Orion Corporate Park" },
+  { key: "orion", label: "On2Cook Pvt Ltd" },
   { key: "greenfield", label: "Greenfield School" },
 ];
 
@@ -21,17 +21,15 @@ function loadPermissions() {
 
 export default function PermissionManager() {
   const [permissions, setPermissions] = useState(loadPermissions);
+  const [unsavedPermissions, setUnsavedPermissions] = useState(loadPermissions);
   const [company, setCompany] = useState("orion");
   const [role, setRole] = useState("Admin Manager");
 
-  const selectedPermissions = permissions?.[company]?.[role] || [];
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(permissions));
-  }, [permissions]);
+  const selectedPermissions = unsavedPermissions?.[company]?.[role] || [];
+  const hasChanges = JSON.stringify(permissions) !== JSON.stringify(unsavedPermissions);
 
   function togglePermission(tabKey) {
-    setPermissions((current) => {
+    setUnsavedPermissions((current) => {
       const companyPermissions = current[company] || {};
       const rolePermissions = companyPermissions[role] || [];
 
@@ -50,7 +48,7 @@ export default function PermissionManager() {
   }
 
   function allowAll() {
-    setPermissions((current) => ({
+    setUnsavedPermissions((current) => ({
       ...current,
       [company]: {
         ...(current[company] || {}),
@@ -60,13 +58,23 @@ export default function PermissionManager() {
   }
 
   function clearAll() {
-    setPermissions((current) => ({
+    setUnsavedPermissions((current) => ({
       ...current,
       [company]: {
         ...(current[company] || {}),
         [role]: [],
       },
     }));
+  }
+
+  function handleSaveChanges() {
+    setPermissions(unsavedPermissions);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(unsavedPermissions));
+    alert("Permissions saved successfully! Active sessions will receive the updated permission matrix.");
+  }
+
+  function handleDiscardChanges() {
+    setUnsavedPermissions(permissions);
   }
 
   return (
@@ -77,8 +85,20 @@ export default function PermissionManager() {
           <p style={styles.subtitle}>Company wise role tab permission setup.</p>
         </div>
         <div style={styles.actions}>
+          {hasChanges && (
+            <button style={{ ...styles.secondaryBtn, borderColor: "#ef4444", color: "#ef4444" }} onClick={handleDiscardChanges}>
+              Discard Unsaved Changes
+            </button>
+          )}
           <button style={styles.secondaryBtn} onClick={clearAll}>Clear All</button>
-          <button style={styles.primaryBtn} onClick={allowAll}>Allow All</button>
+          <button style={styles.secondaryBtn} onClick={allowAll}>Allow All</button>
+          <button 
+            style={{ ...styles.primaryBtn, background: hasChanges ? "#22c55e" : "#cbd5e1", cursor: hasChanges ? "pointer" : "not-allowed" }} 
+            onClick={handleSaveChanges}
+            disabled={!hasChanges}
+          >
+            Save Permissions {hasChanges && "*"}
+          </button>
         </div>
       </div>
 
@@ -105,6 +125,7 @@ export default function PermissionManager() {
       <div style={styles.panel}>
         <div style={styles.panelTitle}>
           Permissions for {role} in {companies.find((item) => item.key === company)?.label}
+          {hasChanges && <span style={{ color: "#ef4444", marginLeft: "10px", fontSize: "12px", fontWeight: "normal" }}>(You have unsaved changes)</span>}
         </div>
 
         <div style={styles.grid}>
