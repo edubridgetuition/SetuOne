@@ -67,6 +67,16 @@ export default function PermissionManager() {
     }));
   }
 
+  function resetToDefaults() {
+    setUnsavedPermissions((current) => ({
+      ...current,
+      [company]: {
+        ...(current[company] || {}),
+        [role]: defaultCompanyPermissions?.[company]?.[role] || []
+      },
+    }));
+  }
+
   function handleSaveChanges() {
     setPermissions(unsavedPermissions);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(unsavedPermissions));
@@ -91,6 +101,7 @@ export default function PermissionManager() {
             </button>
           )}
           <button style={styles.secondaryBtn} onClick={clearAll}>Clear All</button>
+          <button style={styles.secondaryBtn} onClick={resetToDefaults}>Reset Defaults</button>
           <button style={styles.secondaryBtn} onClick={allowAll}>Allow All</button>
           <button 
             style={{ ...styles.primaryBtn, background: hasChanges ? "#22c55e" : "#cbd5e1", cursor: hasChanges ? "pointer" : "not-allowed" }} 

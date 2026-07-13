@@ -17,6 +17,11 @@ export const permissionTabs = [
   { key: "asset", label: "Asset" },
   { key: "assets", label: "Asset Management" },
   { key: "inventory", label: "Inventory" },
+  { key: "itasset", label: "IT Asset" },
+  { key: "mobile", label: "Mobile" },
+  { key: "sim", label: "SIM" },
+  { key: "furniture", label: "Furniture" },
+  { key: "hvac", label: "HVAC" },
   { key: "purchase", label: "Purchase" },
   { key: "workorders", label: "Work Order / PO" },
   { key: "vendors", label: "Vendor Management" },
@@ -30,7 +35,7 @@ export const permissionTabs = [
 
 export const defaultCompanyPermissions = {
   orion: {
-    "Admin Manager": ["dashboard", "maintenance", "checklist", "tickets", "ppm", "asset", "assets", "inventory", "vendors", "reports"],
+    "Admin Manager": ["dashboard", "maintenance", "checklist", "tickets", "ppm", "asset", "assets", "inventory", "itasset", "mobile", "sim", "furniture", "hvac", "vendors", "reports"],
     Employee: ["dashboard", "tickets", "visitors"],
     Vendor: ["dashboard", "tickets", "workorders"],
     "Security Supervisor": ["dashboard", "visitors", "security", "attendance"],
