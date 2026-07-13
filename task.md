@@ -1,4 +1,5 @@
-- [x] Connect Pantry & Coffee dropdown to dynamic inventory items listing.
-- [x] Connect Ticket Category dropdown to Dynamic Masters value registry.
-- [x] Connect Visitor Purpose and Vehicle Type dropdowns to Dynamic Masters value registry.
-- [x] Verify Vite build compilation is successful.
+- `[x]` Execute database migrations for assets, taxes, and transfers in `database/20_AssetLifecycle.sql`
+- `[x]` Update repository layer `src/lib/assetRepository.js` to support extended fields and transfer logs
+- `[x]` Update context layer `src/context/AppContext.jsx` to register actions and states
+- `[x]` Update UI page `src/pages/AssetManagement.jsx` to add forms, abbreviations reference panel, barcode renderer, and depreciation charts
+- `[ ]` Verify Vite production build and push to remote git

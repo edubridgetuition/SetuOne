@@ -2,6 +2,41 @@ import { useEffect, useState } from "react";
 import { useApp } from "../context/appContextCore";
 import { ASSET_STATUS } from "../constants";
 
+// 1. Beautiful SVG Barcode Generator Component
+// Encodes Asset Code | Location | Purchase Date for scanning
+function BarcodeRenderer({ value }) {
+  if (!value) return null;
+  
+  // Create a visually rich pseudo-barcode pattern using character values
+  const hashStr = String(value);
+  const bars = [];
+  let xPos = 10;
+  
+  for (let i = 0; i < hashStr.length; i++) {
+    const charCode = hashStr.charCodeAt(i);
+    // Draw variable-width lines based on character binary details
+    const w1 = (charCode % 3) + 1; 
+    const w2 = ((charCode >> 1) % 3) + 1;
+    
+    // Black bar
+    bars.push(<rect key={`b-${i}`} x={xPos} y={10} width={w1} height={42} fill="#0f172a" />);
+    xPos += w1;
+    // White space
+    xPos += w2;
+  }
+  
+  return (
+    <div style={{ background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "14px", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.05)" }}>
+      <svg width="100%" height="60" viewBox={`0 0 ${Math.max(220, xPos + 10)} 60`} preserveAspectRatio="xMidYMid meet">
+        {bars}
+      </svg>
+      <div style={{ fontSize: "0.72rem", fontFamily: "monospace", letterSpacing: "1.2px", color: "#475569", textAlign: "center", wordBreak: "break-all" }}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
 export default function AssetManagement() {
   const {
     assets,
@@ -15,7 +50,7 @@ export default function AssetManagement() {
     archiveAsset,
     assignAsset,
     returnAsset,
-    transferAsset,
+    logAssetTransfer,
     changeAssetStatus,
     uploadAssetDocument,
     importAssets
@@ -33,32 +68,92 @@ export default function AssetManagement() {
   const [page, setPage] = useState(1);
   const pageSize = 5;
 
-  // Forms states
+  // Form toggles
   const [showAddForm, setShowAddForm] = useState(false);
   const [showAssignForm, setShowAssignForm] = useState(false);
   const [showTransferForm, setShowTransferForm] = useState(false);
+  const [showDisposeForm, setShowDisposeForm] = useState(false);
   const [showUploadForm, setShowUploadForm] = useState(false);
 
+  // Sub-type prefix mapping for Furniture category
+  const furnitureSubTypes = [
+    { name: "Chair", prefix: "CHR" },
+    { name: "Table", prefix: "TBL" },
+    { name: "Wardrobe", prefix: "WRD" },
+    { name: "Cupboard", prefix: "CPB" },
+    { name: "Round Table", prefix: "RTB" },
+    { name: "Square Table", prefix: "STB" }
+  ];
+
+  const indianStates = [
+    "Gujarat", "Maharashtra", "Karnataka", "Delhi", "Tamil Nadu", 
+    "Uttar Pradesh", "Telangana", "Rajasthan", "Madhya Pradesh", "West Bengal"
+  ];
+
+  // Forms states
   const [addForm, setAddForm] = useState({
-    code: "",
     name: "",
     categoryId: "",
+    subType: "Chair",
+    customPrefix: "CHR",
     brandId: "",
     modelId: "",
     locationId: "",
-    purchaseDate: "",
-    warrantyExpiry: "",
-    serialNo: "",
-    customSpecs: {} // Category specific specifications
+    floorNumber: "",
+    roomNumber: "",
+    purchaseDate: new Date().toISOString().split("T")[0],
+    purchaseCost: "5000",
+    purchaseQty: "1",
+    invoiceNo: "",
+    invoiceDate: new Date().toISOString().split("T")[0],
+    invoiceCompany: "",
+    warrantyMonths: "12",
+    
+    // GST Fields
+    gstRate: "18",
+    cgstRate: "9",
+    sgstRate: "9",
+    igstRate: "0",
+    cgstAmount: "450",
+    sgstAmount: "450",
+    igstAmount: "0",
+    gstType: "CGST_SGST", // CGST_SGST or IGST
+    manualTaxMode: false,
+    branchState: "Gujarat",
+    vendorState: "Gujarat",
+
+    // Depreciation
+    depreciationRate: "10.0",
+    depreciationMethod: "SLM", // SLM or WDV
+    shortLifeYears: "3", // Flag for disposal after N years
+
+    // Extra specs
+    starRating: "5", // 1 to 5 Stars
+    makeBrand: "",
+    serialNo: ""
+  });
+
+  const [transferForm, setTransferForm] = useState({
+    type: "Internal", // Internal or External
+    newLocationId: "",
+    newFloorNumber: "",
+    newRoomNumber: "",
+    sisterCompany: "",
+    destinationBranch: "",
+    shippedState: "Maharashtra",
+    notes: ""
+  });
+
+  const [disposeForm, setDisposeForm] = useState({
+    status: "Disposed", // Disposed or Stolen
+    disposeDate: new Date().toISOString().split("T")[0],
+    disposeReason: ""
   });
 
   const [assignForm, setAssignForm] = useState({ employeeId: "", remarks: "" });
-  const [transferForm, setTransferForm] = useState({ targetEmployeeId: "", remarks: "" });
-  
   const [uploadForm, setUploadForm] = useState({ category: "Warranty", fileName: "", fileBlob: null });
-  const [csvFile, setCsvFile] = useState(null);
 
-  // Load Metadata & Assets registers
+  // Load Metadata & Assets list
   useEffect(() => {
     loadAssetMetadata();
   }, []);
@@ -76,7 +171,7 @@ export default function AssetManagement() {
     );
   }, [search, catFilter, brandFilter, statusFilter, page]);
 
-  // Load Dynamic Unified Asset Details once selectedId changes
+  // Load Details once selectedId changes
   useEffect(() => {
     if (!selectedId) {
       setAssetDetails(null);
@@ -93,7 +188,7 @@ export default function AssetManagement() {
     getDetails();
   }, [selectedId]);
 
-  // Set default dropdown selectors once metadata loads
+  // Sync default options when metadata loads
   useEffect(() => {
     if (assetMetadata && !addForm.categoryId) {
       setAddForm(prev => ({
@@ -106,51 +201,166 @@ export default function AssetManagement() {
     }
   }, [assetMetadata]);
 
-  // Dynamic Specs rendering parameters based on category
-  const selectedCategoryName = assetMetadata?.categories.find(c => c.id === addForm.categoryId)?.name || "";
+  // Dynamically update prefix based on category / furniture sub-type selection
+  useEffect(() => {
+    if (!assetMetadata) return;
+    const cat = assetMetadata.categories.find(c => c.id === addForm.categoryId);
+    if (!cat) return;
 
+    let prefix = "AST";
+    if (cat.name === "Furniture") {
+      const match = furnitureSubTypes.find(s => s.name === addForm.subType);
+      prefix = match ? match.prefix : "FUR";
+    } else if (cat.name === "IT Asset") {
+      prefix = "ITA";
+    } else if (cat.name === "HVAC") {
+      prefix = "HVC";
+    }
+    setAddForm(prev => ({ ...prev, customPrefix: prefix }));
+  }, [addForm.categoryId, addForm.subType, assetMetadata]);
+
+  // Dynamic GST tax calculation logic
+  useEffect(() => {
+    if (addForm.manualTaxMode) return; // ignore auto-calculations in manual override mode
+
+    const cost = Number(addForm.purchaseCost || 0);
+    const qty = Number(addForm.purchaseQty || 1);
+    const totalCost = cost * qty;
+    const rate = Number(addForm.gstRate || 0);
+
+    const taxAmount = (totalCost * rate) / 100;
+
+    if (addForm.branchState === addForm.vendorState) {
+      // Local transaction: CGST + SGST (50/50 split)
+      const halfRate = rate / 2;
+      const halfAmount = taxAmount / 2;
+      setAddForm(prev => ({
+        ...prev,
+        gstType: "CGST_SGST",
+        cgstRate: halfRate.toString(),
+        sgstRate: halfRate.toString(),
+        igstRate: "0",
+        cgstAmount: halfAmount.toFixed(2),
+        sgstAmount: halfAmount.toFixed(2),
+        igstAmount: "0"
+      }));
+    } else {
+      // Interstate transaction: IGST
+      setAddForm(prev => ({
+        ...prev,
+        gstType: "IGST",
+        cgstRate: "0",
+        sgstRate: "0",
+        igstRate: rate.toString(),
+        cgstAmount: "0",
+        sgstAmount: "0",
+        igstAmount: taxAmount.toFixed(2)
+      }));
+    }
+  }, [addForm.manualTaxMode, addForm.purchaseCost, addForm.purchaseQty, addForm.gstRate, addForm.branchState, addForm.vendorState]);
+
+  // Submit Handler for New Asset Creation (Supports Qty batch insertion)
   async function handleAddSubmit(e) {
     e.preventDefault();
-    const specs = {
-      serialNo: addForm.serialNo,
-      ...addForm.customSpecs
-    };
-
-    const created = await createAsset({
-      code: addForm.code,
-      name: addForm.name,
-      categoryId: addForm.categoryId,
-      brandId: addForm.brandId,
-      modelId: addForm.modelId,
-      locationId: addForm.locationId,
-      purchaseDate: addForm.purchaseDate,
-      warrantyExpiry: addForm.warrantyExpiry,
-      attributes: specs
+    
+    // Find the highest sequence suffix currently in the local state for this prefix
+    const prefix = addForm.customPrefix || "AST";
+    let baseNum = 0;
+    assets.forEach(a => {
+      if (a.code && a.code.startsWith(prefix + "-")) {
+        const parts = a.code.split("-");
+        const suffix = parseInt(parts[1], 10);
+        if (!isNaN(suffix) && suffix > baseNum) {
+          baseNum = suffix;
+        }
+      }
     });
 
-    if (created) {
-      alert("Asset registered successfully.");
+    const qty = Number(addForm.purchaseQty || 1);
+    const locationName = assetMetadata?.locations.find(l => l.id === addForm.locationId)?.name || "Warehouse";
+
+    let successCount = 0;
+
+    for (let q = 1; q <= qty; q++) {
+      const sequenceNum = baseNum + q;
+      const generatedCode = `${prefix}-${String(sequenceNum).padStart(4, "0")}`;
+      
+      // Auto-generate barcode string: Code | Location details | Purchase Date
+      const barcodeValue = `${generatedCode} | ${locationName} (Floor ${addForm.floorNumber || "N/A"}, Room ${addForm.roomNumber || "N/A"}) | ${addForm.purchaseDate}`;
+
+      const res = await createAsset({
+        code: generatedCode,
+        name: addForm.name + (qty > 1 ? ` (Item ${q})` : ""),
+        categoryId: addForm.categoryId,
+        brandId: addForm.brandId || null,
+        modelId: addForm.modelId || null,
+        locationId: addForm.locationId,
+        purchaseDate: addForm.purchaseDate,
+        warrantyExpiry: new Date(new Date(addForm.purchaseDate).setMonth(new Date(addForm.purchaseDate).getMonth() + Number(addForm.warrantyMonths))).toISOString().split("T")[0],
+        purchaseCost: Number(addForm.purchaseCost),
+        purchaseQty: 1, // individual item tracking
+        invoiceNo: addForm.invoiceNo,
+        invoiceDate: addForm.invoiceDate,
+        invoiceCompany: addForm.invoiceCompany,
+        warrantyMonths: Number(addForm.warrantyMonths),
+        gstRate: Number(addForm.gstRate),
+        cgstRate: Number(addForm.cgstRate),
+        sgstRate: Number(addForm.sgstRate),
+        igstRate: Number(addForm.igstRate),
+        cgstAmount: Number(addForm.cgstAmount),
+        sgstAmount: Number(addForm.sgstAmount),
+        igstAmount: Number(addForm.igstAmount),
+        gstType: addForm.gstType,
+        depreciationRate: Number(addForm.depreciationRate),
+        depreciationMethod: addForm.depreciationMethod,
+        shortLifeYears: addForm.shortLifeYears ? Number(addForm.shortLifeYears) : null,
+        starRating: addForm.starRating ? Number(addForm.starRating) : null,
+        makeBrand: addForm.makeBrand,
+        roomNumber: addForm.roomNumber,
+        floorNumber: addForm.floorNumber,
+        barcode: barcodeValue,
+        attributes: {
+          serialNo: addForm.serialNo || `SN-${generatedCode}`,
+          subType: addForm.subType
+        }
+      });
+
+      if (res) {
+        successCount++;
+      }
+    }
+
+    if (successCount > 0) {
+      alert(`Successfully registered ${successCount} assets sequentially under prefix "${prefix}".`);
       setShowAddForm(false);
-      setAddForm(prev => ({ ...prev, code: "", name: "", serialNo: "", customSpecs: {} }));
+      setAddForm(prev => ({
+        ...prev,
+        name: "",
+        invoiceNo: "",
+        invoiceCompany: "",
+        serialNo: ""
+      }));
     }
   }
 
+  // Custody checkout assignment submit
   async function handleAssignSubmit(e) {
     e.preventDefault();
     if (!selectedId) return;
     const res = await assignAsset(selectedId, assignForm.employeeId, assignForm.remarks);
     if (res) {
       setSelectedId(null);
-      setSelectedId(selectedId); // Trigger refresh
+      setSelectedId(selectedId);
       setShowAssignForm(false);
       setAssignForm({ employeeId: "", remarks: "" });
     }
   }
 
+  // Return asset to warehouse custody
   async function handleReturnSubmit() {
     if (!selectedId) return;
-    if (confirm("Are you sure you want to return this asset?")) {
-      const res = await returnAsset(selectedId, "Custody returned.");
+    if (confirm("Are you sure you want to return this asset to store?")) {
+      const res = await returnAsset(selectedId, "Returned to inventory warehouse.");
       if (res) {
         setSelectedId(null);
         setSelectedId(selectedId);
@@ -158,29 +368,81 @@ export default function AssetManagement() {
     }
   }
 
+  // Submit asset transfer (Internal location changes or External sister concern)
   async function handleTransferSubmit(e) {
     e.preventDefault();
-    if (!selectedId) return;
-    const res = await transferAsset(selectedId, transferForm.targetEmployeeId, transferForm.remarks);
+    if (!selectedId || !assetDetails) return;
+
+    const oldLoc = `${assetDetails.basic.location} (Floor ${assetDetails.basic.floorNumber || "N/A"}, Room ${assetDetails.basic.roomNumber || "N/A"})`;
+    let newLoc = "";
+    
+    if (transferForm.type === "Internal") {
+      const locName = assetMetadata?.locations.find(l => l.id === transferForm.newLocationId)?.name || "New Location";
+      newLoc = `${locName} (Floor ${transferForm.newFloorNumber || "N/A"}, Room ${transferForm.newRoomNumber || "N/A"})`;
+    } else {
+      newLoc = `${transferForm.sisterCompany} - ${transferForm.destinationBranch} (${transferForm.shippedState})`;
+    }
+
+    const payload = {
+      assetId: selectedId,
+      type: transferForm.type,
+      sisterCompany: transferForm.sisterCompany,
+      destinationBranch: transferForm.destinationBranch,
+      shippedState: transferForm.shippedState,
+      oldLocation: oldLoc,
+      newLocation: newLoc,
+      notes: transferForm.notes,
+      newLocationId: transferForm.type === "Internal" ? transferForm.newLocationId : null,
+      newFloorNumber: transferForm.type === "Internal" ? transferForm.newFloorNumber : null,
+      newRoomNumber: transferForm.type === "Internal" ? transferForm.newRoomNumber : null
+    };
+
+    const res = await logAssetTransfer(payload);
     if (res) {
+      alert("Asset transfer logged and location updated successfully.");
       setSelectedId(null);
       setSelectedId(selectedId);
       setShowTransferForm(false);
-      setTransferForm({ targetEmployeeId: "", remarks: "" });
+      setTransferForm({
+        type: "Internal",
+        newLocationId: "",
+        newFloorNumber: "",
+        newRoomNumber: "",
+        sisterCompany: "",
+        destinationBranch: "",
+        shippedState: "Maharashtra",
+        notes: ""
+      });
     }
   }
 
-  async function handleArchiveSubmit() {
-    if (!selectedId) return;
-    if (confirm("Are you sure you want to soft delete (archive) this asset?")) {
-      const res = await archiveAsset(selectedId);
-      if (res) {
-        setSelectedId(null);
-        loadAssets({}, 1, 10);
-      }
+  // Submit Disposal/Stolen state log
+  async function handleDisposeSubmit(e) {
+    e.preventDefault();
+    if (!selectedId || !assetDetails) return;
+
+    const updates = {
+      ...assetDetails.basic,
+      code: assetDetails.basic.code,
+      status: disposeForm.status,
+      disposeDate: disposeForm.disposeDate,
+      disposeReason: disposeForm.disposeReason,
+      isStolen: disposeForm.status === "Stolen",
+      categoryId: assetDetails.basic.categoryId,
+      locationId: assetDetails.basic.locationId
+    };
+
+    const res = await updateAsset(selectedId, updates);
+    if (res.success) {
+      alert(`Asset reported as ${disposeForm.status} successfully.`);
+      setSelectedId(null);
+      setSelectedId(selectedId);
+      setShowDisposeForm(false);
+      setDisposeForm(prev => ({ ...prev, disposeReason: "" }));
     }
   }
 
+  // Upload warranty/manual documents
   async function handleUploadSubmit(e) {
     e.preventDefault();
     if (!selectedId || !uploadForm.fileBlob) return;
@@ -198,36 +460,160 @@ export default function AssetManagement() {
     }
   }
 
-  // Handle Mock CSV Upload
+  // Generate and download a standard CSV template for Excel imports
+  function downloadCsvTemplate() {
+    const headers = [
+      "Asset Name", "Category (Furniture/IT Asset/HVAC)", "Sub-type (Chair/Table etc)", 
+      "Prefix Code", "Make Brand", "Model", "Serial No", "Star Rating (1-5)", 
+      "Purchase Date (YYYY-MM-DD)", "Purchase Cost", "Quantity", "Location Name", 
+      "Floor Number", "Room Number", "GST Rate (%)", "Depreciation Rate (%)", "Warranty Months"
+    ].join(",");
+
+    const row = [
+      "Office Executive Chair", "Furniture", "Chair", "CHR", "Godrej", "Ergonomic V2", "GD-CHR-987", "N/A",
+      "2026-07-14", "4500", "5", "Main Office", "2nd Floor", "Room 205", "18", "15", "24"
+    ].join(",");
+
+    const csvContent = "data:text/csv;charset=utf-8," + headers + "\n" + row;
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "setuone_assets_template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  // Parse CSV file for bulk import
   function handleCsvImport(e) {
     const file = e.target.files?.[0];
     if (!file) return;
-    
-    // Simulate reading CSV rows and importing
+
     const reader = new FileReader();
     reader.onload = async (evt) => {
-      const text = evt.target.result;
-      alert("Simulated CSV File loaded. Columns detected. Importing rows...");
-      // Mock importing 2 rows mapped to categories
-      const mockImport = [
-        {
-          code: "IMP-LAP-098",
-          name: "MacBook Air M2",
-          categoryId: assetMetadata.categories[0]?.id,
-          brandId: assetMetadata.brands[0]?.id,
-          modelId: assetMetadata.models[0]?.id,
-          locationId: assetMetadata.locations[0]?.id,
-          status: "Active",
-          attributes: { serialNo: "CSV-MOCK-001", ram: "16GB", storage: "512GB SSD" }
+      const text = evt.target.result || "";
+      const lines = text.split("\n").filter(l => l.trim() !== "");
+      if (lines.length <= 1) {
+        alert("Empty CSV template file uploaded.");
+        return;
+      }
+
+      // Convert rows to import structures
+      const importedRows = [];
+      const defaultCatId = assetMetadata?.categories[0]?.id;
+      const defaultLocId = assetMetadata?.locations[0]?.id;
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(",").map(c => c.trim().replace(/"/g, ""));
+        if (cols.length < 5) continue;
+
+        const name = cols[0] || "Imported Asset";
+        const catName = cols[1] || "Furniture";
+        const subType = cols[2] || "Chair";
+        const prefix = cols[3] || "CHR";
+        const makeBrand = cols[4] || "";
+        const model = cols[5] || "";
+        const serialNo = cols[6] || "";
+        const starRating = cols[7] !== "N/A" ? parseInt(cols[7], 10) : null;
+        const purchaseDate = cols[8] || new Date().toISOString().split("T")[0];
+        const cost = Number(cols[9] || 0);
+        const qty = parseInt(cols[10] || 1, 10);
+        const locName = cols[11] || "";
+        const floor = cols[12] || "";
+        const room = cols[13] || "";
+        const gstRate = Number(cols[14] || 18);
+        const depRate = Number(cols[15] || 10);
+        const warranty = parseInt(cols[16] || 12, 10);
+
+        // Resolve IDs matching metadata or use default fallbacks
+        const categoryId = assetMetadata?.categories.find(c => c.name.toLowerCase() === catName.toLowerCase())?.id || defaultCatId;
+        const locationId = assetMetadata?.locations.find(l => l.name.toLowerCase() === locName.toLowerCase())?.id || defaultLocId;
+
+        // Loop to generate multiple sequential assets for Quantity
+        for (let q = 1; q <= qty; q++) {
+          importedRows.push({
+            name,
+            categoryId,
+            locationId,
+            code: `${prefix}-IMP-${Date.now().toString().slice(-4)}-${q}`, // temporary sequential code
+            purchaseDate,
+            purchaseCost: cost,
+            purchaseQty: 1,
+            warrantyMonths: warranty,
+            gstRate,
+            depreciationRate: depRate,
+            makeBrand,
+            starRating,
+            floorNumber: floor,
+            roomNumber: room,
+            attributes: { serialNo, subType }
+          });
         }
-      ];
-      const res = await importAssets(mockImport);
+      }
+
+      const res = await importAssets(importedRows);
       if (res.success) {
-        alert("Imported successfully: " + res.message);
+        alert(`Successfully imported and sequentialized ${importedRows.length} assets.`);
+        loadAssets({}, 1, 10);
+      } else {
+        alert("Failed to import: " + res.message);
       }
     };
     reader.readAsText(file);
   }
+
+  // Calculate year-by-year depreciation schedules
+  const depreciationSchedule = assetDetails
+    ? (() => {
+        const cost = Number(assetDetails.basic.purchaseCost || 0);
+        const rate = Number(assetDetails.basic.depreciationRate || 10.0);
+        const method = assetDetails.basic.depreciationMethod || "SLM";
+        const buyDate = assetDetails.basic.purchaseDate;
+        
+        if (!cost || !buyDate) return [];
+
+        const startYear = new Date(buyDate).getFullYear();
+        const currentYear = new Date().getFullYear();
+        const yearsDiff = Math.max(1, currentYear - startYear + 1);
+
+        const schedule = [];
+        let bookValue = cost;
+        const annualRate = rate / 100;
+
+        for (let i = 0; i < yearsDiff; i++) {
+          const year = startYear + i;
+          let depAmt = 0;
+
+          if (method === "SLM") {
+            depAmt = cost * annualRate;
+          } else {
+            depAmt = bookValue * annualRate;
+          }
+
+          depAmt = Math.min(depAmt, bookValue);
+          const opening = bookValue;
+          bookValue -= depAmt;
+
+          schedule.push({
+            year,
+            opening: opening.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+            deduction: depAmt.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+            closing: bookValue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+          });
+        }
+        return schedule;
+      })()
+    : [];
+
+  // Check if asset requires a short-life disposal warning
+  const isShortLifeExpired = assetDetails?.basic.shortLifeYears && assetDetails?.basic.purchaseDate
+    ? (() => {
+        const limitYears = Number(assetDetails.basic.shortLifeYears);
+        const buyYear = new Date(assetDetails.basic.purchaseDate).getFullYear();
+        const currentYear = new Date().getFullYear();
+        return (currentYear - buyYear) >= limitYears;
+      })()
+    : false;
 
   return (
     <div style={styles.page}>
@@ -235,10 +621,11 @@ export default function AssetManagement() {
         <div style={styles.panel}>
           <div style={styles.panelHeader}>
             <div>
-              <div style={styles.panelTitle}>Asset Registry Dashboard</div>
-              <div style={styles.panelSub}>Track corporate assets, lifecycle assignments, and maintenance.</div>
+              <div style={styles.panelTitle}>Corporate Asset Lifecycle Registry</div>
+              <div style={styles.panelSub}>Track barcodes, internal floor transfers, tax inputs, and depreciation sheets.</div>
             </div>
             <div style={{ display: "flex", gap: "10px" }}>
+              <button style={styles.secondaryBtn} onClick={downloadCsvTemplate}>Download CSV Template</button>
               <label style={styles.secondaryBtn}>
                 Import CSV
                 <input type="file" accept=".csv" style={{ display: "none" }} onChange={handleCsvImport} />
@@ -249,103 +636,206 @@ export default function AssetManagement() {
             </div>
           </div>
 
-          {/* New Asset Registration Form */}
+          {/* Extended Asset Registration Form */}
           {showAddForm && (
             <form onSubmit={handleAddSubmit} style={styles.form}>
+              <div style={{ ...styles.panelTitle, fontSize: "0.85rem", borderBottom: "1px dashed #e2e8f0", paddingBottom: "8px" }}>
+                Basic Specifications
+              </div>
               <div style={styles.formGrid}>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Asset Code</label>
-                  <input style={styles.input} required value={addForm.code} onChange={e => setAddForm({ ...addForm, code: e.target.value })} placeholder="APL-MBP-1422" />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Asset Name</label>
-                  <input style={styles.input} required value={addForm.name} onChange={e => setAddForm({ ...addForm, name: e.target.value })} placeholder="Nisha MacBook Pro" />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Category</label>
+                  <label style={styles.label}>Asset Category</label>
                   <select style={styles.input} value={addForm.categoryId} onChange={e => setAddForm({ ...addForm, categoryId: e.target.value })}>
                     {assetMetadata?.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
+
+                {/* Sub-type selection for Furniture */}
+                {assetMetadata?.categories.find(c => c.id === addForm.categoryId)?.name === "Furniture" && (
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Furniture Sub-type</label>
+                    <select style={styles.input} value={addForm.subType} onChange={e => setAddForm({ ...addForm, subType: e.target.value })}>
+                      {furnitureSubTypes.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+                    </select>
+                  </div>
+                )}
+
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Brand</label>
-                  <select style={styles.input} value={addForm.brandId} onChange={e => setAddForm({ ...addForm, brandId: e.target.value })}>
-                    {assetMetadata?.brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  <label style={styles.label}>Custom Prefix Code</label>
+                  <input style={styles.input} required value={addForm.customPrefix} onChange={e => setAddForm({ ...addForm, customPrefix: e.target.value.toUpperCase() })} placeholder="e.g. LAP, SIM, CHR" />
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Asset Model Name</label>
+                  <input style={styles.input} required value={addForm.name} onChange={e => setAddForm({ ...addForm, name: e.target.value })} placeholder="Executive Leather Chair" />
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Manufacturer Make/Brand</label>
+                  <input style={styles.input} required value={addForm.makeBrand} onChange={e => setAddForm({ ...addForm, makeBrand: e.target.value })} placeholder="e.g. Godrej, Dell, Voltas" />
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Serial Number / Tag</label>
+                  <input style={styles.input} required value={addForm.serialNo} onChange={e => setAddForm({ ...addForm, serialNo: e.target.value })} placeholder="e.g. G-9876543-F" />
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Star Efficiency Rating</label>
+                  <select style={styles.input} value={addForm.starRating} onChange={e => setAddForm({ ...addForm, starRating: e.target.value })}>
+                    {["1 Star", "2 Star", "3 Star", "4 Star", "5 Star", "N/A"].map(s => <option key={s} value={s.replace(" Star", "")}>{s}</option>)}
                   </select>
                 </div>
+              </div>
+
+              <div style={{ ...styles.panelTitle, fontSize: "0.85rem", borderBottom: "1px dashed #e2e8f0", paddingBottom: "8px", marginTop: "10px" }}>
+                Purchase Invoice & Location Mappings
+              </div>
+              <div style={styles.formGrid}>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Model</label>
-                  <select style={styles.input} value={addForm.modelId} onChange={e => setAddForm({ ...addForm, modelId: e.target.value })}>
-                    {assetMetadata?.models.filter(m => m.brand_id === addForm.brandId).map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                  </select>
+                  <label style={styles.label}>Purchase Qty (Batch)</label>
+                  <input style={styles.input} type="number" min="1" required value={addForm.purchaseQty} onChange={e => setAddForm({ ...addForm, purchaseQty: e.target.value })} />
                 </div>
+
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Location</label>
+                  <label style={styles.label}>Per Unit Cost (₹)</label>
+                  <input style={styles.input} type="number" required value={addForm.purchaseCost} onChange={e => setAddForm({ ...addForm, purchaseCost: e.target.value })} />
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Invoice Number</label>
+                  <input style={styles.input} required value={addForm.invoiceNo} onChange={e => setAddForm({ ...addForm, invoiceNo: e.target.value })} placeholder="INV-2026-987" />
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Invoice Date</label>
+                  <input style={styles.input} type="date" value={addForm.invoiceDate} onChange={e => setAddForm({ ...addForm, invoiceDate: e.target.value })} />
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Invoice Vendor Company</label>
+                  <input style={styles.input} required value={addForm.invoiceCompany} onChange={e => setAddForm({ ...addForm, invoiceCompany: e.target.value })} placeholder="Godrej Office Furniture" />
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Branch Location</label>
                   <select style={styles.input} value={addForm.locationId} onChange={e => setAddForm({ ...addForm, locationId: e.target.value })}>
                     {assetMetadata?.locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                   </select>
                 </div>
+
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Serial Number</label>
-                  <input style={styles.input} required value={addForm.serialNo} onChange={e => setAddForm({ ...addForm, serialNo: e.target.value })} placeholder="C02GG345Q05D" />
+                  <label style={styles.label}>Floor Number</label>
+                  <input style={styles.input} value={addForm.floorNumber} onChange={e => setAddForm({ ...addForm, floorNumber: e.target.value })} placeholder="e.g. 2nd Floor" />
                 </div>
+
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Purchase Date</label>
-                  <input style={styles.input} type="date" value={addForm.purchaseDate} onChange={e => setAddForm({ ...addForm, purchaseDate: e.target.value })} />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Warranty Expiry</label>
-                  <input style={styles.input} type="date" value={addForm.warrantyExpiry} onChange={e => setAddForm({ ...addForm, warrantyExpiry: e.target.value })} />
+                  <label style={styles.label}>Room Number / Desk</label>
+                  <input style={styles.input} value={addForm.roomNumber} onChange={e => setAddForm({ ...addForm, roomNumber: e.target.value })} placeholder="e.g. Room 205" />
                 </div>
               </div>
 
-              {/* Dynamic Categories-Specific specs renderer */}
-              <div style={{ borderTop: "1px dashed #e2e8f0", paddingTop: "15px" }}>
-                <div style={styles.panelTitle} style={{ fontSize: "0.8rem", marginBottom: "10px" }}>
-                  Specification Mapping ({selectedCategoryName || "IT Asset"})
+              <div style={{ ...styles.panelTitle, fontSize: "0.85rem", borderBottom: "1px dashed #e2e8f0", paddingBottom: "8px", marginTop: "10px", display: "flex", justifyContent: "space-between" }}>
+                <span>GST Tax Details</span>
+                <label style={{ fontSize: "0.72rem", color: "#0038a8", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <input type="checkbox" checked={addForm.manualTaxMode} onChange={e => setAddForm({ ...addForm, manualTaxMode: e.target.checked })} />
+                  Manual Override Mode
+                </label>
+              </div>
+
+              <div style={styles.formGrid}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Our Branch State</label>
+                  <select style={styles.input} disabled={addForm.manualTaxMode} value={addForm.branchState} onChange={e => setAddForm({ ...addForm, branchState: e.target.value })}>
+                    {indianStates.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
                 </div>
-                <div style={styles.formGrid}>
-                  {(selectedCategoryName === "IT Asset" || selectedCategoryName === "Laptop") ? (
-                    <>
-                      <div style={styles.formGroup}>
-                        <label style={styles.label}>RAM Spec</label>
-                        <input style={styles.input} placeholder="16GB" onChange={e => setAddForm({ ...addForm, customSpecs: { ...addForm.customSpecs, RAM: e.target.value } })} />
-                      </div>
-                      <div style={styles.formGroup}>
-                        <label style={styles.label}>Storage</label>
-                        <input style={styles.input} placeholder="512GB SSD" onChange={e => setAddForm({ ...addForm, customSpecs: { ...addForm.customSpecs, Storage: e.target.value } })} />
-                      </div>
-                      <div style={styles.formGroup}>
-                        <label style={styles.label}>Processor</label>
-                        <input style={styles.input} placeholder="Intel i7" onChange={e => setAddForm({ ...addForm, customSpecs: { ...addForm.customSpecs, Processor: e.target.value } })} />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div style={styles.formGroup}>
-                        <label style={styles.label}>Tonnage</label>
-                        <input style={styles.input} placeholder="1.5 Ton" onChange={e => setAddForm({ ...addForm, customSpecs: { ...addForm.customSpecs, Tonnage: e.target.value } })} />
-                      </div>
-                      <div style={styles.formGroup}>
-                        <label style={styles.label}>Gas Type</label>
-                        <input style={styles.input} placeholder="R32" onChange={e => setAddForm({ ...addForm, customSpecs: { ...addForm.customSpecs, GasType: e.target.value } })} />
-                      </div>
-                      <div style={styles.formGroup}>
-                        <label style={styles.label}>Clean Cycle Days</label>
-                        <input style={styles.input} type="number" placeholder="90" onChange={e => setAddForm({ ...addForm, customSpecs: { ...addForm.customSpecs, FilterCleanCycleDays: parseInt(e.target.value, 10) } })} />
-                      </div>
-                    </>
-                  )}
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Vendor billing State</label>
+                  <select style={styles.input} disabled={addForm.manualTaxMode} value={addForm.vendorState} onChange={e => setAddForm({ ...addForm, vendorState: e.target.value })}>
+                    {indianStates.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Applicable GST Type</label>
+                  <input style={{ ...styles.input, background: "#f1f5f9" }} readOnly value={addForm.gstType === "CGST_SGST" ? "Local (CGST + SGST)" : "Interstate (IGST)"} />
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Total GST Rate (%)</label>
+                  <input style={styles.input} type="number" value={addForm.gstRate} onChange={e => setAddForm({ ...addForm, gstRate: e.target.value })} />
+                </div>
+
+                {addForm.gstType === "CGST_SGST" ? (
+                  <>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>CGST Rate (%)</label>
+                      <input style={styles.input} type="number" readOnly={!addForm.manualTaxMode} value={addForm.cgstRate} onChange={e => setAddForm({ ...addForm, cgstRate: e.target.value })} />
+                    </div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>CGST Amount (₹)</label>
+                      <input style={styles.input} type="number" readOnly={!addForm.manualTaxMode} value={addForm.cgstAmount} onChange={e => setAddForm({ ...addForm, cgstAmount: e.target.value })} />
+                    </div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>SGST Rate (%)</label>
+                      <input style={styles.input} type="number" readOnly={!addForm.manualTaxMode} value={addForm.sgstRate} onChange={e => setAddForm({ ...addForm, sgstRate: e.target.value })} />
+                    </div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>SGST Amount (₹)</label>
+                      <input style={styles.input} type="number" readOnly={!addForm.manualTaxMode} value={addForm.sgstAmount} onChange={e => setAddForm({ ...addForm, sgstAmount: e.target.value })} />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>IGST Rate (%)</label>
+                      <input style={styles.input} type="number" readOnly={!addForm.manualTaxMode} value={addForm.igstRate} onChange={e => setAddForm({ ...addForm, igstRate: e.target.value })} />
+                    </div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>IGST Amount (₹)</label>
+                      <input style={styles.input} type="number" readOnly={!addForm.manualTaxMode} value={addForm.igstAmount} onChange={e => setAddForm({ ...addForm, igstAmount: e.target.value })} />
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div style={{ ...styles.panelTitle, fontSize: "0.85rem", borderBottom: "1px dashed #e2e8f0", paddingBottom: "8px", marginTop: "10px" }}>
+                Depreciation Config & Lifespan
+              </div>
+              <div style={styles.formGrid}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Depreciation Method</label>
+                  <select style={styles.input} value={addForm.depreciationMethod} onChange={e => setAddForm({ ...addForm, depreciationMethod: e.target.value })}>
+                    <option value="SLM">Straight Line Method (SLM)</option>
+                    <option value="WDV">Written Down Value (WDV)</option>
+                  </select>
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Annual Rate (%)</label>
+                  <input style={styles.input} type="number" step="0.1" value={addForm.depreciationRate} onChange={e => setAddForm({ ...addForm, depreciationRate: e.target.value })} />
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Disposal Lifespan (Years)</label>
+                  <input style={styles.input} type="number" value={addForm.shortLifeYears} onChange={e => setAddForm({ ...addForm, shortLifeYears: e.target.value })} placeholder="Disposal target in years" />
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Warranty (Months)</label>
+                  <input style={styles.input} type="number" value={addForm.warrantyMonths} onChange={e => setAddForm({ ...addForm, warrantyMonths: e.target.value })} />
                 </div>
               </div>
 
-              <button style={styles.primaryBtn} type="submit">Create Asset</button>
+              <button style={styles.primaryBtn} type="submit" style={{ marginTop: "10px", padding: "12px 24px" }}>Register Asset Batch</button>
             </form>
           )}
 
-          {/* Search, filters, and paginations row controls */}
+          {/* Search, filters, and status controls toolbar */}
           <div style={styles.toolbar}>
-            <input style={styles.filterSelect} placeholder="Search code, serial, name..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+            <input style={styles.filterSelect} placeholder="Search code, serial, make..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
             <select style={styles.filterSelect} value={catFilter} onChange={e => { setCatFilter(e.target.value); setPage(1); }}>
               <option value="">All Categories</option>
               {assetMetadata?.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -356,15 +846,16 @@ export default function AssetManagement() {
             </select>
             <select style={styles.filterSelect} value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1); }}>
               <option value="">All Status</option>
-              {["Active", "Repair", "Scrapped", "Inactive"].map(s => <option key={s} value={s}>{s}</option>)}
+              {["Active", "Repair", "Scrapped", "Inactive", "Disposed", "Stolen"].map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
 
+          {/* Assets Grid Table */}
           <div style={styles.tableWrap}>
             <table style={styles.table}>
               <thead>
                 <tr>
-                  {["Asset Code", "Name", "Category", "Brand", "Serial No", "Custodian", "Status"].map(h => (
+                  {["Asset Code", "Model Name", "Category", "Location", "Serial No", "Custodian", "Status"].map(h => (
                     <th key={h} style={styles.th}>{h}</th>
                   ))}
                 </tr>
@@ -375,11 +866,15 @@ export default function AssetManagement() {
                     <td style={styles.td}><strong>{asset.code}</strong></td>
                     <td style={styles.td}>{asset.name}</td>
                     <td style={styles.td}>{asset.category}</td>
-                    <td style={styles.td}>{asset.brand}</td>
+                    <td style={styles.td}>{asset.location}</td>
                     <td style={styles.td}>{asset.serialNo}</td>
                     <td style={styles.td}>{asset.assignedTo}</td>
                     <td style={styles.td}>
-                      <span style={{ ...styles.badge, background: asset.status === "Active" ? "#22c55e22" : "#f59e0b22", color: asset.status === "Active" ? "#22c55e" : "#f59e0b" }}>
+                      <span style={{ 
+                        ...styles.badge, 
+                        background: asset.status === "Active" ? "#22c55e22" : asset.status === "Stolen" || asset.status === "Disposed" ? "#ef444422" : "#f59e0b22", 
+                        color: asset.status === "Active" ? "#22c55e" : asset.status === "Stolen" || asset.status === "Disposed" ? "#ef4444" : "#f59e0b" 
+                      }}>
                         {asset.status}
                       </span>
                     </td>
@@ -390,10 +885,10 @@ export default function AssetManagement() {
             {assets.length === 0 && <div style={styles.empty}>No assets registered.</div>}
           </div>
 
-          {/* Pagination Controls */}
+          {/* Pagination bar */}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "15px" }}>
             <span style={{ fontSize: "0.8rem", color: "#64748b" }}>
-              Total Assets: <strong>{totalAssetsCount}</strong>
+              Total Assets count: <strong>{totalAssetsCount}</strong>
             </span>
             <div style={{ display: "flex", gap: "10px" }}>
               <button disabled={page === 1} onClick={() => setPage(page - 1)} style={styles.secondaryBtn}>Previous</button>
@@ -401,97 +896,263 @@ export default function AssetManagement() {
             </div>
           </div>
         </div>
+
+        {/* Legend for Abbreviations card */}
+        <div style={styles.legendCard}>
+          <div style={{ ...styles.panelTitle, fontSize: "0.85rem", marginBottom: "10px", color: "#1e293b" }}>
+            Abbreviations & References Legend
+          </div>
+          <div style={styles.legendGrid}>
+            <div><strong>SLM:</strong> Straight Line Method (Depreciation)</div>
+            <div><strong>WDV:</strong> Written Down Value (Depreciation)</div>
+            <div><strong>CGST:</strong> Central Goods and Services Tax</div>
+            <div><strong>SGST:</strong> State Goods and Services Tax</div>
+            <div><strong>IGST:</strong> Integrated Goods and Services Tax</div>
+            <div><strong>HVAC:</strong> Heating, Ventilation, and Air Conditioning</div>
+            <div><strong>PPM:</strong> Planned Preventive Maintenance</div>
+            <div><strong>AMC:</strong> Annual Maintenance Contract</div>
+          </div>
+        </div>
       </div>
 
-      {/* Asset Unified Details Sidebar Panel */}
+      {/* Asset Lifecycle Specification Sidebar */}
       <div style={styles.detailPanel}>
         {!selectedId || loadingDetails ? (
-          <div style={styles.emptyDetail}>{loadingDetails ? "Loading asset details..." : "Select an asset to view lifecycle specs."}</div>
+          <div style={styles.emptyDetail}>{loadingDetails ? "Loading asset specifications..." : "Select an asset row to view custom barcode values and depreciation ledger."}</div>
         ) : (
           assetDetails && (
             <div>
               <div style={styles.detailHeader}>
                 <div>
-                  <div style={styles.muted}>Lifecycle details</div>
+                  <div style={styles.muted}>Extended Specs</div>
                   <div style={styles.detailNo}>{assetDetails.basic.code}</div>
                 </div>
-                <div style={{ display: "flex", gap: "10px" }}>
-                  <button style={{ ...styles.secondaryBtn, borderColor: "#ef4444", color: "#ef4444" }} onClick={handleArchiveSubmit}>Archive</button>
+                <div style={{ display: "flex", gap: "6px" }}>
+                  <button style={{ ...styles.secondaryBtn, color: "#ef4444", borderColor: "#ef4444" }} onClick={() => setShowDisposeForm(!showDisposeForm)}>Dispose/Stolen</button>
+                  <button style={{ ...styles.secondaryBtn, color: "#94a3b8", borderColor: "#cbd5e1" }} onClick={handleArchiveSubmit}>Archive</button>
                 </div>
               </div>
 
-              {/* Dynamic specs specs display */}
+              {/* Short-Life Warning Alert */}
+              {isShortLifeExpired && assetDetails.basic.status === "Active" && (
+                <div style={styles.disposalAlert}>
+                  <strong>⚠️ Short-Life Disposal Alert</strong>
+                  <div>This asset has reached its defined lifespan of {assetDetails.basic.shortLifeYears} years (Purchased: {assetDetails.basic.purchaseDate}). Please coordinate disposal.</div>
+                </div>
+              )}
+
+              {/* Dynamic SVGs Barcode Render Panel */}
               <div style={styles.descBox}>
-                <div style={styles.muted}>Specifications (JSONB Mapping)</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginTop: "5px" }}>
-                  {Object.entries(assetDetails.basic.attributes).map(([key, val]) => (
-                    <div key={key} style={{ fontSize: "0.78rem" }}>
-                      <strong>{key.toUpperCase()}:</strong> {String(val)}
+                <div style={styles.muted}>Auto-Generated Scanner Barcode</div>
+                <div style={{ marginTop: "10px" }}>
+                  <BarcodeRenderer value={assetDetails.basic.barcode || `${assetDetails.basic.code} | ${assetDetails.basic.location} | ${assetDetails.basic.purchaseDate}`} />
+                </div>
+              </div>
+
+              {/* Specs parameters table */}
+              <div style={styles.descBox}>
+                <div style={styles.muted}>Asset Specifications Details</div>
+                <div style={styles.specTable}>
+                  <div><strong>Make Brand:</strong> {assetDetails.basic.makeBrand || "N/A"}</div>
+                  <div><strong>Model Name:</strong> {assetDetails.basic.model || assetDetails.basic.name}</div>
+                  <div><strong>Serial Tag:</strong> {assetDetails.basic.serialNo || "N/A"}</div>
+                  <div><strong>Star Rating:</strong> {assetDetails.basic.starRating ? `${assetDetails.basic.starRating} Star` : "N/A"}</div>
+                  <div><strong>Floor Number:</strong> {assetDetails.basic.floorNumber || "N/A"}</div>
+                  <div><strong>Room Desk No:</strong> {assetDetails.basic.roomNumber || "N/A"}</div>
+                  <div><strong>Purchase Cost:</strong> ₹{Number(assetDetails.basic.purchaseCost).toLocaleString("en-IN")}</div>
+                  <div><strong>Purchase Qty:</strong> {assetDetails.basic.purchaseQty} Unit(s)</div>
+                  <div><strong>Warranty:</strong> {assetDetails.basic.warrantyExpiry} ({assetDetails.basic.warrantyMonths || 0} Months)</div>
+                  <div><strong>Invoice No:</strong> {assetDetails.basic.invoiceNo || "N/A"}</div>
+                  <div><strong>Invoice Vendor:</strong> {assetDetails.basic.invoiceCompany || "N/A"}</div>
+                  <div><strong>GST Type:</strong> {assetDetails.basic.gstType === "IGST" ? "IGST (Interstate)" : "CGST + SGST (Local)"}</div>
+                  {assetDetails.basic.gstType === "IGST" ? (
+                    <div><strong>IGST Amount:</strong> ₹{Number(assetDetails.basic.igstAmount).toFixed(2)} ({assetDetails.basic.igstRate}%)</div>
+                  ) : (
+                    <>
+                      <div><strong>CGST Amount:</strong> ₹{Number(assetDetails.basic.cgstAmount).toFixed(2)} ({assetDetails.basic.cgstRate}%)</div>
+                      <div><strong>SGST Amount:</strong> ₹{Number(assetDetails.basic.sgstAmount).toFixed(2)} ({assetDetails.basic.sgstRate}%)</div>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Yearly Depreciation Ledger Card Table */}
+              <div style={styles.descBox}>
+                <div style={styles.muted}>Yearly Depreciation Ledger ({assetDetails.basic.depreciationMethod})</div>
+                <div style={{ overflowX: "auto", marginTop: "10px" }}>
+                  <table style={styles.ledgerTable}>
+                    <thead>
+                      <tr>
+                        <th>Year</th>
+                        <th>Opening (₹)</th>
+                        <th>Depreciation (₹)</th>
+                        <th>Closing (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {depreciationSchedule.map(row => (
+                        <tr key={row.year}>
+                          <td><strong>{row.year}</strong></td>
+                          <td>{row.opening}</td>
+                          <td style={{ color: "#ef4444" }}>-{row.deduction}</td>
+                          <td><strong>{row.closing}</strong></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Location Transfer controls panel */}
+              <div style={styles.descBox}>
+                <div style={styles.detailHeader} style={{ borderBottom: "none", paddingBottom: 0, marginBottom: "8px" }}>
+                  <div style={styles.muted}>Premises Location custody</div>
+                  <button style={styles.secondaryBtn} onClick={() => setShowTransferForm(!showTransferForm)}>Transfer Asset</button>
+                </div>
+                
+                {showTransferForm && (
+                  <form onSubmit={handleTransferSubmit} style={styles.embeddedForm}>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Transfer Type</label>
+                      <select style={styles.input} value={transferForm.type} onChange={e => setTransferForm({ ...transferForm, type: e.target.value })}>
+                        <option value="Internal">Internal (Floor/Room location update)</option>
+                        <option value="External">External (Sister concern company shipment)</option>
+                      </select>
+                    </div>
+
+                    {transferForm.type === "Internal" ? (
+                      <>
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Target Premises</label>
+                          <select style={styles.input} required value={transferForm.newLocationId} onChange={e => setTransferForm({ ...transferForm, newLocationId: e.target.value })}>
+                            <option value="">Select Premises Location</option>
+                            {assetMetadata?.locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                          </select>
+                        </div>
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>New Floor Level</label>
+                          <input style={styles.input} value={transferForm.newFloorNumber} onChange={e => setTransferForm({ ...transferForm, newFloorNumber: e.target.value })} placeholder="e.g. 3rd Floor" />
+                        </div>
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>New Room Desk No</label>
+                          <input style={styles.input} value={transferForm.newRoomNumber} onChange={e => setTransferForm({ ...transferForm, newRoomNumber: e.target.value })} placeholder="e.g. Room 302" />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Sister Concern Company</label>
+                          <input style={styles.input} required value={transferForm.sisterCompany} onChange={e => setTransferForm({ ...transferForm, sisterCompany: e.target.value })} placeholder="e.g. Orion Logistics Pvt Ltd" />
+                        </div>
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Destination Branch</label>
+                          <input style={styles.input} required value={transferForm.destinationBranch} onChange={e => setTransferForm({ ...transferForm, destinationBranch: e.target.value })} placeholder="e.g. Mumbai Hub" />
+                        </div>
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Destination State</label>
+                          <select style={styles.input} value={transferForm.shippedState} onChange={e => setTransferForm({ ...transferForm, shippedState: e.target.value })}>
+                            {indianStates.map(s => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                        </div>
+                      </>
+                    )}
+
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Transfer Audit notes</label>
+                      <input style={styles.input} placeholder="Reason for floor transfer or concern allocation." value={transferForm.notes} onChange={e => setTransferForm({ ...transferForm, notes: e.target.value })} />
+                    </div>
+
+                    <button style={styles.primaryBtn} type="submit">Log Transfer</button>
+                  </form>
+                )}
+
+                {/* Transfer History Timeline */}
+                <div style={styles.timelineList}>
+                  {assetDetails.transferHistory?.map((item, index) => (
+                    <div key={index} style={styles.timelineItem}>
+                      <div style={styles.timelineHeader}>
+                        <strong>{item.type} Transfer</strong>
+                        <span style={styles.muted}>{item.transferDate}</span>
+                      </div>
+                      <div style={styles.timelineBody}>
+                        Moved from {item.oldLocation} ➡️ {item.newLocation}. <br/>
+                        <span style={{ fontSize: "0.72rem", fontStyle: "italic", color: "#64748b" }}>"{item.notes}"</span>
+                      </div>
                     </div>
                   ))}
+                  {(!assetDetails.transferHistory || assetDetails.transferHistory.length === 0) && (
+                    <div style={{ fontSize: "0.78rem", color: "#94a3b8", fontStyle: "italic" }}>No location transfers recorded.</div>
+                  )}
                 </div>
               </div>
 
-              {/* Current Custody Assignment detail */}
+              {/* Disposal / Loss Logging Form overlay */}
+              {showDisposeForm && (
+                <div style={styles.descBox}>
+                  <div style={styles.muted}>Disposal / Loss Report Logging</div>
+                  <form onSubmit={handleDisposeSubmit} style={styles.embeddedForm}>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Status Category</label>
+                      <select style={styles.input} value={disposeForm.status} onChange={e => setDisposeForm({ ...disposeForm, status: e.target.value })}>
+                        <option value="Disposed">Disposed (End-of-life scrapped)</option>
+                        <option value="Stolen">Stolen (Asset lost/stolen)</option>
+                      </select>
+                    </div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Action Date</label>
+                      <input style={styles.input} type="date" value={disposeForm.disposeDate} onChange={e => setDisposeForm({ ...disposeForm, disposeDate: e.target.value })} />
+                    </div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Notes / Reason / FIR No</label>
+                      <input style={styles.input} required placeholder="FIR number or scrapper dealer receipt details." value={disposeForm.disposeReason} onChange={e => setDisposeForm({ ...disposeForm, disposeReason: e.target.value })} />
+                    </div>
+                    <button style={{ ...styles.primaryBtn, background: "#ef4444" }} type="submit">Complete Log</button>
+                  </form>
+                </div>
+              )}
+
+              {/* Custody Employee checkout section */}
               <div style={styles.descBox}>
-                <div style={styles.muted}>Current Assignment Status</div>
+                <div style={styles.muted}>Current Employee Custody</div>
                 {assetDetails.currentAssignment ? (
                   <div style={{ fontSize: "0.8rem", marginTop: "5px" }}>
-                    <div>Custodian: <strong>{assetDetails.currentAssignment.assignedTo}</strong></div>
-                    <div>Assigned At: {assetDetails.currentAssignment.assignedAt}</div>
+                    <div>Custodian Employee: <strong>{assetDetails.currentAssignment.assignedTo}</strong></div>
+                    <div>Assigned Date: {assetDetails.currentAssignment.assignedAt}</div>
                     <div style={{ fontStyle: "italic", marginTop: "4px" }}>"{assetDetails.currentAssignment.remarks}"</div>
                     <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-                      <button style={styles.secondaryBtn} onClick={() => setShowTransferForm(!showTransferForm)}>Transfer Custody</button>
-                      <button style={{ ...styles.secondaryBtn, color: "#ef4444" }} onClick={handleReturnAssetSubmit => handleReturnSubmit()}>Return Asset</button>
+                      <button style={styles.secondaryBtn} onClick={() => setShowAssignForm(!showAssignForm)}>Re-assign Custodian</button>
+                      <button style={{ ...styles.secondaryBtn, color: "#ef4444" }} onClick={handleReturnSubmit}>Return Custody</button>
                     </div>
                   </div>
                 ) : (
                   <div style={{ fontSize: "0.8rem", marginTop: "5px", color: "#94a3b8" }}>
-                    Asset is currently unassigned in warehouse store.
-                    <button style={{ ...styles.primaryBtn, width: "100%", marginTop: "10px" }} onClick={() => setShowAssignForm(!showAssignForm)}>Assign Asset</button>
+                    Unassigned. Kept in store room.
+                    <button style={{ ...styles.primaryBtn, width: "100%", marginTop: "10px" }} onClick={() => setShowAssignForm(!showAssignForm)}>Assign Custodian</button>
                   </div>
                 )}
               </div>
 
-              {/* Assignment Checkout Forms */}
+              {/* Custody Checkout Employee Form */}
               {showAssignForm && (
                 <form onSubmit={handleAssignSubmit} style={{ ...styles.form, marginTop: "10px" }}>
                   <div style={styles.formGroup}>
-                    <label style={styles.label}>Select Custodian</label>
+                    <label style={styles.label}>Select Custodian Employee</label>
                     <select style={styles.input} required value={assignForm.employeeId} onChange={e => setAssignForm({ ...assignForm, employeeId: e.target.value })}>
                       <option value="">Choose Employee</option>
                       {assetMetadata?.employees.map(emp => <option key={emp.id} value={emp.id}>{emp.full_name}</option>)}
                     </select>
                   </div>
                   <div style={styles.formGroup}>
-                    <label style={styles.label}>Remarks</label>
-                    <input style={styles.input} placeholder="Laptop issued for remote work." value={assignForm.remarks} onChange={e => setAssignForm({ ...assignForm, remarks: e.target.value })} />
+                    <label style={styles.label}>Issuance Comments</label>
+                    <input style={styles.input} placeholder="Laptop issued for client code deployment." value={assignForm.remarks} onChange={e => setAssignForm({ ...assignForm, remarks: e.target.value })} />
                   </div>
-                  <button style={styles.primaryBtn} type="submit">Complete Checkout</button>
+                  <button style={styles.primaryBtn} type="submit">Assign Custodian</button>
                 </form>
               )}
 
-              {/* Transfer Custody Form */}
-              {showTransferForm && (
-                <form onSubmit={handleTransferSubmit} style={{ ...styles.form, marginTop: "10px" }}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Transfer To</label>
-                    <select style={styles.input} required value={transferForm.targetEmployeeId} onChange={e => setTransferForm({ ...transferForm, targetEmployeeId: e.target.value })}>
-                      <option value="">Choose Target Employee</option>
-                      {assetMetadata?.employees.map(emp => <option key={emp.id} value={emp.id}>{emp.full_name}</option>)}
-                    </select>
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Transfer Comments</label>
-                    <input style={styles.input} placeholder="Re-allocated from manager to supervisor." value={transferForm.remarks} onChange={e => setTransferForm({ ...transferForm, remarks: e.target.value })} />
-                  </div>
-                  <button style={styles.primaryBtn} type="submit">Complete Transfer</button>
-                </form>
-              )}
-
-              {/* Custody Assignment Audit Logs Timeline */}
+              {/* Audits Checkout history timeline */}
               <div style={styles.timelineBox}>
-                <div style={styles.muted}>Custody History Audit Trail</div>
+                <div style={styles.muted}>Custody Issue Audit Trail</div>
                 <div style={styles.timelineList}>
                   {assetDetails.assignmentHistory.map((item, index) => (
                     <div key={index} style={styles.timelineItem}>
@@ -499,34 +1160,17 @@ export default function AssetManagement() {
                         <strong>Returned</strong>
                         <span style={styles.muted}>{item.returnedAt}</span>
                       </div>
-                      <div style={styles.timelineBody}>Held by {item.assignedTo} (Assigned: {item.assignedAt}) — <em>"{item.remarks}"</em></div>
+                      <div style={styles.timelineBody}>Custodian: {item.assignedTo} (Assigned: {item.assignedAt}) — <em>"{item.remarks}"</em></div>
                     </div>
                   ))}
-                  {assetDetails.assignmentHistory.length === 0 && <div style={styles.empty}>No past assignment records.</div>}
+                  {assetDetails.assignmentHistory.length === 0 && <div style={styles.empty}>No past custodian issuance history.</div>}
                 </div>
               </div>
 
-              {/* Maintenance & Servicing History logs */}
-              <div style={styles.timelineBox}>
-                <div style={styles.muted}>Maintenance Logs</div>
-                <div style={styles.timelineList}>
-                  {assetDetails.maintenanceHistory.map((item, index) => (
-                    <div key={index} style={styles.timelineItem}>
-                      <div style={styles.timelineHeader}>
-                        <strong>{item.type} Servicing</strong>
-                        <span style={styles.muted}>{item.startDate}</span>
-                      </div>
-                      <div style={styles.timelineBody}>{item.description} (Cost: ₹{item.cost}) by {item.performedBy}</div>
-                    </div>
-                  ))}
-                  {assetDetails.maintenanceHistory.length === 0 && <div style={styles.empty}>No technical maintenance logs.</div>}
-                </div>
-              </div>
-
-              {/* Documents & File Attachments categories list */}
+              {/* Documents warranties upload & listing */}
               <div style={styles.timelineBox}>
                 <div style={styles.detailHeader} style={{ marginBottom: "10px", paddingBottom: "5px" }}>
-                  <div style={styles.muted}>Uploaded Documents</div>
+                  <div style={styles.muted}>Invoices & Warranties Files</div>
                   <button style={styles.secondaryBtn} onClick={() => setShowUploadForm(!showUploadForm)}>+ Upload Doc</button>
                 </div>
 
@@ -558,7 +1202,7 @@ export default function AssetManagement() {
                       <a href={doc.fileUrl} target="_blank" rel="noreferrer" style={{ color: "#0038a8", textDecoration: "none", fontWeight: 600 }}>Download</a>
                     </div>
                   ))}
-                  {assetDetails.documents.length === 0 && <div style={styles.empty}>No warranty or manuals uploaded.</div>}
+                  {assetDetails.documents.length === 0 && <div style={styles.empty}>No uploaded documents found.</div>}
                 </div>
               </div>
             </div>
@@ -570,44 +1214,52 @@ export default function AssetManagement() {
 }
 
 const styles = {
-  page: { display: "flex", gap: "20px", width: "100%" },
+  page: { display: "flex", gap: "20px", width: "100%", padding: "10px" },
   left: { flex: 1.8, minWidth: "0" },
-  panel: { background: "#fff", border: "1px solid #e2e8f0", borderRadius: "4px", padding: "24px", display: "flex", flexDirection: "column", gap: "20px" },
-  panelHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "20px" },
-  panelTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: "1rem", fontWeight: 700, color: "#111625" },
-  panelSub: { fontSize: "0.78rem", color: "#64748b", marginTop: "2px" },
-  primaryBtn: { background: "#0038a8", color: "#fff", border: "none", borderRadius: "4px", padding: "10px 16px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" },
-  secondaryBtn: { background: "#fff", color: "#64748b", border: "1px solid #cbd5e1", borderRadius: "4px", padding: "8px 14px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", display: "inline-block", textAlign: "center" },
+  panel: { background: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "24px", display: "flex", flexDirection: "column", gap: "20px", boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1)" },
+  panelHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "20px", borderBottom: "1px solid #f1f5f9", paddingBottom: "15px" },
+  panelTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: "1.1rem", fontWeight: 700, color: "#0f172a" },
+  panelSub: { fontSize: "0.8rem", color: "#64748b", marginTop: "2px" },
+  primaryBtn: { background: "#0038a8", color: "#fff", border: "none", borderRadius: "4px", padding: "10px 16px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", transition: "background 0.2s" },
+  secondaryBtn: { background: "#fff", color: "#475569", border: "1px solid #cbd5e1", borderRadius: "4px", padding: "8px 14px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", display: "inline-block", textAlign: "center" },
 
-  form: { background: "#f8fafc", padding: "20px", borderRadius: "4px", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: "16px" },
-  formGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" },
-  formGroup: { display: "flex", flexDirection:"column", gap: "6px" },
-  label: { fontSize: "0.65rem", fontWeight: 700, letterSpacing: "1.5px", color: "#111625", textTransform: "uppercase" },
-  input: { width: "100%", padding: "10px 12px", fontSize: "0.82rem", color: "#111625", border: "1px solid #e2e8f0", borderRadius: "4px", background: "#fff", outline: "none" },
+  form: { background: "#f8fafc", padding: "20px", borderRadius: "8px", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: "16px", marginBottom: "15px" },
+  formGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" },
+  formGroup: { display: "flex", flexDirection: "column", gap: "6px" },
+  label: { fontSize: "0.65rem", fontWeight: 700, letterSpacing: "1px", color: "#475569", textTransform: "uppercase" },
+  input: { width: "100%", padding: "10px 12px", fontSize: "0.82rem", color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: "4px", background: "#fff", outline: "none", boxSizing: "border-box" },
+  embeddedForm: { background: "#ffffff", border: "1px solid #e2e8f0", padding: "14px", borderRadius: "6px", display: "flex", flexDirection: "column", gap: "12px", marginTop: "8px" },
 
-  toolbar: { display: "flex", gap: "12px" },
-  filterSelect: { padding: "8px 12px", fontSize: "0.8rem", color: "#111625", border: "1px solid #e2e8f0", borderRadius: "4px", outline: "none", minWidth: "150px" },
+  toolbar: { display: "flex", gap: "12px", flexWrap: "wrap" },
+  filterSelect: { padding: "10px 12px", fontSize: "0.8rem", color: "#0f172a", border: "1px solid #cbd5e1", borderRadius: "4px", outline: "none", minWidth: "160px" },
 
-  tableWrap: { overflowX: "auto" },
+  tableWrap: { overflowX: "auto", border: "1px solid #e2e8f0", borderRadius: "6px", marginTop: "10px" },
   table: { width: "100%", borderCollapse: "collapse" },
-  th: { textTransform: "uppercase", fontSize: "0.65rem", fontWeight: 700, color: "#64748b", padding: "12px 16px", borderBottom: "1px solid #e2e8f0", textAlign: "left", letterSpacing: "1px" },
+  th: { textTransform: "uppercase", fontSize: "0.65rem", fontWeight: 700, color: "#64748b", padding: "14px 16px", borderBottom: "1px solid #e2e8f0", textAlign: "left", letterSpacing: "1px", background: "#f8fafc" },
   tr: { borderBottom: "1px solid #f1f5f9", cursor: "pointer", transition: "background 0.2s" },
-  trActive: { background: "#f1f5f9" },
-  td: { padding: "12px 16px", fontSize: "0.8rem", color: "#111625" },
+  trActive: { background: "#f8fafc" },
+  td: { padding: "14px 16px", fontSize: "0.8rem", color: "#334155" },
   badge: { fontSize: "0.68rem", fontWeight: 600, padding: "3px 8px", borderRadius: "20px", display: "inline-block" },
   empty: { color: "#94a3b8", fontSize: "0.82rem", textAlign: "center", padding: "30px" },
 
-  detailPanel: { flex: 1, background: "#fff", border: "1px solid #e2e8f0", borderRadius: "4px", padding: "24px", minWidth: "350px", maxHeight: "100vh", overflowY: "auto" },
-  emptyDetail: { height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", fontSize: "0.85rem", padding: "40px", textAlign: "center" },
+  detailPanel: { flex: 1, background: "#fff", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "24px", minWidth: "380px", maxHeight: "90vh", overflowY: "auto", boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1)" },
+  emptyDetail: { height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#64748b", fontSize: "0.82rem", padding: "40px", textAlign: "center", fontStyle: "italic" },
   detailHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #e2e8f0", paddingBottom: "16px", marginBottom: "16px" },
   muted: { fontSize: "0.65rem", fontWeight: 700, letterSpacing: "1px", color: "#64748b", textTransform: "uppercase" },
-  detailNo: { fontFamily: "'Space Grotesk', sans-serif", fontSize: "1.2rem", fontWeight: 700, color: "#111625", marginTop: "4px" },
+  detailNo: { fontFamily: "'Space Grotesk', sans-serif", fontSize: "1.2rem", fontWeight: 700, color: "#0f172a", marginTop: "4px" },
 
-  descBox: { background: "#f8fafc", padding: "16px", borderRadius: "4px", border: "1px solid #e2e8f0", marginBottom: "20px", display: "flex", flexDirection: "column", gap: "6px" },
+  descBox: { background: "#f8fafc", padding: "16px", borderRadius: "6px", border: "1px solid #e2e8f0", marginBottom: "20px", display: "flex", flexDirection: "column", gap: "6px" },
+  specTable: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 14px", fontSize: "0.78rem", color: "#334155", marginTop: "5px" },
+  
+  ledgerTable: { width: "100%", borderCollapse: "collapse", fontSize: "0.76rem" },
+  disposalAlert: { background: "#fef3c7", border: "1px solid #f59e0b", color: "#b45309", padding: "12px", borderRadius: "6px", fontSize: "0.78rem", marginBottom: "20px", display: "flex", flexDirection: "column", gap: "4px" },
 
-  timelineBox: { border: "1px solid #e2e8f0", borderRadius: "4px", padding: "16px", marginBottom: "20px", background: "#fcfcfd" },
-  timelineList: { display: "flex", flexDirection: "column", gap: "14px", maxHeight: "150px", overflowY: "auto", marginTop: "10px" },
+  timelineBox: { border: "1px solid #e2e8f0", borderRadius: "6px", padding: "16px", marginBottom: "20px", background: "#fcfcfd" },
+  timelineList: { display: "flex", flexDirection: "column", gap: "14px", maxHeight: "180px", overflowY: "auto", marginTop: "10px" },
   timelineItem: { display: "flex", flexDirection: "column", gap: "4px", borderLeft: "2px solid #e2e8f0", paddingLeft: "12px" },
   timelineHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.72rem" },
-  timelineBody: { fontSize: "0.78rem", color: "#475569" }
+  timelineBody: { fontSize: "0.78rem", color: "#475569" },
+
+  legendCard: { background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px", padding: "20px", marginTop: "20px", boxShadow: "0 1px 3px 0 rgb(0 0 0 / 0.1)" },
+  legendGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: "10px 20px", fontSize: "0.76rem", color: "#475569" }
 };

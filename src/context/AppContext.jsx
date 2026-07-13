@@ -24,6 +24,7 @@ import {
   changeAssetStatus as apiChangeAssetStatus,
   uploadAssetDocument as apiUploadAssetDocument,
   importAssets as apiImportAssets,
+  logAssetTransfer as apiLogAssetTransfer,
   
   // Purchase imports
   fetchPurchaseRequests as apiFetchPurchaseRequests,
@@ -497,6 +498,17 @@ export function AppProvider({ children }) {
       return res.data;
     } else {
       alert("Error transferring asset: " + res.message);
+    }
+    return null;
+  }
+
+  async function logAssetTransfer(transferData) {
+    const res = await apiLogAssetTransfer(transferData);
+    if (res.success) {
+      await loadAssets({}, 1, 10);
+      return res.data;
+    } else {
+      alert("Error logging asset transfer: " + res.message);
     }
     return null;
   }
@@ -1601,7 +1613,7 @@ export function AppProvider({ children }) {
       // Asset values
       assets, totalAssetsCount, assetMetadata, loadAssets, loadAssetDetails,
       loadAssetMetadata, createAsset, updateAsset, archiveAsset, assignAsset,
-      returnAsset, transferAsset, changeAssetStatus, uploadAssetDocument, importAssets,
+      returnAsset, transferAsset, logAssetTransfer, changeAssetStatus, uploadAssetDocument, importAssets,
       
       // Purchase & Inventory values
       purchaseRequests, purchaseOrders, inventoryItems, stockBalances, grns, invoices, payments, inventoryTransactions,
