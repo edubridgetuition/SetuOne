@@ -21,7 +21,7 @@ This walkthrough documents the successful integration of the **Enterprise Energy
   - Automatically fetches preceding readings per meter via SQL window function `LAG()`.
   - Calculates dynamic difference units (`consumption_units`) and cost (`calculated_cost`).
   - Sets cost/consumption to `NULL` and flags `reading_valid = FALSE` if consecutive readings contain descending values (negative consumption checks).
-* **`handle_new_user()` Trigger Function Update (`database/18_DynamicSignUp.sql`) [NEW]**:
+* **`handle_new_user()` Trigger Function Update (`database/18_DynamicSignUp.sql`)**:
   - Upgraded trigger to dynamically create new **Companies** and default **Branches** if user metadata contains a `company_name` string.
   - Links user profiles seamlessly during client admin registration.
 * **Enterprise RLS Security**: Strict tenant isolation matching user profiles (`company_id = public.get_user_company(auth.uid())`), without any RLS bypasses.
@@ -30,7 +30,7 @@ This walkthrough documents the successful integration of the **Enterprise Energy
 ### 2. Repository Layer (`src/lib/authRepository.js` & `src/lib/energyRepository.js`)
 * Implements robust backend integrations returning standard success/error objects:
   - `login(email, password)`
-  - `register(email, password, fullName, companyName)` [NEW]
+  - `register(email, password, fullName, companyName)`
   - `logout()`
   - `checkDuplicateHash(hash)`
 
@@ -40,11 +40,15 @@ This walkthrough documents the successful integration of the **Enterprise Energy
 * Automatically loads energy meters on session login.
 * Mapped view switch route: `"energy" ➡️ <EnergyMonitoring />`.
 
-### 4. Interactive Page Layout (`src/pages/LoginPage.jsx` & `src/pages/EnergyMonitoring.jsx`)
-* **LoginPage Sign Up View [NEW]**:
+### 4. Interactive Page Layout (`src/components/Layout.jsx`, `src/pages/LoginPage.jsx` & `src/pages/EnergyMonitoring.jsx`)
+* **LoginPage Sign Up View**:
   - Added a clean toggle switch to change login layout into a "Sign Up / Register" form.
   - Collects Full Name, Email, Password, and Company Name.
   - Submits signup payload to Supabase Auth, which creates the profile and company dynamically on backend database.
+* **Password Eye Toggle Icon [NEW]**:
+  - Embedded `MdVisibility` / `MdVisibilityOff` eye icons inside the password fields on sign-in and signup forms to allow supervisors to preview input passwords.
+* **Company Name Top Header Display [NEW]**:
+  - Updated the header layout shell to dynamically render the user's logged-in `session.companyName` (e.g. `ABC Ltd.`) instead of defaulting to the platform tenant label (`Orion Corporate Park`).
 * **Meter Selector Cards**: Supports dynamic meter lists (UGVCL Meter 1, UGVCL Meter 2, UGVCL Meter 3, DG Meter).
 * **AI OCR scan overlay**: Displays preview photos, green laser sweep scanner lines, progress loaders, confidence metrics, and confirm/edit controls.
 * **SHA-256 Web Crypto Image Fingerprinting**:
