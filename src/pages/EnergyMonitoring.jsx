@@ -266,23 +266,26 @@ export default function EnergyMonitoring() {
 
         cropCtx.drawImage(canvas, minX, minY, croppedWidth, croppedHeight, 0, 0, croppedWidth, croppedHeight);
 
-        // Grayscale, high-contrast, and thresholding (Binarize)
+        // Grayscale and contrast boosting (Let Tesseract's built-in Otsu's binarizer do thresholding)
         const cropData = cropCtx.getImageData(0, 0, croppedWidth, croppedHeight);
         const cPixels = cropData.data;
+        const contrastFactor = 1.6; // Boost text clarity
 
         for (let i = 0; i < cPixels.length; i += 4) {
           const r = cPixels[i];
           const g = cPixels[i + 1];
           const b = cPixels[i + 2];
+          
+          // Grayscale conversion
           const gray = 0.299 * r + 0.587 * g + 0.114 * b;
 
-          // Binarize
-          const threshold = 120;
-          const val = gray > threshold ? 255 : 0;
+          // Contrast enhancement: factor * (gray - 128) + 128
+          let enhanced = contrastFactor * (gray - 128) + 128;
+          enhanced = Math.max(0, Math.min(255, enhanced));
 
-          cPixels[i] = val;
-          cPixels[i + 1] = val;
-          cPixels[i + 2] = val;
+          cPixels[i] = enhanced;
+          cPixels[i + 1] = enhanced;
+          cPixels[i + 2] = enhanced;
         }
 
         cropCtx.putImageData(cropData, 0, 0);
@@ -376,8 +379,9 @@ export default function EnergyMonitoring() {
           
           console.log("Raw Tesseract Text:", rawText);
           
-          // Regex search: look for a sequence of 5 to 8 digits, or any consecutive numbers
-          const matches = rawText.match(/\b\d{5,8}\b/) || rawText.match(/\d+/g);
+          // Regex search: clean whitespaces and look for 5 to 9 digits (Min 5, Max 9)
+          const cleanText = rawText.replace(/\s+/g, "");
+          const matches = cleanText.match(/\d{5,9}/) || rawText.match(/\d+/g);
           parsedValue = matches ? matches[0] : "";
           
           const tessConf = ocrResult.data.confidence || 0;
@@ -406,7 +410,8 @@ export default function EnergyMonitoring() {
           const tesseract = await loadTesseract();
           const ocrResult = await tesseract.recognize(processed.blob, 'eng');
           rawText = ocrResult.data.text || "";
-          const matches = rawText.match(/\b\d{5,8}\b/) || rawText.match(/\d+/g);
+          const cleanText = rawText.replace(/\s+/g, "");
+          const matches = cleanText.match(/\d{5,9}/) || rawText.match(/\d+/g);
           parsedValue = matches ? matches[0] : "";
           
           // Simulate higher deep-learning confidence (Paddle/Easy are highly accurate)
