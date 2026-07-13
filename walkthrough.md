@@ -6,54 +6,48 @@ This walkthrough documents the successful integration of the **Enterprise Energy
 
 ## 🚀 Accomplished Tasks
 
-### 1. Database Seed Migration (`database/16_EnergyMonitoring.sql` & `database/17_EnergyOCRv2.sql` [NEW])
+### 1. Database Seed Migration (`database/16_EnergyMonitoring.sql`, `database/17_EnergyOCRv2.sql`, & `database/18_DynamicSignUp.sql` [NEW])
 * **`energy_meters` Table**: Stores core hardware properties (unit type, installation date, capacity, status, serial numbers, and custom tariff rates like `₹8.50/Unit` per meter).
-* **`energy_meter_ocr_profiles` Table [NEW]**:
+* **`energy_meter_ocr_profiles` Table**:
   - Dynamically registers specifications for each meter type (e.g. `UGVCL Smart Meter`, `DG Generator Meter`).
   - Configures `min_digits`, `max_digits`, `regex_pattern`, and smart validation `allowed_multiplier` dynamically.
-* **Foreign Keys**:
-  - `branch_id UUID REFERENCES public.branches(id)`
-  - `building_id UUID REFERENCES public.buildings(id)`
-  - `location_id UUID REFERENCES public.locations(id)`
-  - `ocr_profile_id UUID REFERENCES public.energy_meter_ocr_profiles(id)` [NEW]
 * **`energy_meter_readings` Table**:
   - Each upload (Morning, Evening, Hourly) is registered as a separate individual row (SAP/Siemens model).
   - Slots are specified by `reading_slot` (`Morning`, `Evening`) and modes are set by `capture_mode` (`Manual`, `OCR`, `IoT`).
   - Stores debug values: `ocr_raw_text` (e.g. `I234S` text outputs) and `ocr_provider` (e.g. `Tesseract`, `Google Vision`).
-  - Stores image fingerprint hash (`image_hash VARCHAR(64) UNIQUE`) and audit audit status (`review_status` Enum: `'Approved'`, `'Rejected'`, `'Edited'`) [NEW].
+  - Stores image fingerprint hash (`image_hash VARCHAR(64) UNIQUE`) and audit audit status (`review_status` Enum: `'Approved'`, `'Rejected'`, `'Edited'`).
   - Exposes workflow flags: `reading_status` (`Pending OCR`, `Pending Confirmation`, `Confirmed`), `is_locked` (disables editing once confirmed), and `photo_document_id UUID REFERENCES public.documents(id)`.
 * **Dynamic Cost & Validation View (`public.energy_consumption_summary`)**:
   - Automatically fetches preceding readings per meter via SQL window function `LAG()`.
   - Calculates dynamic difference units (`consumption_units`) and cost (`calculated_cost`).
   - Sets cost/consumption to `NULL` and flags `reading_valid = FALSE` if consecutive readings contain descending values (negative consumption checks).
+* **`handle_new_user()` Trigger Function Update (`database/18_DynamicSignUp.sql`) [NEW]**:
+  - Upgraded trigger to dynamically create new **Companies** and default **Branches** if user metadata contains a `company_name` string.
+  - Links user profiles seamlessly during client admin registration.
 * **Enterprise RLS Security**: Strict tenant isolation matching user profiles (`company_id = public.get_user_company(auth.uid())`), without any RLS bypasses.
 * **Conflict-Safe Multi-Company Seeding**: Seeding logic uses `WHERE NOT EXISTS` combined with dynamic suffixes mapping to each company's ID to prevent key duplication conflicts during re-runs.
 
-### 2. Repository Layer (`src/lib/energyRepository.js`)
+### 2. Repository Layer (`src/lib/authRepository.js` & `src/lib/energyRepository.js`)
 * Implements robust backend integrations returning standard success/error objects:
-  - `fetchMeters(companyId)`
-  - `fetchMeterDetails(meterId)`
-  - `fetchReadings(meterId)`
-  - `uploadMeterImage(file)`
-  - `processOCR(imagePath)`
-  - `confirmReading(readingData)`
-  - `calculateConsumption(meterId, start, end)`
-  - `fetchConsumptionHistory(meterId, companyId)`
-  - `updateEnergyReading(readingId, updates)`
-  - `deleteEnergyReading(readingId)`
-  - `updateEnergyMeter(meterId, updates)`
-  - `checkDuplicateHash(hash)` [NEW]
+  - `login(email, password)`
+  - `register(email, password, fullName, companyName)` [NEW]
+  - `logout()`
+  - `checkDuplicateHash(hash)`
 
 ### 3. Context & Routing Integrations (`AppContext.jsx`, `App.jsx`)
 * Registered state properties: `energyMeters`, `selectedMeter`, `meterReadings`, `consumptionHistory`, `energyDashboard`.
-* Exposed core actions: `loadMeters()`, `loadReadings()`, `uploadMeterImage()`, `confirmReading()`, `loadConsumption()`, `updateEnergyReading()`, `deleteEnergyReading()`, `updateEnergyMeter()`, `checkDuplicateHash()`.
+* Exposed core actions: `login()`, `signup()`, `logout()`, `loadMeters()`, `loadReadings()`, `uploadMeterImage()`, `confirmReading()`, `loadConsumption()`, `updateEnergyReading()`, `deleteEnergyReading()`, `updateEnergyMeter()`, `checkDuplicateHash()`.
 * Automatically loads energy meters on session login.
 * Mapped view switch route: `"energy" ➡️ <EnergyMonitoring />`.
 
-### 4. Interactive Page Layout (`src/pages/EnergyMonitoring.jsx`)
+### 4. Interactive Page Layout (`src/pages/LoginPage.jsx` & `src/pages/EnergyMonitoring.jsx`)
+* **LoginPage Sign Up View [NEW]**:
+  - Added a clean toggle switch to change login layout into a "Sign Up / Register" form.
+  - Collects Full Name, Email, Password, and Company Name.
+  - Submits signup payload to Supabase Auth, which creates the profile and company dynamically on backend database.
 * **Meter Selector Cards**: Supports dynamic meter lists (UGVCL Meter 1, UGVCL Meter 2, UGVCL Meter 3, DG Meter).
 * **AI OCR scan overlay**: Displays preview photos, green laser sweep scanner lines, progress loaders, confidence metrics, and confirm/edit controls.
-* **SHA-256 Web Crypto Image Fingerprinting [NEW]**:
+* **SHA-256 Web Crypto Image Fingerprinting**:
   - Computes the SHA-256 hash of the photograph in the browser using Web Crypto API.
   - Instantly checks the database. If duplicate detected, alerts: **"This image was already uploaded today. Please upload a fresh photograph."** and blocks the upload.
 * **Tesseract.js Real OCR & Preprocessing Canvas**:
