@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useApp } from "../context/appContextCore";
-import { ASSET_STATUS } from "../constants";
+import { supabase } from "../lib/supabase";
 
 // 1. Beautiful SVG Barcode Generator Component
 // Encodes Asset Code | Location | Purchase Date for scanning
@@ -59,6 +59,7 @@ export default function AssetManagement() {
   const [selectedId, setSelectedId] = useState(null);
   const [assetDetails, setAssetDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   // Filters and Pagination
   const [search, setSearch] = useState("");
@@ -74,16 +75,44 @@ export default function AssetManagement() {
   const [showTransferForm, setShowTransferForm] = useState(false);
   const [showDisposeForm, setShowDisposeForm] = useState(false);
   const [showUploadForm, setShowUploadForm] = useState(false);
+  const [showAddCategoryForm, setShowAddCategoryForm] = useState(false);
 
-  // Sub-type prefix mapping for Furniture category
-  const furnitureSubTypes = [
-    { name: "Chair", prefix: "CHR" },
-    { name: "Table", prefix: "TBL" },
-    { name: "Wardrobe", prefix: "WRD" },
-    { name: "Cupboard", prefix: "CPB" },
-    { name: "Round Table", prefix: "RTB" },
-    { name: "Square Table", prefix: "STB" }
-  ];
+  // Setup Admin dynamic category name
+  const [newCategoryName, setNewCategoryName] = useState("");
+
+  // Category Asset Types definition with default prefix mappings
+  const categoryAssetTypes = {
+    "Furniture": [
+      { name: "Chair", prefix: "CHR" },
+      { name: "Table", prefix: "TBL" },
+      { name: "Wardrobe", prefix: "WRD" },
+      { name: "Cupboard", prefix: "CPB" },
+      { name: "Round Table", prefix: "RTB" },
+      { name: "Square Table", prefix: "STB" },
+      { name: "Sofa", prefix: "SOF" },
+      { name: "Cabinet", prefix: "CAB" }
+    ],
+    "IT Asset": [
+      { name: "Laptop", prefix: "LAP" },
+      { name: "Monitor", prefix: "MON" },
+      { name: "CPU", prefix: "CPU" },
+      { name: "Mouse", prefix: "MSE" },
+      { name: "Keyboard", prefix: "KYB" },
+      { name: "Printer", prefix: "PRN" },
+      { name: "UPS", prefix: "UPS" },
+      { name: "Server", prefix: "SRV" },
+      { name: "Switch", prefix: "SWT" },
+      { name: "Router", prefix: "RTR" }
+    ],
+    "HVAC": [
+      { name: "Split AC", prefix: "SAC" },
+      { name: "Cassette AC", prefix: "CAC" },
+      { name: "Window AC", prefix: "WAC" },
+      { name: "Tower AC", prefix: "TAC" },
+      { name: "AHU", prefix: "AHU" },
+      { name: "Chiller", prefix: "CHL" }
+    ]
+  };
 
   const indianStates = [
     "Gujarat", "Maharashtra", "Karnataka", "Delhi", "Tamil Nadu", 
@@ -94,8 +123,8 @@ export default function AssetManagement() {
   const [addForm, setAddForm] = useState({
     name: "",
     categoryId: "",
-    subType: "Chair",
-    customPrefix: "CHR",
+    assetType: "Laptop",
+    customPrefix: "LAP",
     brandId: "",
     modelId: "",
     locationId: "",
@@ -125,12 +154,49 @@ export default function AssetManagement() {
     // Depreciation
     depreciationRate: "10.0",
     depreciationMethod: "SLM", // SLM or WDV
-    shortLifeYears: "3", // Flag for disposal after N years
+    shortLifeYears: "", // Optional, blank by default
 
     // Extra specs
     starRating: "5", // 1 to 5 Stars
     makeBrand: "",
     serialNo: ""
+  });
+
+  const [editForm, setEditForm] = useState({
+    name: "",
+    categoryId: "",
+    assetType: "",
+    code: "",
+    brandId: "",
+    modelId: "",
+    locationId: "",
+    floorNumber: "",
+    roomNumber: "",
+    purchaseDate: "",
+    purchaseCost: "",
+    purchaseQty: "1",
+    invoiceNo: "",
+    invoiceDate: "",
+    invoiceCompany: "",
+    warrantyMonths: "",
+    gstRate: "",
+    cgstRate: "",
+    sgstRate: "",
+    igstRate: "",
+    cgstAmount: "",
+    sgstAmount: "",
+    igstAmount: "",
+    gstType: "CGST_SGST",
+    manualTaxMode: false,
+    branchState: "Gujarat",
+    vendorState: "Gujarat",
+    depreciationRate: "",
+    depreciationMethod: "SLM",
+    shortLifeYears: "",
+    starRating: "",
+    makeBrand: "",
+    serialNo: "",
+    status: ""
   });
 
   const [transferForm, setTransferForm] = useState({
@@ -175,6 +241,7 @@ export default function AssetManagement() {
   useEffect(() => {
     if (!selectedId) {
       setAssetDetails(null);
+      setIsEditing(false);
       return;
     }
     async function getDetails() {
@@ -191,37 +258,42 @@ export default function AssetManagement() {
   // Sync default options when metadata loads
   useEffect(() => {
     if (assetMetadata && !addForm.categoryId) {
+      const firstCat = assetMetadata.categories[0];
+      const defaultTypes = firstCat ? (categoryAssetTypes[firstCat.name] || []) : [];
       setAddForm(prev => ({
         ...prev,
-        categoryId: assetMetadata.categories[0]?.id || "",
+        categoryId: firstCat?.id || "",
         brandId: assetMetadata.brands[0]?.id || "",
         modelId: assetMetadata.models[0]?.id || "",
-        locationId: assetMetadata.locations[0]?.id || ""
+        locationId: "", // Optional, blank by default
+        assetType: defaultTypes[0]?.name || "Other",
+        customPrefix: defaultTypes[0]?.prefix || "AST"
       }));
     }
   }, [assetMetadata]);
 
-  // Dynamically update prefix based on category / furniture sub-type selection
+  // Dynamically update prefix based on category / asset type selection
   useEffect(() => {
     if (!assetMetadata) return;
     const cat = assetMetadata.categories.find(c => c.id === addForm.categoryId);
     if (!cat) return;
 
+    const types = categoryAssetTypes[cat.name] || [];
+    const match = types.find(t => t.name === addForm.assetType);
+    
     let prefix = "AST";
-    if (cat.name === "Furniture") {
-      const match = furnitureSubTypes.find(s => s.name === addForm.subType);
-      prefix = match ? match.prefix : "FUR";
-    } else if (cat.name === "IT Asset") {
-      prefix = "ITA";
-    } else if (cat.name === "HVAC") {
-      prefix = "HVC";
+    if (match) {
+      prefix = match.prefix;
+    } else {
+      prefix = cat.name.slice(0, 3).toUpperCase();
     }
+    
     setAddForm(prev => ({ ...prev, customPrefix: prefix }));
-  }, [addForm.categoryId, addForm.subType, assetMetadata]);
+  }, [addForm.categoryId, addForm.assetType, assetMetadata]);
 
   // Dynamic GST tax calculation logic
   useEffect(() => {
-    if (addForm.manualTaxMode) return; // ignore auto-calculations in manual override mode
+    if (addForm.manualTaxMode) return;
 
     const cost = Number(addForm.purchaseCost || 0);
     const qty = Number(addForm.purchaseQty || 1);
@@ -231,7 +303,6 @@ export default function AssetManagement() {
     const taxAmount = (totalCost * rate) / 100;
 
     if (addForm.branchState === addForm.vendorState) {
-      // Local transaction: CGST + SGST (50/50 split)
       const halfRate = rate / 2;
       const halfAmount = taxAmount / 2;
       setAddForm(prev => ({
@@ -245,7 +316,6 @@ export default function AssetManagement() {
         igstAmount: "0"
       }));
     } else {
-      // Interstate transaction: IGST
       setAddForm(prev => ({
         ...prev,
         gstType: "IGST",
@@ -259,11 +329,154 @@ export default function AssetManagement() {
     }
   }, [addForm.manualTaxMode, addForm.purchaseCost, addForm.purchaseQty, addForm.gstRate, addForm.branchState, addForm.vendorState]);
 
+  // Dynamic Edit Form GST calculations
+  useEffect(() => {
+    if (editForm.manualTaxMode || !isEditing) return;
+
+    const cost = Number(editForm.purchaseCost || 0);
+    const qty = Number(editForm.purchaseQty || 1);
+    const totalCost = cost * qty;
+    const rate = Number(editForm.gstRate || 0);
+
+    const taxAmount = (totalCost * rate) / 100;
+
+    if (editForm.branchState === editForm.vendorState) {
+      const halfRate = rate / 2;
+      const halfAmount = taxAmount / 2;
+      setEditForm(prev => ({
+        ...prev,
+        gstType: "CGST_SGST",
+        cgstRate: halfRate.toString(),
+        sgstRate: halfRate.toString(),
+        igstRate: "0",
+        cgstAmount: halfAmount.toFixed(2),
+        sgstAmount: halfAmount.toFixed(2),
+        igstAmount: "0"
+      }));
+    } else {
+      setEditForm(prev => ({
+        ...prev,
+        gstType: "IGST",
+        cgstRate: "0",
+        sgstRate: "0",
+        igstRate: rate.toString(),
+        cgstAmount: "0",
+        sgstAmount: "0",
+        igstAmount: taxAmount.toFixed(2)
+      }));
+    }
+  }, [editForm.manualTaxMode, editForm.purchaseCost, editForm.purchaseQty, editForm.gstRate, editForm.branchState, editForm.vendorState, isEditing]);
+
+  // Admin dynamic category addition
+  async function handleAddCategorySubmit(e) {
+    e.preventDefault();
+    if (!newCategoryName.trim()) return;
+
+    const { data, error } = await supabase
+      .from("asset_categories")
+      .insert({
+        name: newCategoryName.trim(),
+        schema_definition: {}
+      })
+      .select()
+      .single();
+
+    if (error) {
+      alert("Failed to create category: " + error.message);
+    } else {
+      alert(`Category "${newCategoryName.trim()}" added successfully.`);
+      setNewCategoryName("");
+      setShowAddCategoryForm(false);
+      loadAssetMetadata();
+    }
+  }
+
+  // Edit details triggers
+  function startEditing() {
+    if (!assetDetails) return;
+    const b = assetDetails.basic;
+    setEditForm({
+      name: b.name || "",
+      categoryId: b.categoryId || "",
+      assetType: b.assetType || "",
+      code: b.code || "",
+      brandId: b.brandId || "",
+      modelId: b.modelId || "",
+      locationId: b.locationId || "",
+      floorNumber: b.floorNumber || "",
+      roomNumber: b.roomNumber || "",
+      purchaseDate: b.purchaseDate || "",
+      purchaseCost: b.purchaseCost || "0",
+      purchaseQty: b.purchaseQty || "1",
+      invoiceNo: b.invoiceNo || "",
+      invoiceDate: b.invoiceDate || "",
+      invoiceCompany: b.invoiceCompany || "",
+      warrantyMonths: b.warrantyMonths || "0",
+      gstRate: b.gstRate || "0",
+      cgstRate: b.cgstRate || "0",
+      sgstRate: b.sgstRate || "0",
+      igstRate: b.igstRate || "0",
+      cgstAmount: b.cgstAmount || "0",
+      sgstAmount: b.sgstAmount || "0",
+      igstAmount: b.igstAmount || "0",
+      gstType: b.gstType || "CGST_SGST",
+      manualTaxMode: false,
+      branchState: "Gujarat",
+      vendorState: "Gujarat",
+      depreciationRate: b.depreciationRate || "10.0",
+      depreciationMethod: b.depreciationMethod || "SLM",
+      shortLifeYears: b.shortLifeYears || "",
+      starRating: b.starRating || "",
+      makeBrand: b.makeBrand || "",
+      serialNo: b.attributes?.serialNo || "",
+      status: b.status || "Active"
+    });
+    setIsEditing(true);
+  }
+
+  // Save updates submitted from details sidebar form
+  async function handleEditSubmit(e) {
+    e.preventDefault();
+    if (!selectedId) return;
+
+    const res = await updateAsset(selectedId, {
+      ...editForm,
+      locationId: editForm.locationId || null,
+      floorNumber: editForm.floorNumber || null,
+      roomNumber: editForm.roomNumber || null,
+      shortLifeYears: editForm.shortLifeYears ? Number(editForm.shortLifeYears) : null,
+      starRating: editForm.starRating ? Number(editForm.starRating) : null,
+      purchaseCost: Number(editForm.purchaseCost || 0),
+      purchaseQty: Number(editForm.purchaseQty || 1),
+      gstRate: Number(editForm.gstRate || 0),
+      cgstRate: Number(editForm.cgstRate || 0),
+      sgstRate: Number(editForm.sgstRate || 0),
+      igstRate: Number(editForm.igstRate || 0),
+      cgstAmount: Number(editForm.cgstAmount || 0),
+      sgstAmount: Number(editForm.sgstAmount || 0),
+      igstAmount: Number(editForm.igstAmount || 0),
+      depreciationRate: Number(editForm.depreciationRate || 10.0),
+      warrantyMonths: Number(editForm.warrantyMonths || 0),
+      attributes: {
+        serialNo: editForm.serialNo,
+        subType: editForm.assetType
+      }
+    });
+
+    if (res.success) {
+      alert("Asset specifications updated successfully.");
+      setIsEditing(false);
+      setSelectedId(null);
+      setSelectedId(selectedId);
+    } else {
+      alert("Failed to update specifications: " + res.message);
+    }
+  }
+
   // Submit Handler for New Asset Creation (Supports Qty batch insertion)
   async function handleAddSubmit(e) {
     e.preventDefault();
     
-    // Find the highest sequence suffix currently in the local state for this prefix
     const prefix = addForm.customPrefix || "AST";
     let baseNum = 0;
     assets.forEach(a => {
@@ -277,7 +490,7 @@ export default function AssetManagement() {
     });
 
     const qty = Number(addForm.purchaseQty || 1);
-    const locationName = assetMetadata?.locations.find(l => l.id === addForm.locationId)?.name || "Warehouse";
+    const locationName = assetMetadata?.locations.find(l => l.id === addForm.locationId)?.name || "Warehouse/Pending Allocation";
 
     let successCount = 0;
 
@@ -285,7 +498,6 @@ export default function AssetManagement() {
       const sequenceNum = baseNum + q;
       const generatedCode = `${prefix}-${String(sequenceNum).padStart(4, "0")}`;
       
-      // Auto-generate barcode string: Code | Location details | Purchase Date
       const barcodeValue = `${generatedCode} | ${locationName} (Floor ${addForm.floorNumber || "N/A"}, Room ${addForm.roomNumber || "N/A"}) | ${addForm.purchaseDate}`;
 
       const res = await createAsset({
@@ -294,34 +506,35 @@ export default function AssetManagement() {
         categoryId: addForm.categoryId,
         brandId: addForm.brandId || null,
         modelId: addForm.modelId || null,
-        locationId: addForm.locationId,
-        purchaseDate: addForm.purchaseDate,
-        warrantyExpiry: new Date(new Date(addForm.purchaseDate).setMonth(new Date(addForm.purchaseDate).getMonth() + Number(addForm.warrantyMonths))).toISOString().split("T")[0],
-        purchaseCost: Number(addForm.purchaseCost),
-        purchaseQty: 1, // individual item tracking
-        invoiceNo: addForm.invoiceNo,
-        invoiceDate: addForm.invoiceDate,
-        invoiceCompany: addForm.invoiceCompany,
-        warrantyMonths: Number(addForm.warrantyMonths),
-        gstRate: Number(addForm.gstRate),
-        cgstRate: Number(addForm.cgstRate),
-        sgstRate: Number(addForm.sgstRate),
-        igstRate: Number(addForm.igstRate),
-        cgstAmount: Number(addForm.cgstAmount),
-        sgstAmount: Number(addForm.sgstAmount),
-        igstAmount: Number(addForm.igstAmount),
+        locationId: addForm.locationId || null, // Optional, blank by default
+        purchaseDate: addForm.purchaseDate || null,
+        warrantyExpiry: addForm.purchaseDate ? new Date(new Date(addForm.purchaseDate).setMonth(new Date(addForm.purchaseDate).getMonth() + Number(addForm.warrantyMonths))).toISOString().split("T")[0] : null,
+        purchaseCost: Number(addForm.purchaseCost || 0),
+        purchaseQty: 1,
+        invoiceNo: addForm.invoiceNo || null,
+        invoiceDate: addForm.invoiceDate || null,
+        invoiceCompany: addForm.invoiceCompany || null,
+        warrantyMonths: Number(addForm.warrantyMonths || 0),
+        gstRate: Number(addForm.gstRate || 0),
+        cgstRate: Number(addForm.cgstRate || 0),
+        sgstRate: Number(addForm.sgstRate || 0),
+        igstRate: Number(addForm.igstRate || 0),
+        cgstAmount: Number(addForm.cgstAmount || 0),
+        sgstAmount: Number(addForm.sgstAmount || 0),
+        igstAmount: Number(addForm.igstAmount || 0),
         gstType: addForm.gstType,
-        depreciationRate: Number(addForm.depreciationRate),
+        depreciationRate: Number(addForm.depreciationRate || 10.0),
         depreciationMethod: addForm.depreciationMethod,
-        shortLifeYears: addForm.shortLifeYears ? Number(addForm.shortLifeYears) : null,
+        shortLifeYears: addForm.shortLifeYears ? Number(addForm.shortLifeYears) : null, // Optional
         starRating: addForm.starRating ? Number(addForm.starRating) : null,
-        makeBrand: addForm.makeBrand,
-        roomNumber: addForm.roomNumber,
-        floorNumber: addForm.floorNumber,
+        makeBrand: addForm.makeBrand || null,
+        roomNumber: addForm.roomNumber || null,
+        floorNumber: addForm.floorNumber || null,
+        assetType: addForm.assetType,
         barcode: barcodeValue,
         attributes: {
           serialNo: addForm.serialNo || `SN-${generatedCode}`,
-          subType: addForm.subType
+          subType: addForm.assetType
         }
       });
 
@@ -356,14 +569,27 @@ export default function AssetManagement() {
     }
   }
 
-  // Return asset to warehouse custody
+  // Return asset to store custody
   async function handleReturnSubmit() {
     if (!selectedId) return;
     if (confirm("Are you sure you want to return this asset to store?")) {
-      const res = await returnAsset(selectedId, "Returned to inventory warehouse.");
+      const res = await returnAsset(selectedId, "Returned to inventory store.");
       if (res) {
         setSelectedId(null);
         setSelectedId(selectedId);
+      }
+    }
+  }
+
+  // Soft delete / Archive asset handler
+  async function handleArchiveSubmit() {
+    if (!selectedId) return;
+    if (confirm("Are you sure you want to archive/inactive this asset?")) {
+      const res = await archiveAsset(selectedId);
+      if (res.success) {
+        alert("Asset archived successfully.");
+        setSelectedId(null);
+        loadAssets({}, 1, 10);
       }
     }
   }
@@ -498,7 +724,6 @@ export default function AssetManagement() {
         return;
       }
 
-      // Convert rows to import structures
       const importedRows = [];
       const defaultCatId = assetMetadata?.categories[0]?.id;
       const defaultLocId = assetMetadata?.locations[0]?.id;
@@ -514,8 +739,8 @@ export default function AssetManagement() {
         const makeBrand = cols[4] || "";
         const model = cols[5] || "";
         const serialNo = cols[6] || "";
-        const starRating = cols[7] !== "N/A" ? parseInt(cols[7], 10) : null;
-        const purchaseDate = cols[8] || new Date().toISOString().split("T")[0];
+        const starRating = cols[7] !== "N/A" && cols[7] ? parseInt(cols[7], 10) : null;
+        const purchaseDate = cols[8] || null;
         const cost = Number(cols[9] || 0);
         const qty = parseInt(cols[10] || 1, 10);
         const locName = cols[11] || "";
@@ -525,17 +750,15 @@ export default function AssetManagement() {
         const depRate = Number(cols[15] || 10);
         const warranty = parseInt(cols[16] || 12, 10);
 
-        // Resolve IDs matching metadata or use default fallbacks
         const categoryId = assetMetadata?.categories.find(c => c.name.toLowerCase() === catName.toLowerCase())?.id || defaultCatId;
-        const locationId = assetMetadata?.locations.find(l => l.name.toLowerCase() === locName.toLowerCase())?.id || defaultLocId;
+        const locationId = assetMetadata?.locations.find(l => l.name.toLowerCase() === locName.toLowerCase())?.id || null;
 
-        // Loop to generate multiple sequential assets for Quantity
         for (let q = 1; q <= qty; q++) {
           importedRows.push({
             name,
             categoryId,
             locationId,
-            code: `${prefix}-IMP-${Date.now().toString().slice(-4)}-${q}`, // temporary sequential code
+            code: `${prefix}-IMP-${Date.now().toString().slice(-4)}-${q}`,
             purchaseDate,
             purchaseCost: cost,
             purchaseQty: 1,
@@ -544,8 +767,9 @@ export default function AssetManagement() {
             depreciationRate: depRate,
             makeBrand,
             starRating,
-            floorNumber: floor,
-            roomNumber: room,
+            floorNumber: floor || null,
+            roomNumber: room || null,
+            assetType: subType,
             attributes: { serialNo, subType }
           });
         }
@@ -615,6 +839,13 @@ export default function AssetManagement() {
       })()
     : false;
 
+  // Resolve Asset Types option list based on category
+  const activeCategoryName = assetMetadata?.categories.find(c => c.id === addForm.categoryId)?.name || "";
+  const activeAssetTypes = categoryAssetTypes[activeCategoryName] || [];
+
+  const activeCategoryEditName = assetMetadata?.categories.find(c => c.id === editForm.categoryId)?.name || "";
+  const activeAssetEditTypes = categoryAssetTypes[activeCategoryEditName] || [];
+
   return (
     <div style={styles.page}>
       <div style={styles.left}>
@@ -624,17 +855,39 @@ export default function AssetManagement() {
               <div style={styles.panelTitle}>Corporate Asset Lifecycle Registry</div>
               <div style={styles.panelSub}>Track barcodes, internal floor transfers, tax inputs, and depreciation sheets.</div>
             </div>
-            <div style={{ display: "flex", gap: "10px" }}>
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
               <button style={styles.secondaryBtn} onClick={downloadCsvTemplate}>Download CSV Template</button>
               <label style={styles.secondaryBtn}>
                 Import CSV
                 <input type="file" accept=".csv" style={{ display: "none" }} onChange={handleCsvImport} />
               </label>
+              <button style={styles.secondaryBtn} onClick={() => setShowAddCategoryForm(!showAddCategoryForm)}>
+                Admin Setup: Add Category
+              </button>
               <button style={styles.primaryBtn} onClick={() => setShowAddForm(!showAddForm)}>
                 {showAddForm ? "Cancel" : "+ New Asset"}
               </button>
             </div>
           </div>
+
+          {/* Add Category Admin Form */}
+          {showAddCategoryForm && (
+            <form onSubmit={handleAddCategorySubmit} style={styles.form}>
+              <div style={styles.panelTitle} style={{ fontSize: "0.85rem", borderBottom: "1px dashed #e2e8f0", paddingBottom: "8px" }}>
+                Add New Asset Category (Admin Setup)
+              </div>
+              <div style={styles.formGrid}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>New Category Name</label>
+                  <input style={styles.input} required value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="e.g. Mobile Phones, Handtools" />
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                <button style={styles.primaryBtn} type="submit">Save Category</button>
+                <button style={styles.secondaryBtn} type="button" onClick={() => setShowAddCategoryForm(false)}>Cancel</button>
+              </div>
+            </form>
+          )}
 
           {/* Extended Asset Registration Form */}
           {showAddForm && (
@@ -650,15 +903,17 @@ export default function AssetManagement() {
                   </select>
                 </div>
 
-                {/* Sub-type selection for Furniture */}
-                {assetMetadata?.categories.find(c => c.id === addForm.categoryId)?.name === "Furniture" && (
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Furniture Sub-type</label>
-                    <select style={styles.input} value={addForm.subType} onChange={e => setAddForm({ ...addForm, subType: e.target.value })}>
-                      {furnitureSubTypes.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+                {/* Sub-type / Asset Type dropdown populated dynamically */}
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Asset Type</label>
+                  {activeAssetTypes.length > 0 ? (
+                    <select style={styles.input} value={addForm.assetType} onChange={e => setAddForm({ ...addForm, assetType: e.target.value })}>
+                      {activeAssetTypes.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
                     </select>
-                  </div>
-                )}
+                  ) : (
+                    <input style={styles.input} required value={addForm.assetType} onChange={e => setAddForm({ ...addForm, assetType: e.target.value })} placeholder="e.g. Printer, Scanner" />
+                  )}
+                </div>
 
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Custom Prefix Code</label>
@@ -666,8 +921,8 @@ export default function AssetManagement() {
                 </div>
 
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Asset Model Name</label>
-                  <input style={styles.input} required value={addForm.name} onChange={e => setAddForm({ ...addForm, name: e.target.value })} placeholder="Executive Leather Chair" />
+                  <label style={styles.label}>Asset Name</label>
+                  <input style={styles.input} required value={addForm.name} onChange={e => setAddForm({ ...addForm, name: e.target.value })} placeholder="Executive Office Laptop" />
                 </div>
 
                 <div style={styles.formGroup}>
@@ -689,7 +944,7 @@ export default function AssetManagement() {
               </div>
 
               <div style={{ ...styles.panelTitle, fontSize: "0.85rem", borderBottom: "1px dashed #e2e8f0", paddingBottom: "8px", marginTop: "10px" }}>
-                Purchase Invoice & Location Mappings
+                Purchase Invoice & Location Mappings (Optional)
               </div>
               <div style={styles.formGrid}>
                 <div style={styles.formGroup}>
@@ -704,7 +959,7 @@ export default function AssetManagement() {
 
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Invoice Number</label>
-                  <input style={styles.input} required value={addForm.invoiceNo} onChange={e => setAddForm({ ...addForm, invoiceNo: e.target.value })} placeholder="INV-2026-987" />
+                  <input style={styles.input} value={addForm.invoiceNo} onChange={e => setAddForm({ ...addForm, invoiceNo: e.target.value })} placeholder="INV-2026-987" />
                 </div>
 
                 <div style={styles.formGroup}>
@@ -714,12 +969,13 @@ export default function AssetManagement() {
 
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Invoice Vendor Company</label>
-                  <input style={styles.input} required value={addForm.invoiceCompany} onChange={e => setAddForm({ ...addForm, invoiceCompany: e.target.value })} placeholder="Godrej Office Furniture" />
+                  <input style={styles.input} value={addForm.invoiceCompany} onChange={e => setAddForm({ ...addForm, invoiceCompany: e.target.value })} placeholder="Godrej Office Furniture" />
                 </div>
 
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Branch Location</label>
                   <select style={styles.input} value={addForm.locationId} onChange={e => setAddForm({ ...addForm, locationId: e.target.value })}>
+                    <option value="">Warehouse / Pending Allocation</option>
                     {assetMetadata?.locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                   </select>
                 </div>
@@ -802,7 +1058,7 @@ export default function AssetManagement() {
               </div>
 
               <div style={{ ...styles.panelTitle, fontSize: "0.85rem", borderBottom: "1px dashed #e2e8f0", paddingBottom: "8px", marginTop: "10px" }}>
-                Depreciation Config & Lifespan
+                Depreciation Config & Lifespan (Optional)
               </div>
               <div style={styles.formGrid}>
                 <div style={styles.formGroup}>
@@ -820,7 +1076,7 @@ export default function AssetManagement() {
 
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Disposal Lifespan (Years)</label>
-                  <input style={styles.input} type="number" value={addForm.shortLifeYears} onChange={e => setAddForm({ ...addForm, shortLifeYears: e.target.value })} placeholder="Disposal target in years" />
+                  <input style={styles.input} type="number" value={addForm.shortLifeYears} onChange={e => setAddForm({ ...addForm, shortLifeYears: e.target.value })} placeholder="Leave blank if unlimited" />
                 </div>
 
                 <div style={styles.formGroup}>
@@ -835,7 +1091,7 @@ export default function AssetManagement() {
 
           {/* Search, filters, and status controls toolbar */}
           <div style={styles.toolbar}>
-            <input style={styles.filterSelect} placeholder="Search code, serial, make..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+            <input style={{ ...styles.filterSelect, flex: 1.5 }} placeholder="Search name, invoice, purchase date (YYYY-MM-DD)..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
             <select style={styles.filterSelect} value={catFilter} onChange={e => { setCatFilter(e.target.value); setPage(1); }}>
               <option value="">All Categories</option>
               {assetMetadata?.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -855,7 +1111,7 @@ export default function AssetManagement() {
             <table style={styles.table}>
               <thead>
                 <tr>
-                  {["Asset Code", "Model Name", "Category", "Location", "Serial No", "Custodian", "Status"].map(h => (
+                  {["Asset Code", "Asset Name", "Category", "Location", "Serial No", "Custodian", "Status"].map(h => (
                     <th key={h} style={styles.th}>{h}</th>
                   ))}
                 </tr>
@@ -865,7 +1121,7 @@ export default function AssetManagement() {
                   <tr key={asset.id} style={{ ...styles.tr, ...(selectedId === asset.id ? styles.trActive : {}) }} onClick={() => setSelectedId(asset.id)}>
                     <td style={styles.td}><strong>{asset.code}</strong></td>
                     <td style={styles.td}>{asset.name}</td>
-                    <td style={styles.td}>{asset.category}</td>
+                    <td style={styles.td}>{asset.category} {asset.assetType ? `(${asset.assetType})` : ""}</td>
                     <td style={styles.td}>{asset.location}</td>
                     <td style={styles.td}>{asset.serialNo}</td>
                     <td style={styles.td}>{asset.assignedTo}</td>
@@ -922,289 +1178,404 @@ export default function AssetManagement() {
         ) : (
           assetDetails && (
             <div>
-              <div style={styles.detailHeader}>
-                <div>
-                  <div style={styles.muted}>Extended Specs</div>
-                  <div style={styles.detailNo}>{assetDetails.basic.code}</div>
-                </div>
-                <div style={{ display: "flex", gap: "6px" }}>
-                  <button style={{ ...styles.secondaryBtn, color: "#ef4444", borderColor: "#ef4444" }} onClick={() => setShowDisposeForm(!showDisposeForm)}>Dispose/Stolen</button>
-                  <button style={{ ...styles.secondaryBtn, color: "#94a3b8", borderColor: "#cbd5e1" }} onClick={handleArchiveSubmit}>Archive</button>
-                </div>
-              </div>
-
-              {/* Short-Life Warning Alert */}
-              {isShortLifeExpired && assetDetails.basic.status === "Active" && (
-                <div style={styles.disposalAlert}>
-                  <strong>⚠️ Short-Life Disposal Alert</strong>
-                  <div>This asset has reached its defined lifespan of {assetDetails.basic.shortLifeYears} years (Purchased: {assetDetails.basic.purchaseDate}). Please coordinate disposal.</div>
-                </div>
-              )}
-
-              {/* Dynamic SVGs Barcode Render Panel */}
-              <div style={styles.descBox}>
-                <div style={styles.muted}>Auto-Generated Scanner Barcode</div>
-                <div style={{ marginTop: "10px" }}>
-                  <BarcodeRenderer value={assetDetails.basic.barcode || `${assetDetails.basic.code} | ${assetDetails.basic.location} | ${assetDetails.basic.purchaseDate}`} />
-                </div>
-              </div>
-
-              {/* Specs parameters table */}
-              <div style={styles.descBox}>
-                <div style={styles.muted}>Asset Specifications Details</div>
-                <div style={styles.specTable}>
-                  <div><strong>Make Brand:</strong> {assetDetails.basic.makeBrand || "N/A"}</div>
-                  <div><strong>Model Name:</strong> {assetDetails.basic.model || assetDetails.basic.name}</div>
-                  <div><strong>Serial Tag:</strong> {assetDetails.basic.serialNo || "N/A"}</div>
-                  <div><strong>Star Rating:</strong> {assetDetails.basic.starRating ? `${assetDetails.basic.starRating} Star` : "N/A"}</div>
-                  <div><strong>Floor Number:</strong> {assetDetails.basic.floorNumber || "N/A"}</div>
-                  <div><strong>Room Desk No:</strong> {assetDetails.basic.roomNumber || "N/A"}</div>
-                  <div><strong>Purchase Cost:</strong> ₹{Number(assetDetails.basic.purchaseCost).toLocaleString("en-IN")}</div>
-                  <div><strong>Purchase Qty:</strong> {assetDetails.basic.purchaseQty} Unit(s)</div>
-                  <div><strong>Warranty:</strong> {assetDetails.basic.warrantyExpiry} ({assetDetails.basic.warrantyMonths || 0} Months)</div>
-                  <div><strong>Invoice No:</strong> {assetDetails.basic.invoiceNo || "N/A"}</div>
-                  <div><strong>Invoice Vendor:</strong> {assetDetails.basic.invoiceCompany || "N/A"}</div>
-                  <div><strong>GST Type:</strong> {assetDetails.basic.gstType === "IGST" ? "IGST (Interstate)" : "CGST + SGST (Local)"}</div>
-                  {assetDetails.basic.gstType === "IGST" ? (
-                    <div><strong>IGST Amount:</strong> ₹{Number(assetDetails.basic.igstAmount).toFixed(2)} ({assetDetails.basic.igstRate}%)</div>
-                  ) : (
-                    <>
-                      <div><strong>CGST Amount:</strong> ₹{Number(assetDetails.basic.cgstAmount).toFixed(2)} ({assetDetails.basic.cgstRate}%)</div>
-                      <div><strong>SGST Amount:</strong> ₹{Number(assetDetails.basic.sgstAmount).toFixed(2)} ({assetDetails.basic.sgstRate}%)</div>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Yearly Depreciation Ledger Card Table */}
-              <div style={styles.descBox}>
-                <div style={styles.muted}>Yearly Depreciation Ledger ({assetDetails.basic.depreciationMethod})</div>
-                <div style={{ overflowX: "auto", marginTop: "10px" }}>
-                  <table style={styles.ledgerTable}>
-                    <thead>
-                      <tr>
-                        <th>Year</th>
-                        <th>Opening (₹)</th>
-                        <th>Depreciation (₹)</th>
-                        <th>Closing (₹)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {depreciationSchedule.map(row => (
-                        <tr key={row.year}>
-                          <td><strong>{row.year}</strong></td>
-                          <td>{row.opening}</td>
-                          <td style={{ color: "#ef4444" }}>-{row.deduction}</td>
-                          <td><strong>{row.closing}</strong></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Location Transfer controls panel */}
-              <div style={styles.descBox}>
-                <div style={styles.detailHeader} style={{ borderBottom: "none", paddingBottom: 0, marginBottom: "8px" }}>
-                  <div style={styles.muted}>Premises Location custody</div>
-                  <button style={styles.secondaryBtn} onClick={() => setShowTransferForm(!showTransferForm)}>Transfer Asset</button>
-                </div>
-                
-                {showTransferForm && (
-                  <form onSubmit={handleTransferSubmit} style={styles.embeddedForm}>
-                    <div style={styles.formGroup}>
-                      <label style={styles.label}>Transfer Type</label>
-                      <select style={styles.input} value={transferForm.type} onChange={e => setTransferForm({ ...transferForm, type: e.target.value })}>
-                        <option value="Internal">Internal (Floor/Room location update)</option>
-                        <option value="External">External (Sister concern company shipment)</option>
-                      </select>
-                    </div>
-
-                    {transferForm.type === "Internal" ? (
-                      <>
-                        <div style={styles.formGroup}>
-                          <label style={styles.label}>Target Premises</label>
-                          <select style={styles.input} required value={transferForm.newLocationId} onChange={e => setTransferForm({ ...transferForm, newLocationId: e.target.value })}>
-                            <option value="">Select Premises Location</option>
-                            {assetMetadata?.locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                          </select>
-                        </div>
-                        <div style={styles.formGroup}>
-                          <label style={styles.label}>New Floor Level</label>
-                          <input style={styles.input} value={transferForm.newFloorNumber} onChange={e => setTransferForm({ ...transferForm, newFloorNumber: e.target.value })} placeholder="e.g. 3rd Floor" />
-                        </div>
-                        <div style={styles.formGroup}>
-                          <label style={styles.label}>New Room Desk No</label>
-                          <input style={styles.input} value={transferForm.newRoomNumber} onChange={e => setTransferForm({ ...transferForm, newRoomNumber: e.target.value })} placeholder="e.g. Room 302" />
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div style={styles.formGroup}>
-                          <label style={styles.label}>Sister Concern Company</label>
-                          <input style={styles.input} required value={transferForm.sisterCompany} onChange={e => setTransferForm({ ...transferForm, sisterCompany: e.target.value })} placeholder="e.g. Orion Logistics Pvt Ltd" />
-                        </div>
-                        <div style={styles.formGroup}>
-                          <label style={styles.label}>Destination Branch</label>
-                          <input style={styles.input} required value={transferForm.destinationBranch} onChange={e => setTransferForm({ ...transferForm, destinationBranch: e.target.value })} placeholder="e.g. Mumbai Hub" />
-                        </div>
-                        <div style={styles.formGroup}>
-                          <label style={styles.label}>Destination State</label>
-                          <select style={styles.input} value={transferForm.shippedState} onChange={e => setTransferForm({ ...transferForm, shippedState: e.target.value })}>
-                            {indianStates.map(s => <option key={s} value={s}>{s}</option>)}
-                          </select>
-                        </div>
-                      </>
-                    )}
-
-                    <div style={styles.formGroup}>
-                      <label style={styles.label}>Transfer Audit notes</label>
-                      <input style={styles.input} placeholder="Reason for floor transfer or concern allocation." value={transferForm.notes} onChange={e => setTransferForm({ ...transferForm, notes: e.target.value })} />
-                    </div>
-
-                    <button style={styles.primaryBtn} type="submit">Log Transfer</button>
-                  </form>
-                )}
-
-                {/* Transfer History Timeline */}
-                <div style={styles.timelineList}>
-                  {assetDetails.transferHistory?.map((item, index) => (
-                    <div key={index} style={styles.timelineItem}>
-                      <div style={styles.timelineHeader}>
-                        <strong>{item.type} Transfer</strong>
-                        <span style={styles.muted}>{item.transferDate}</span>
-                      </div>
-                      <div style={styles.timelineBody}>
-                        Moved from {item.oldLocation} ➡️ {item.newLocation}. <br/>
-                        <span style={{ fontSize: "0.72rem", fontStyle: "italic", color: "#64748b" }}>"{item.notes}"</span>
-                      </div>
-                    </div>
-                  ))}
-                  {(!assetDetails.transferHistory || assetDetails.transferHistory.length === 0) && (
-                    <div style={{ fontSize: "0.78rem", color: "#94a3b8", fontStyle: "italic" }}>No location transfers recorded.</div>
-                  )}
-                </div>
-              </div>
-
-              {/* Disposal / Loss Logging Form overlay */}
-              {showDisposeForm && (
-                <div style={styles.descBox}>
-                  <div style={styles.muted}>Disposal / Loss Report Logging</div>
-                  <form onSubmit={handleDisposeSubmit} style={styles.embeddedForm}>
-                    <div style={styles.formGroup}>
-                      <label style={styles.label}>Status Category</label>
-                      <select style={styles.input} value={disposeForm.status} onChange={e => setDisposeForm({ ...disposeForm, status: e.target.value })}>
-                        <option value="Disposed">Disposed (End-of-life scrapped)</option>
-                        <option value="Stolen">Stolen (Asset lost/stolen)</option>
-                      </select>
-                    </div>
-                    <div style={styles.formGroup}>
-                      <label style={styles.label}>Action Date</label>
-                      <input style={styles.input} type="date" value={disposeForm.disposeDate} onChange={e => setDisposeForm({ ...disposeForm, disposeDate: e.target.value })} />
-                    </div>
-                    <div style={styles.formGroup}>
-                      <label style={styles.label}>Notes / Reason / FIR No</label>
-                      <input style={styles.input} required placeholder="FIR number or scrapper dealer receipt details." value={disposeForm.disposeReason} onChange={e => setDisposeForm({ ...disposeForm, disposeReason: e.target.value })} />
-                    </div>
-                    <button style={{ ...styles.primaryBtn, background: "#ef4444" }} type="submit">Complete Log</button>
-                  </form>
-                </div>
-              )}
-
-              {/* Custody Employee checkout section */}
-              <div style={styles.descBox}>
-                <div style={styles.muted}>Current Employee Custody</div>
-                {assetDetails.currentAssignment ? (
-                  <div style={{ fontSize: "0.8rem", marginTop: "5px" }}>
-                    <div>Custodian Employee: <strong>{assetDetails.currentAssignment.assignedTo}</strong></div>
-                    <div>Assigned Date: {assetDetails.currentAssignment.assignedAt}</div>
-                    <div style={{ fontStyle: "italic", marginTop: "4px" }}>"{assetDetails.currentAssignment.remarks}"</div>
-                    <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-                      <button style={styles.secondaryBtn} onClick={() => setShowAssignForm(!showAssignForm)}>Re-assign Custodian</button>
-                      <button style={{ ...styles.secondaryBtn, color: "#ef4444" }} onClick={handleReturnSubmit}>Return Custody</button>
-                    </div>
+              {/* Conditional Edit Form Rendering */}
+              {isEditing ? (
+                <form onSubmit={handleEditSubmit} style={styles.form}>
+                  <div style={{ ...styles.panelTitle, fontSize: "0.88rem", borderBottom: "1px dashed #cbd5e1", paddingBottom: "6px", display: "flex", justifyContent: "space-between" }}>
+                    <span>Edit Asset Specifications</span>
+                    <button type="button" style={{ ...styles.secondaryBtn, fontSize: "0.72rem", padding: "4px 8px" }} onClick={() => setIsEditing(false)}>Cancel</button>
                   </div>
-                ) : (
-                  <div style={{ fontSize: "0.8rem", marginTop: "5px", color: "#94a3b8" }}>
-                    Unassigned. Kept in store room.
-                    <button style={{ ...styles.primaryBtn, width: "100%", marginTop: "10px" }} onClick={() => setShowAssignForm(!showAssignForm)}>Assign Custodian</button>
-                  </div>
-                )}
-              </div>
-
-              {/* Custody Checkout Employee Form */}
-              {showAssignForm && (
-                <form onSubmit={handleAssignSubmit} style={{ ...styles.form, marginTop: "10px" }}>
+                  
                   <div style={styles.formGroup}>
-                    <label style={styles.label}>Select Custodian Employee</label>
-                    <select style={styles.input} required value={assignForm.employeeId} onChange={e => setAssignForm({ ...assignForm, employeeId: e.target.value })}>
-                      <option value="">Choose Employee</option>
-                      {assetMetadata?.employees.map(emp => <option key={emp.id} value={emp.id}>{emp.full_name}</option>)}
+                    <label style={styles.label}>Asset Name</label>
+                    <input style={styles.input} required value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Asset Type</label>
+                    {activeAssetEditTypes.length > 0 ? (
+                      <select style={styles.input} value={editForm.assetType} onChange={e => setEditForm({ ...editForm, assetType: e.target.value })}>
+                        {activeAssetEditTypes.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
+                      </select>
+                    ) : (
+                      <input style={styles.input} required value={editForm.assetType} onChange={e => setEditForm({ ...editForm, assetType: e.target.value })} />
+                    )}
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Asset Code</label>
+                    <input style={styles.input} required value={editForm.code} onChange={e => setEditForm({ ...editForm, code: e.target.value })} />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Manufacturer Make/Brand</label>
+                    <input style={styles.input} value={editForm.makeBrand} onChange={e => setEditForm({ ...editForm, makeBrand: e.target.value })} />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Serial Number</label>
+                    <input style={styles.input} value={editForm.serialNo} onChange={e => setEditForm({ ...editForm, serialNo: e.target.value })} />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Star Efficiency Rating</label>
+                    <select style={styles.input} value={editForm.starRating} onChange={e => setEditForm({ ...editForm, starRating: e.target.value })}>
+                      {["1", "2", "3", "4", "5", ""].map(s => <option key={s} value={s}>{s ? `${s} Star` : "N/A"}</option>)}
                     </select>
                   </div>
+
                   <div style={styles.formGroup}>
-                    <label style={styles.label}>Issuance Comments</label>
-                    <input style={styles.input} placeholder="Laptop issued for client code deployment." value={assignForm.remarks} onChange={e => setAssignForm({ ...assignForm, remarks: e.target.value })} />
+                    <label style={styles.label}>Location / Premises</label>
+                    <select style={styles.input} value={editForm.locationId} onChange={e => setEditForm({ ...editForm, locationId: e.target.value })}>
+                      <option value="">Warehouse / Unallocated</option>
+                      {assetMetadata?.locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                    </select>
                   </div>
-                  <button style={styles.primaryBtn} type="submit">Assign Custodian</button>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Floor Number</label>
+                    <input style={styles.input} value={editForm.floorNumber} onChange={e => setEditForm({ ...editForm, floorNumber: e.target.value })} />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Room Number</label>
+                    <input style={styles.input} value={editForm.roomNumber} onChange={e => setEditForm({ ...editForm, roomNumber: e.target.value })} />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Purchase Date</label>
+                    <input style={styles.input} type="date" value={editForm.purchaseDate} onChange={e => setEditForm({ ...editForm, purchaseDate: e.target.value })} />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Per Unit Cost (₹)</label>
+                    <input style={styles.input} type="number" value={editForm.purchaseCost} onChange={e => setEditForm({ ...editForm, purchaseCost: e.target.value })} />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Invoice Number</label>
+                    <input style={styles.input} value={editForm.invoiceNo} onChange={e => setEditForm({ ...editForm, invoiceNo: e.target.value })} />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Invoice Vendor</label>
+                    <input style={styles.input} value={editForm.invoiceCompany} onChange={e => setEditForm({ ...editForm, invoiceCompany: e.target.value })} />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>GST Rate (%)</label>
+                    <input style={styles.input} type="number" value={editForm.gstRate} onChange={e => setEditForm({ ...editForm, gstRate: e.target.value })} />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Depreciation Method</label>
+                    <select style={styles.input} value={editForm.depreciationMethod} onChange={e => setEditForm({ ...editForm, depreciationMethod: e.target.value })}>
+                      <option value="SLM">SLM (Straight Line)</option>
+                      <option value="WDV">WDV (Written Down Value)</option>
+                    </select>
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Depreciation Rate (%)</label>
+                    <input style={styles.input} type="number" step="0.1" value={editForm.depreciationRate} onChange={e => setEditForm({ ...editForm, depreciationRate: e.target.value })} />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Disposal Lifespan (Years)</label>
+                    <input style={styles.input} type="number" value={editForm.shortLifeYears} onChange={e => setEditForm({ ...editForm, shortLifeYears: e.target.value })} placeholder="Leave blank if unlimited" />
+                  </div>
+
+                  <button style={styles.primaryBtn} type="submit">Save Updates</button>
                 </form>
+              ) : (
+                <div>
+                  <div style={styles.detailHeader}>
+                    <div>
+                      <div style={styles.muted}>Extended Specs</div>
+                      <div style={styles.detailNo}>{assetDetails.basic.code}</div>
+                    </div>
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <button style={{ ...styles.secondaryBtn, color: "#0038a8", borderColor: "#0038a8" }} onClick={startEditing}>Edit details</button>
+                      <button style={{ ...styles.secondaryBtn, color: "#ef4444", borderColor: "#ef4444" }} onClick={() => setShowDisposeForm(!showDisposeForm)}>Dispose/Stolen</button>
+                      <button style={{ ...styles.secondaryBtn, color: "#94a3b8", borderColor: "#cbd5e1" }} onClick={handleArchiveSubmit}>Archive</button>
+                    </div>
+                  </div>
+
+                  {/* Short-Life Warning Alert */}
+                  {isShortLifeExpired && assetDetails.basic.status === "Active" && (
+                    <div style={styles.disposalAlert}>
+                      <strong>⚠️ Short-Life Disposal Alert</strong>
+                      <div>This asset has reached its defined lifespan of {assetDetails.basic.shortLifeYears} years (Purchased: {assetDetails.basic.purchaseDate}). Please coordinate disposal.</div>
+                    </div>
+                  )}
+
+                  {/* Dynamic SVGs Barcode Render Panel */}
+                  <div style={styles.descBox}>
+                    <div style={styles.muted}>Auto-Generated Scanner Barcode</div>
+                    <div style={{ marginTop: "10px" }}>
+                      <BarcodeRenderer value={assetDetails.basic.barcode || `${assetDetails.basic.code} | ${assetDetails.basic.location} | ${assetDetails.basic.purchaseDate}`} />
+                    </div>
+                  </div>
+
+                  {/* Specs parameters table */}
+                  <div style={styles.descBox}>
+                    <div style={styles.muted}>Asset Specifications Details</div>
+                    <div style={styles.specTable}>
+                      <div><strong>Asset Name:</strong> {assetDetails.basic.name}</div>
+                      <div><strong>Asset Type:</strong> {assetDetails.basic.assetType || "Other"}</div>
+                      <div><strong>Make Brand:</strong> {assetDetails.basic.makeBrand || "N/A"}</div>
+                      <div><strong>Serial Tag:</strong> {assetDetails.basic.serialNo || "N/A"}</div>
+                      <div><strong>Star Rating:</strong> {assetDetails.basic.starRating ? `${assetDetails.basic.starRating} Star` : "N/A"}</div>
+                      <div><strong>Floor Number:</strong> {assetDetails.basic.floorNumber || "N/A"}</div>
+                      <div><strong>Room Desk No:</strong> {assetDetails.basic.roomNumber || "N/A"}</div>
+                      <div><strong>Purchase Cost:</strong> ₹{Number(assetDetails.basic.purchaseCost).toLocaleString("en-IN")}</div>
+                      <div><strong>Purchase Qty:</strong> {assetDetails.basic.purchaseQty} Unit(s)</div>
+                      <div><strong>Warranty:</strong> {assetDetails.basic.warrantyExpiry || "N/A"} ({assetDetails.basic.warrantyMonths || 0} Months)</div>
+                      <div><strong>Invoice No:</strong> {assetDetails.basic.invoiceNo || "N/A"}</div>
+                      <div><strong>Invoice Vendor:</strong> {assetDetails.basic.invoiceCompany || "N/A"}</div>
+                      <div><strong>GST Type:</strong> {assetDetails.basic.gstType === "IGST" ? "IGST (Interstate)" : "CGST + SGST (Local)"}</div>
+                      {assetDetails.basic.gstType === "IGST" ? (
+                        <div><strong>IGST Amount:</strong> ₹{Number(assetDetails.basic.igstAmount).toFixed(2)} ({assetDetails.basic.igstRate}%)</div>
+                      ) : (
+                        <>
+                          <div><strong>CGST Amount:</strong> ₹{Number(assetDetails.basic.cgstAmount).toFixed(2)} ({assetDetails.basic.cgstRate}%)</div>
+                          <div><strong>SGST Amount:</strong> ₹{Number(assetDetails.basic.sgstAmount).toFixed(2)} ({assetDetails.basic.sgstRate}%)</div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Yearly Depreciation Ledger Card Table */}
+                  <div style={styles.descBox}>
+                    <div style={styles.muted}>Yearly Depreciation Ledger ({assetDetails.basic.depreciationMethod})</div>
+                    <div style={{ overflowX: "auto", marginTop: "10px" }}>
+                      <table style={styles.ledgerTable}>
+                        <thead>
+                          <tr>
+                            <th>Year</th>
+                            <th>Opening (₹)</th>
+                            <th>Depreciation (₹)</th>
+                            <th>Closing (₹)</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {depreciationSchedule.map(row => (
+                            <tr key={row.year}>
+                              <td><strong>{row.year}</strong></td>
+                              <td>{row.opening}</td>
+                              <td style={{ color: "#ef4444" }}>-{row.deduction}</td>
+                              <td><strong>{row.closing}</strong></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Location Transfer controls panel */}
+                  <div style={styles.descBox}>
+                    <div style={styles.detailHeader} style={{ borderBottom: "none", paddingBottom: 0, marginBottom: "8px" }}>
+                      <div style={styles.muted}>Premises Location custody</div>
+                      <button style={styles.secondaryBtn} onClick={() => setShowTransferForm(!showTransferForm)}>Transfer Asset</button>
+                    </div>
+                    
+                    {showTransferForm && (
+                      <form onSubmit={handleTransferSubmit} style={styles.embeddedForm}>
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Transfer Type</label>
+                          <select style={styles.input} value={transferForm.type} onChange={e => setTransferForm({ ...transferForm, type: e.target.value })}>
+                            <option value="Internal">Internal (Floor/Room location update)</option>
+                            <option value="External">External (Sister concern company shipment)</option>
+                          </select>
+                        </div>
+
+                        {transferForm.type === "Internal" ? (
+                          <>
+                            <div style={styles.formGroup}>
+                              <label style={styles.label}>Target Premises</label>
+                              <select style={styles.input} required value={transferForm.newLocationId} onChange={e => setTransferForm({ ...transferForm, newLocationId: e.target.value })}>
+                                <option value="">Select Premises Location</option>
+                                {assetMetadata?.locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                              </select>
+                            </div>
+                            <div style={styles.formGroup}>
+                              <label style={styles.label}>New Floor Level</label>
+                              <input style={styles.input} value={transferForm.newFloorNumber} onChange={e => setTransferForm({ ...transferForm, newFloorNumber: e.target.value })} placeholder="e.g. 3rd Floor" />
+                            </div>
+                            <div style={styles.formGroup}>
+                              <label style={styles.label}>New Room Desk No</label>
+                              <input style={styles.input} value={transferForm.newRoomNumber} onChange={e => setTransferForm({ ...transferForm, newRoomNumber: e.target.value })} placeholder="e.g. Room 302" />
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div style={styles.formGroup}>
+                              <label style={styles.label}>Sister Concern Company</label>
+                              <input style={styles.input} required value={transferForm.sisterCompany} onChange={e => setTransferForm({ ...transferForm, sisterCompany: e.target.value })} placeholder="e.g. Orion Logistics Pvt Ltd" />
+                            </div>
+                            <div style={styles.formGroup}>
+                              <label style={styles.label}>Destination Branch</label>
+                              <input style={styles.input} required value={transferForm.destinationBranch} onChange={e => setTransferForm({ ...transferForm, destinationBranch: e.target.value })} placeholder="e.g. Mumbai Hub" />
+                            </div>
+                            <div style={styles.formGroup}>
+                              <label style={styles.label}>Destination State</label>
+                              <select style={styles.input} value={transferForm.shippedState} onChange={e => setTransferForm({ ...transferForm, shippedState: e.target.value })}>
+                                {indianStates.map(s => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            </div>
+                          </>
+                        )}
+
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Transfer Audit notes</label>
+                          <input style={styles.input} placeholder="Reason for floor transfer or concern allocation." value={transferForm.notes} onChange={e => setTransferForm({ ...transferForm, notes: e.target.value })} />
+                        </div>
+
+                        <button style={styles.primaryBtn} type="submit">Log Transfer</button>
+                      </form>
+                    )}
+
+                    {/* Transfer History Timeline */}
+                    <div style={styles.timelineList}>
+                      {assetDetails.transferHistory?.map((item, index) => (
+                        <div key={index} style={styles.timelineItem}>
+                          <div style={styles.timelineHeader}>
+                            <strong>{item.type} Transfer</strong>
+                            <span style={styles.muted}>{item.transferDate}</span>
+                          </div>
+                          <div style={styles.timelineBody}>
+                            Moved from {item.oldLocation} ➡️ {item.newLocation}. <br/>
+                            <span style={{ fontSize: "0.72rem", fontStyle: "italic", color: "#64748b" }}>"{item.notes}"</span>
+                          </div>
+                        </div>
+                      ))}
+                      {(!assetDetails.transferHistory || assetDetails.transferHistory.length === 0) && (
+                        <div style={{ fontSize: "0.78rem", color: "#94a3b8", fontStyle: "italic" }}>No location transfers recorded.</div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Disposal / Loss Logging Form overlay */}
+                  {showDisposeForm && (
+                    <div style={styles.descBox}>
+                      <div style={styles.muted}>Disposal / Loss Report Logging</div>
+                      <form onSubmit={handleDisposeSubmit} style={styles.embeddedForm}>
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Status Category</label>
+                          <select style={styles.input} value={disposeForm.status} onChange={e => setDisposeForm({ ...disposeForm, status: e.target.value })}>
+                            <option value="Disposed">Disposed (End-of-life scrapped)</option>
+                            <option value="Stolen">Stolen (Asset lost/stolen)</option>
+                          </select>
+                        </div>
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Action Date</label>
+                          <input style={styles.input} type="date" value={disposeForm.disposeDate} onChange={e => setDisposeForm({ ...disposeForm, disposeDate: e.target.value })} />
+                        </div>
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Notes / Reason / FIR No</label>
+                          <input style={styles.input} required placeholder="FIR number or scrapper dealer receipt details." value={disposeForm.disposeReason} onChange={e => setDisposeForm({ ...disposeForm, disposeReason: e.target.value })} />
+                        </div>
+                        <button style={{ ...styles.primaryBtn, background: "#ef4444" }} type="submit">Complete Log</button>
+                      </form>
+                    </div>
+                  )}
+
+                  {/* Custody Employee checkout section */}
+                  <div style={styles.descBox}>
+                    <div style={styles.muted}>Current Employee Custody</div>
+                    {assetDetails.currentAssignment ? (
+                      <div style={{ fontSize: "0.8rem", marginTop: "5px" }}>
+                        <div>Custodian Employee: <strong>{assetDetails.currentAssignment.assignedTo}</strong></div>
+                        <div>Assigned Date: {assetDetails.currentAssignment.assignedAt}</div>
+                        <div style={{ fontStyle: "italic", marginTop: "4px" }}>"{assetDetails.currentAssignment.remarks}"</div>
+                        <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                          <button style={styles.secondaryBtn} onClick={() => setShowAssignForm(!showAssignForm)}>Re-assign Custodian</button>
+                          <button style={{ ...styles.secondaryBtn, color: "#ef4444" }} onClick={handleReturnSubmit}>Return Custody</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: "0.8rem", marginTop: "5px", color: "#94a3b8" }}>
+                        Unassigned. Kept in store room.
+                        <button style={{ ...styles.primaryBtn, width: "100%", marginTop: "10px" }} onClick={() => setShowAssignForm(!showAssignForm)}>Assign Custodian</button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Custody Checkout Employee Form */}
+                  {showAssignForm && (
+                    <form onSubmit={handleAssignSubmit} style={{ ...styles.form, marginTop: "10px" }}>
+                      <div style={styles.formGroup}>
+                        <label style={styles.label}>Select Custodian Employee</label>
+                        <select style={styles.input} required value={assignForm.employeeId} onChange={e => setAssignForm({ ...assignForm, employeeId: e.target.value })}>
+                          <option value="">Choose Employee</option>
+                          {assetMetadata?.employees.map(emp => <option key={emp.id} value={emp.id}>{emp.full_name}</option>)}
+                        </select>
+                      </div>
+                      <div style={styles.formGroup}>
+                        <label style={styles.label}>Issuance Comments</label>
+                        <input style={styles.input} placeholder="Laptop issued for client code deployment." value={assignForm.remarks} onChange={e => setAssignForm({ ...assignForm, remarks: e.target.value })} />
+                      </div>
+                      <button style={styles.primaryBtn} type="submit">Assign Custodian</button>
+                    </form>
+                  )}
+
+                  {/* Audits Checkout history timeline */}
+                  <div style={styles.timelineBox}>
+                    <div style={styles.muted}>Custody Issue Audit Trail</div>
+                    <div style={styles.timelineList}>
+                      {assetDetails.assignmentHistory.map((item, index) => (
+                        <div key={index} style={styles.timelineItem}>
+                          <div style={styles.timelineHeader}>
+                            <strong>Returned</strong>
+                            <span style={styles.muted}>{item.returnedAt}</span>
+                          </div>
+                          <div style={styles.timelineBody}>Custodian: {item.assignedTo} (Assigned: {item.assignedAt}) — <em>"{item.remarks}"</em></div>
+                        </div>
+                      ))}
+                      {assetDetails.assignmentHistory.length === 0 && <div style={styles.empty}>No past custodian issuance history.</div>}
+                    </div>
+                  </div>
+
+                  {/* Documents warranties upload & listing */}
+                  <div style={styles.timelineBox}>
+                    <div style={styles.detailHeader} style={{ marginBottom: "10px", paddingBottom: "5px" }}>
+                      <div style={styles.muted}>Invoices & Warranties Files</div>
+                      <button style={styles.secondaryBtn} onClick={() => setShowUploadForm(!showUploadForm)}>+ Upload Doc</button>
+                    </div>
+
+                    {showUploadForm && (
+                      <form onSubmit={handleUploadSubmit} style={{ ...styles.form, marginBottom: "10px" }}>
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Doc Category</label>
+                          <select style={styles.input} value={uploadForm.category} onChange={e => setUploadForm({ ...uploadForm, category: e.target.value })}>
+                            {["Warranty", "Invoice", "Agreement", "Photo", "Insurance", "Manual", "Other"].map(c => <option key={c} value={c}>{c}</option>)}
+                          </select>
+                        </div>
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Select File</label>
+                          <input type="file" required style={styles.input} onChange={e => {
+                            const file = e.target.files?.[0];
+                            if (file) setUploadForm({ ...uploadForm, fileName: file.name, fileBlob: file });
+                          }} />
+                        </div>
+                        <button style={styles.primaryBtn} type="submit">Upload File</button>
+                      </form>
+                    )}
+
+                    <div style={styles.timelineList}>
+                      {assetDetails.documents.map((doc, index) => (
+                        <div key={index} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.78rem", borderBottom: "1px dashed #f1f5f9", paddingBottom: "8px" }}>
+                          <div>
+                            <strong>[{doc.category}]</strong> {doc.name}
+                          </div>
+                          <a href={doc.fileUrl} target="_blank" rel="noreferrer" style={{ color: "#0038a8", textDecoration: "none", fontWeight: 600 }}>Download</a>
+                        </div>
+                      ))}
+                      {assetDetails.documents.length === 0 && <div style={styles.empty}>No uploaded documents found.</div>}
+                    </div>
+                  </div>
+                </div>
               )}
-
-              {/* Audits Checkout history timeline */}
-              <div style={styles.timelineBox}>
-                <div style={styles.muted}>Custody Issue Audit Trail</div>
-                <div style={styles.timelineList}>
-                  {assetDetails.assignmentHistory.map((item, index) => (
-                    <div key={index} style={styles.timelineItem}>
-                      <div style={styles.timelineHeader}>
-                        <strong>Returned</strong>
-                        <span style={styles.muted}>{item.returnedAt}</span>
-                      </div>
-                      <div style={styles.timelineBody}>Custodian: {item.assignedTo} (Assigned: {item.assignedAt}) — <em>"{item.remarks}"</em></div>
-                    </div>
-                  ))}
-                  {assetDetails.assignmentHistory.length === 0 && <div style={styles.empty}>No past custodian issuance history.</div>}
-                </div>
-              </div>
-
-              {/* Documents warranties upload & listing */}
-              <div style={styles.timelineBox}>
-                <div style={styles.detailHeader} style={{ marginBottom: "10px", paddingBottom: "5px" }}>
-                  <div style={styles.muted}>Invoices & Warranties Files</div>
-                  <button style={styles.secondaryBtn} onClick={() => setShowUploadForm(!showUploadForm)}>+ Upload Doc</button>
-                </div>
-
-                {showUploadForm && (
-                  <form onSubmit={handleUploadSubmit} style={{ ...styles.form, marginBottom: "10px" }}>
-                    <div style={styles.formGroup}>
-                      <label style={styles.label}>Doc Category</label>
-                      <select style={styles.input} value={uploadForm.category} onChange={e => setUploadForm({ ...uploadForm, category: e.target.value })}>
-                        {["Warranty", "Invoice", "Agreement", "Photo", "Insurance", "Manual", "Other"].map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                    </div>
-                    <div style={styles.formGroup}>
-                      <label style={styles.label}>Select File</label>
-                      <input type="file" required style={styles.input} onChange={e => {
-                        const file = e.target.files?.[0];
-                        if (file) setUploadForm({ ...uploadForm, fileName: file.name, fileBlob: file });
-                      }} />
-                    </div>
-                    <button style={styles.primaryBtn} type="submit">Upload File</button>
-                  </form>
-                )}
-
-                <div style={styles.timelineList}>
-                  {assetDetails.documents.map((doc, index) => (
-                    <div key={index} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.78rem", borderBottom: "1px dashed #f1f5f9", paddingBottom: "8px" }}>
-                      <div>
-                        <strong>[{doc.category}]</strong> {doc.name}
-                      </div>
-                      <a href={doc.fileUrl} target="_blank" rel="noreferrer" style={{ color: "#0038a8", textDecoration: "none", fontWeight: 600 }}>Download</a>
-                    </div>
-                  ))}
-                  {assetDetails.documents.length === 0 && <div style={styles.empty}>No uploaded documents found.</div>}
-                </div>
-              </div>
             </div>
           )
         )}

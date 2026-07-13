@@ -14,9 +14,14 @@ export async function fetchAssets(filters = {}, page = 1, pageSize = 10) {
         asset_assignments (id, status, profiles (id, full_name))
       `, { count: 'exact' });
 
-    // Search query matches code or asset name
+    // Search query matches code, asset name, invoice number, or purchase date
     if (filters.search) {
-      query = query.or(`asset_code.ilike.%${filters.search}%,name.ilike.%${filters.search}%`);
+      const isDate = /^\d{4}-\d{2}-\d{2}$/.test(filters.search.trim());
+      if (isDate) {
+        query = query.or(`asset_code.ilike.%${filters.search}%,name.ilike.%${filters.search}%,invoice_no.ilike.%${filters.search}%,purchase_date.eq.${filters.search.trim()}`);
+      } else {
+        query = query.or(`asset_code.ilike.%${filters.search}%,name.ilike.%${filters.search}%,invoice_no.ilike.%${filters.search}%`);
+      }
     }
 
     // Category / Brand / Status / Location filters
@@ -77,7 +82,8 @@ export async function fetchAssets(filters = {}, page = 1, pageSize = 10) {
         starRating: asset.star_rating,
         makeBrand: asset.make_brand,
         roomNumber: asset.room_number,
-        floorNumber: asset.floor_number
+        floorNumber: asset.floor_number,
+        assetType: asset.asset_type
       };
     });
 
@@ -166,7 +172,8 @@ export async function fetchAssetDetails(assetId) {
         starRating: asset.star_rating,
         makeBrand: asset.make_brand,
         roomNumber: asset.room_number,
-        floorNumber: asset.floor_number
+        floorNumber: asset.floor_number,
+        assetType: asset.asset_type
       },
       currentAssignment: activeAssignment ? {
         id: activeAssignment.id,
@@ -295,7 +302,8 @@ export async function createAsset(assetData, tenantId) {
         star_rating: assetData.starRating || null,
         make_brand: assetData.makeBrand || null,
         room_number: assetData.roomNumber || null,
-        floor_number: assetData.floorNumber || null
+        floor_number: assetData.floorNumber || null,
+        asset_type: assetData.assetType || null
       })
       .select()
       .single();
@@ -344,6 +352,7 @@ export async function updateAsset(assetId, updates) {
         make_brand: updates.makeBrand || null,
         room_number: updates.roomNumber || null,
         floor_number: updates.floorNumber || null,
+        asset_type: updates.assetType || null,
         dispose_date: updates.disposeDate || null,
         dispose_reason: updates.disposeReason || null,
         is_stolen: updates.isStolen || false,
@@ -571,7 +580,8 @@ export async function importAssets(assetsArray, tenantId) {
       star_rating: asset.starRating || null,
       make_brand: asset.makeBrand || null,
       room_number: asset.roomNumber || null,
-      floor_number: asset.floorNumber || null
+      floor_number: asset.floorNumber || null,
+      asset_type: asset.assetType || null
     }));
 
     const { data, error } = await supabase
