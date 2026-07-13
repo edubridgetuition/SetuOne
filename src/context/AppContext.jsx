@@ -292,6 +292,7 @@ export function AppProvider({ children }) {
         email: authSession.user.email, 
         name: profile.full_name,
         companyId: profile.company_id,
+        companyName: profile.companies?.name || "Orion Corporate Park",
         branchId: profile.branch_id,
         departmentId: profile.department_id,
         tenantId: profile.companies?.tenant_id
@@ -301,7 +302,11 @@ export function AppProvider({ children }) {
     } else {
       const user = demoUsers[authSession.user.email];
       if (user) {
-        setSession({ email: authSession.user.email, name: user.name });
+        setSession({ 
+          email: authSession.user.email, 
+          name: user.name,
+          companyName: "Orion Corporate Park"
+        });
         setActiveTenant(user.tenant);
         setActiveRole(user.role);
       } else {
@@ -311,6 +316,7 @@ export function AppProvider({ children }) {
           email: authSession.user.email,
           name: authSession.user.user_metadata?.full_name || authSession.user.email.split('@')[0],
           companyId: authSession.user.user_metadata?.company_id || null,
+          companyName: authSession.user.user_metadata?.company_name || "Orion Corporate Park",
           branchId: authSession.user.user_metadata?.branch_id || null,
           tenantId: "orion"
         });

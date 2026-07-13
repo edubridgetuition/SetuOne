@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { useApp } from "../context/appContextCore";
 import { demoUsers } from "../data/appData";
+import { MdVisibility, MdVisibilityOff } from "react-icons/md";
 
 export default function LoginPage() {
   const { login, signup } = useApp();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [error, setError] = useState("");
@@ -119,7 +121,36 @@ export default function LoginPage() {
             </div>
             <div style={styles.formGroup}>
               <label style={styles.label}>PASSWORD</label>
-              <input style={styles.input} type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
+              <div style={{ position: "relative", width: "100%" }}>
+                <input 
+                  style={{ ...styles.input, paddingRight: "40px" }} 
+                  type={showPassword ? "text" : "password"} 
+                  value={password} 
+                  onChange={e => setPassword(e.target.value)} 
+                  placeholder="••••••••" 
+                  required 
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: "absolute",
+                    right: "12px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "#64748b",
+                    padding: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center"
+                  }}
+                >
+                  {showPassword ? <MdVisibilityOff size={18} /> : <MdVisibility size={18} />}
+                </button>
+              </div>
             </div>
             <button style={styles.btnLogin} type="submit">
               {isSignUp ? "Sign up" : "Sign in"} <span>→</span>
