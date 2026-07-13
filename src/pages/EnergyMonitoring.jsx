@@ -266,26 +266,64 @@ export default function EnergyMonitoring() {
 
         cropCtx.drawImage(canvas, minX, minY, croppedWidth, croppedHeight, 0, 0, croppedWidth, croppedHeight);
 
-        // Grayscale and contrast boosting (Let Tesseract's built-in Otsu's binarizer do thresholding)
+        // 1. Convert cropped image region to grayscale
         const cropData = cropCtx.getImageData(0, 0, croppedWidth, croppedHeight);
         const cPixels = cropData.data;
-        const contrastFactor = 1.6; // Boost text clarity
-
+        const grayData = new Uint8ClampedArray(croppedWidth * croppedHeight);
+        
         for (let i = 0; i < cPixels.length; i += 4) {
           const r = cPixels[i];
           const g = cPixels[i + 1];
           const b = cPixels[i + 2];
-          
-          // Grayscale conversion
-          const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+          grayData[i / 4] = 0.299 * r + 0.587 * g + 0.114 * b;
+        }
 
-          // Contrast enhancement: factor * (gray - 128) + 128
-          let enhanced = contrastFactor * (gray - 128) + 128;
-          enhanced = Math.max(0, Math.min(255, enhanced));
+        // 2. Bradley-Roth Local Adaptive Thresholding using Integral Image
+        // Compare each pixel to the average of its surrounding S x S block.
+        // If it is 15% darker than local average, mark as black text (0), else white background (255).
+        const S = Math.round(Math.max(croppedWidth, croppedHeight) / 8) || 16; // local block size
+        const T = 0.15; // threshold tolerance offset
+        
+        const integral = new Float64Array(croppedWidth * croppedHeight);
+        for (let y = 0; y < croppedHeight; y++) {
+          let sum = 0;
+          for (let x = 0; x < croppedWidth; x++) {
+            const idx = y * croppedWidth + x;
+            sum += grayData[idx];
+            if (y === 0) {
+              integral[idx] = sum;
+            } else {
+              integral[idx] = integral[(y - 1) * croppedWidth + x] + sum;
+            }
+          }
+        }
 
-          cPixels[i] = enhanced;
-          cPixels[i + 1] = enhanced;
-          cPixels[i + 2] = enhanced;
+        for (let y = 0; y < croppedHeight; y++) {
+          for (let x = 0; x < croppedWidth; x++) {
+            const idx = y * croppedWidth + x;
+            
+            const x1 = Math.max(0, x - Math.round(S / 2));
+            const x2 = Math.min(croppedWidth - 1, x + Math.round(S / 2));
+            const y1 = Math.max(0, y - Math.round(S / 2));
+            const y2 = Math.min(croppedHeight - 1, y + Math.round(S / 2));
+            
+            const count = (x2 - x1 + 1) * (y2 - y1 + 1);
+            
+            const iA = y1 > 0 && x1 > 0 ? integral[(y1 - 1) * croppedWidth + (x1 - 1)] : 0;
+            const iB = y1 > 0 ? integral[(y1 - 1) * croppedWidth + x2] : 0;
+            const iC = x1 > 0 ? integral[y2 * croppedWidth + (x1 - 1)] : 0;
+            const iD = integral[y2 * croppedWidth + x2];
+            const sum = iD - iB - iC + iA;
+            
+            const pixelVal = grayData[idx];
+            // If pixel is 15% darker than local mean, set to black (0), else white (255)
+            const val = (pixelVal * count) < (sum * (1.0 - T)) ? 0 : 255;
+            
+            const pixelIdx = idx * 4;
+            cPixels[pixelIdx] = val;
+            cPixels[pixelIdx + 1] = val;
+            cPixels[pixelIdx + 2] = val;
+          }
         }
 
         cropCtx.putImageData(cropData, 0, 0);
