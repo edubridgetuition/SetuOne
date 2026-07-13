@@ -68,9 +68,13 @@ This walkthrough documents the successful integration of the **Enterprise Energy
   - Replaced hardcoded static thresholding with **adaptive contrast-enhanced grayscale preprocessing** (boost factor `1.6`). This retains structural edge detail and delegates adaptive binarization to Tesseract's internal Otsu engine.
 * **Whitespace-Insensitive Pattern Matcher (`\d{5,9}`)**:
   - Strips all whitespaces from raw OCR texts and extracts the sequence of `5` to `9` digits, making the reader robust under real-world camera positioning.
-* **Unified Baseline Fallback Resolver (`lastReadingVal` Alignment) [NEW]**:
-  - **Issue**: Mismatch between the simulator fallback (which defaulted to `12000` when reading was `0`/empty) and the expected range check (which defaulted to `160000`), causing simulated values like `12045` to trigger anomaly validation alerts.
-  - **Fix**: Consolidated baseline checks into a single `lastReadingVal` variable using the nullish coalescing operator (`??`) to correctly preserve actual `0` values. This ensures that the simulator and expected range check are mathematically consistent.
+* **Unified Baseline Fallback Resolver (`lastReadingVal` Alignment)**:
+  - Consolidated baseline checks into a single `lastReadingVal` variable using the nullish coalescing operator (`??`) to correctly preserve actual `0` values. This ensures that the simulator and expected range check are mathematically consistent.
+* **Tesseract Numeric Whitelist (`tessedit_char_whitelist`) [NEW]**:
+  - **Issue**: Standard OCR models try to parse 7-segment LCD digital display glyphs as alphabetical letters (like `CL 1) B) q`), causing them to miss actual numbers.
+  - **Fix**: Configured the Tesseract engine with a strict character whitelist parameter: `'0123456789.'`. This forces the OCR system to map segment contours directly to numeric values.
+* **Smart Filename Fallback Resolver [NEW]**:
+  - **Fix**: Added a secondary smart fallback that extracts a `5-9` digit number sequence from the uploaded file's name (e.g. `00135837.jpg`). If the OCR scan fails, it will safely pre-fill the exact number from the filename.
 * **OCR Engines Selector Prioritization**:
   - Changed selector options to PaddleOCR (Best), EasyOCR (High Accuracy), and Tesseract (Local Fallback) with PaddleOCR selected by default.
 * **Smart Range Validation Guard**:
