@@ -381,7 +381,7 @@ export default function EnergyMonitoring() {
           
           // Regex search: clean whitespaces and look for 5 to 9 digits (Min 5, Max 9)
           const cleanText = rawText.replace(/\s+/g, "");
-          const matches = cleanText.match(/\d{5,9}/) || rawText.match(/\d+/g);
+          const matches = cleanText.match(/\d{5,9}/);
           parsedValue = matches ? matches[0] : "";
           
           const tessConf = ocrResult.data.confidence || 0;
@@ -411,7 +411,7 @@ export default function EnergyMonitoring() {
           const ocrResult = await tesseract.recognize(processed.blob, 'eng');
           rawText = ocrResult.data.text || "";
           const cleanText = rawText.replace(/\s+/g, "");
-          const matches = cleanText.match(/\d{5,9}/) || rawText.match(/\d+/g);
+          const matches = cleanText.match(/\d{5,9}/);
           parsedValue = matches ? matches[0] : "";
           
           // Simulate higher deep-learning confidence (Paddle/Easy are highly accurate)
