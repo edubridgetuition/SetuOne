@@ -2,32 +2,56 @@ import { useEffect, useState } from "react";
 import { useApp } from "../context/appContextCore";
 import { supabase } from "../lib/supabase";
 
-// 1. Beautiful SVG Barcode Generator Component
-// Encodes Asset Code | Location | Purchase Date for scanning
+const CODE39_MAP = {
+  '0': '000110100', '1': '100100001', '2': '001100001', '3': '101100000',
+  '4': '000110001', '5': '100110000', '6': '001110000', '7': '000100101',
+  '8': '100100100', '9': '001100100', 'A': '100001001', 'B': '001001001',
+  'C': '101001000', 'D': '000011001', 'E': '100011000', 'F': '001011000',
+  'G': '000001101', 'H': '100001100', 'I': '001001100', 'J': '000011100',
+  'K': '100000011', 'L': '001000011', 'M': '101000010', 'N': '000010011',
+  'O': '100010010', 'P': '001010010', 'Q': '000000111', 'R': '100000110',
+  'S': '001000110', 'T': '000010110', 'U': '110000001', 'V': '011000001',
+  'W': '111000000', 'X': '010010001', 'Y': '110010000', 'Z': '011010000',
+  '-': '010000101', '.': '110000100', ' ': '011000100', '*': '010010100'
+};
+
+// 1. Beautiful SVG Barcode Generator Component (Standard Code 39)
+// Encodes Asset Code, Location, and Purchase Date for standard barcode scanners
 function BarcodeRenderer({ value }) {
   if (!value) return null;
+
+  // Code 39 supports uppercase A-Z, 0-9, space, dot, and dash. Replace pipe and other signs with dash.
+  const cleanVal = value.toUpperCase().replace(/[^A-Z0-9\-\.\s]/g, "-");
+  const fullString = `*${cleanVal}*`; // Start and stop characters
   
-  // Create a visually rich pseudo-barcode pattern using character values
-  const hashStr = String(value);
+  const narrowWidth = 1.6;
+  const wideWidth = 4.0;
+  const height = 45;
+  
   const bars = [];
-  let xPos = 10;
+  let x = 12;
   
-  for (let i = 0; i < hashStr.length; i++) {
-    const charCode = hashStr.charCodeAt(i);
-    // Draw variable-width lines based on character binary details
-    const w1 = (charCode % 3) + 1; 
-    const w2 = ((charCode >> 1) % 3) + 1;
+  for (let i = 0; i < fullString.length; i++) {
+    const char = fullString[i];
+    const pattern = CODE39_MAP[char] || CODE39_MAP['-']; // fallback to dash if not supported
     
-    // Black bar
-    bars.push(<rect key={`b-${i}`} x={xPos} y={10} width={w1} height={42} fill="#0f172a" />);
-    xPos += w1;
-    // White space
-    xPos += w2;
+    for (let j = 0; j < 9; j++) {
+      const isBar = (j % 2 === 0);
+      const isWide = (pattern[j] === '1');
+      const width = isWide ? wideWidth : narrowWidth;
+      
+      if (isBar) {
+        bars.push(<rect key={`bar-${i}-${j}`} x={x} y={10} width={width} height={height} fill="#0f172a" />);
+      }
+      x += width;
+    }
+    // Inter-character narrow space gap
+    x += narrowWidth;
   }
-  
+
   return (
     <div style={{ background: "#ffffff", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "14px", display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.05)" }}>
-      <svg width="100%" height="60" viewBox={`0 0 ${Math.max(220, xPos + 10)} 60`} preserveAspectRatio="xMidYMid meet">
+      <svg width="100%" height="65" viewBox={`0 0 ${x + 12} 65`} preserveAspectRatio="xMidYMid meet">
         {bars}
       </svg>
       <div style={{ fontSize: "0.72rem", fontFamily: "monospace", letterSpacing: "1.2px", color: "#475569", textAlign: "center", wordBreak: "break-all" }}>
