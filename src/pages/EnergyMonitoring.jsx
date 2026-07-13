@@ -407,6 +407,7 @@ export default function EnergyMonitoring() {
 
       if (engineName === "Tesseract") {
         setRawOcrText("Initializing client-side Tesseract.js engine...");
+        let worker = null;
         try {
           const tesseract = await loadTesseract();
           setRawOcrText("Cropping and binarizing green backlit LCD display region...");
@@ -415,10 +416,16 @@ export default function EnergyMonitoring() {
           const processed = await preprocessImage(file);
           setProcessedPreviewUrl(processed.preview); // Save processed preview
           
-          setRawOcrText("Tesseract.js engine loaded. Extracting characters from preprocessed view...");
-          const ocrResult = await tesseract.recognize(processed.blob, 'eng', {
+          setRawOcrText("Initializing Tesseract.js worker with numeric whitelist...");
+          worker = await tesseract.createWorker();
+          await worker.loadLanguage('eng');
+          await worker.initialize('eng');
+          await worker.setParameters({
             tessedit_char_whitelist: '0123456789.'
           });
+
+          setRawOcrText("Tesseract.js worker ready. Extracting digits from preprocessed view...");
+          const ocrResult = await worker.recognize(processed.blob);
           rawText = ocrResult.data.text || "";
           
           console.log("Raw Tesseract Text:", rawText);
@@ -447,10 +454,19 @@ export default function EnergyMonitoring() {
           }
           confidence = 0.88;
           rawText = `[Fallback Simulator Mode]\nReason: ${ocrErr.message}`;
+        } finally {
+          if (worker) {
+            try {
+              await worker.terminate();
+            } catch (termErr) {
+              console.warn("Failed to terminate worker:", termErr);
+            }
+          }
         }
       } else {
         // PaddleOCR (Best) & EasyOCR Cloud Simulator (with Tesseract hybrid validation)
         setRawOcrText(`Connecting to cloud ${engineName} pipeline...`);
+        let worker = null;
         try {
           // Preprocess local image to display crop
           const processed = await preprocessImage(file);
@@ -458,9 +474,14 @@ export default function EnergyMonitoring() {
           
           // Try local engine as pre-check hybrid
           const tesseract = await loadTesseract();
-          const ocrResult = await tesseract.recognize(processed.blob, 'eng', {
+          worker = await tesseract.createWorker();
+          await worker.loadLanguage('eng');
+          await worker.initialize('eng');
+          await worker.setParameters({
             tessedit_char_whitelist: '0123456789.'
           });
+
+          const ocrResult = await worker.recognize(processed.blob);
           rawText = ocrResult.data.text || "";
           const cleanText = rawText.replace(/[^0-9]/g, "");
           const matches = cleanText.match(/\d{5,9}/);
@@ -483,6 +504,14 @@ export default function EnergyMonitoring() {
           }
           confidence = 0.96;
           rawText = `[Simulated ${engineName} pipeline output]`;
+        } finally {
+          if (worker) {
+            try {
+              await worker.terminate();
+            } catch (termErr) {
+              console.warn("Failed to terminate worker:", termErr);
+            }
+          }
         }
       }
 
