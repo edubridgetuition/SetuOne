@@ -6,7 +6,7 @@ This walkthrough documents the successful integration of the **Enterprise Energy
 
 ## 🚀 Accomplished Tasks
 
-### 1. Database Seed Migration (`database/16_EnergyMonitoring.sql`, `database/17_EnergyOCRv2.sql`, `database/18_DynamicSignUp.sql`, & `database/19_EnergyVoidDuplicates.sql` [NEW])
+### 1. Database Seed Migration (`database/16_EnergyMonitoring.sql`, `database/17_EnergyOCRv2.sql`, `database/18_DynamicSignUp.sql`, & `database/19_EnergyVoidDuplicates.sql`)
 * **`energy_meters` Table**: Stores core hardware properties (unit type, installation date, capacity, status, serial numbers, and custom tariff rates like `₹8.50/Unit` per meter).
 * **`energy_meter_ocr_profiles` Table**:
   - Dynamically registers specifications for each meter type (e.g. `UGVCL Smart Meter`, `DG Generator Meter`).
@@ -24,7 +24,7 @@ This walkthrough documents the successful integration of the **Enterprise Energy
 * **`handle_new_user()` Trigger Function Update (`database/18_DynamicSignUp.sql`)**:
   - Upgraded trigger to dynamically create new **Companies** and default **Branches** if user metadata contains a `company_name` string.
   - Links user profiles seamlessly during client admin registration.
-* **Kolkata Timezone Safe Deduplication & Constraints (`database/19_EnergyVoidDuplicates.sql` [NEW])**:
+* **Kolkata Timezone Safe Deduplication & Constraints (`database/19_EnergyVoidDuplicates.sql`)**:
   - Added `is_void` boolean column (default false) to mark obsolete readings.
   - Auto-voids duplicate readings for same day/slot (retains the latest entry).
   - Created unique partial index constraint checking: `meter_id`, timezone-safe `public.get_kolkata_date(reading_datetime)`, and `reading_slot` when `is_void = FALSE` to prevent duplicate slot uploads on same day.
@@ -64,12 +64,13 @@ This walkthrough documents the successful integration of the **Enterprise Energy
 * **SHA-256 Web Crypto Image Fingerprinting**:
   - Computes the SHA-256 hash of the photograph in the browser using Web Crypto API.
   - Instantly checks the database. If duplicate detected, alerts: **"This image was already uploaded today. Please upload a fresh photograph."** and blocks the upload.
-* **Contrast-Enhanced Adaptive OCR Preprocessing [NEW]**:
-  - **Issue**: Standard static thresholding (`threshold = 120`) was causing LCD cropped regions to completely blackout/whiteout under extreme glare or zoom conditions, leading to local check failures and forced simulated fallback triggers.
-  - **Fix**: Replaced hardcoded static thresholding with **adaptive contrast-enhanced grayscale preprocessing** (boost factor `1.6`). This retains structural edge detail and delegates adaptive binarization to Tesseract's internal Otsu engine.
-* **Whitespace-Insensitive Pattern Matcher (`\d{5,9}`) [NEW]**:
-  - **Issue**: The strict `\b\d{5,8}\b` regex boundary failed when unit text (`"kWh"`) or noise was adjacent to numbers (e.g. `"166500kWh"`).
-  - **Fix**: Strips all whitespaces from raw OCR texts and extracts the sequence of `5` to `9` digits, making the reader robust under real-world camera positioning.
+* **Contrast-Enhanced Adaptive OCR Preprocessing**:
+  - Replaced hardcoded static thresholding with **adaptive contrast-enhanced grayscale preprocessing** (boost factor `1.6`). This retains structural edge detail and delegates adaptive binarization to Tesseract's internal Otsu engine.
+* **Whitespace-Insensitive Pattern Matcher (`\d{5,9}`)**:
+  - Strips all whitespaces from raw OCR texts and extracts the sequence of `5` to `9` digits, making the reader robust under real-world camera positioning.
+* **Unified Baseline Fallback Resolver (`lastReadingVal` Alignment) [NEW]**:
+  - **Issue**: Mismatch between the simulator fallback (which defaulted to `12000` when reading was `0`/empty) and the expected range check (which defaulted to `160000`), causing simulated values like `12045` to trigger anomaly validation alerts.
+  - **Fix**: Consolidated baseline checks into a single `lastReadingVal` variable using the nullish coalescing operator (`??`) to correctly preserve actual `0` values. This ensures that the simulator and expected range check are mathematically consistent.
 * **OCR Engines Selector Prioritization**:
   - Changed selector options to PaddleOCR (Best), EasyOCR (High Accuracy), and Tesseract (Local Fallback) with PaddleOCR selected by default.
 * **Smart Range Validation Guard**:
