@@ -317,15 +317,30 @@ export function AppProvider({ children }) {
         
         // Fetch live company fallback
         try {
-          const { data: cos } = await supabase.from('companies').select('id, name').limit(1);
-          if (cos && cos.length > 0) {
-            resolvedCompanyId = cos[0].id;
-            resolvedCompanyName = cos[0].name;
-          } else {
-            resolvedCompanyId = "77f72677-a422-44f5-a1c7-62716923cb45"; // Seed fallback
+          // 1. Try to get it from purchase_requests
+          const { data: prs } = await supabase.from('purchase_requests').select('company_id').limit(1);
+          if (prs && prs.length > 0 && prs[0].company_id) {
+            resolvedCompanyId = prs[0].company_id;
+          }
+          
+          // 2. Try to get it from vendors
+          if (!resolvedCompanyId) {
+            const { data: vends } = await supabase.from('vendors').select('company_id').limit(1);
+            if (vends && vends.length > 0 && vends[0].company_id) {
+              resolvedCompanyId = vends[0].company_id;
+            }
+          }
+          
+          // 3. Try to get it from companies table
+          if (!resolvedCompanyId) {
+            const { data: cos } = await supabase.from('companies').select('id, name').limit(1);
+            if (cos && cos.length > 0) {
+              resolvedCompanyId = cos[0].id;
+              resolvedCompanyName = cos[0].name;
+            }
           }
         } catch (e) {
-          resolvedCompanyId = "77f72677-a422-44f5-a1c7-62716923cb45";
+          console.warn("Error resolving fallback company:", e);
         }
 
         const fallbackRoleName = authSession.user.user_metadata?.role || "Admin Manager";
