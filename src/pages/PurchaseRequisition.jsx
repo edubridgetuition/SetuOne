@@ -269,6 +269,38 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
     }
   }
 
+  async function handleResubmitPR() {
+    if (!selectedId) return;
+    if (confirm("Are you sure you want to resubmit this requisition for manager approval?")) {
+      const updatedPayload = {
+        ...(selectedPR.payload || {}),
+        query_raised: false,
+        resubmitted_at: new Date().toISOString()
+      };
+
+      const { error } = await supabase
+        .from('purchase_requests')
+        .update({
+          status: 'Pending Approval',
+          payload: updatedPayload,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', selectedId);
+
+      if (error) {
+        alert("Failed to resubmit requisition: " + error.message);
+      } else {
+        alert("Requisition resubmitted successfully for manager approval!");
+        await triggerInboxNotification(
+          "PR Resubmitted",
+          `Requisition ${selectedPR.no} has been resubmitted by the owner and is pending manager approval.`
+        );
+        setSelectedId(null);
+        await loadPurchaseRequests();
+      }
+    }
+  }
+
   async function handleSelectQuotation(quoteId) {
     if (!selectedId) return;
     if (confirm("Proceed to approve this quote and generate PO?")) {
@@ -791,6 +823,24 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
                       </button>
                     </form>
                   )}
+                </div>
+              )}
+
+              {/* Owner action: Resubmit Requisition */}
+              {selectedPR.status === "Draft" && selectedPR.payload?.query_raised && (
+                <div style={styles.descBox}>
+                  <div style={styles.muted}>Requisition Action Needed</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginTop: "10px" }}>
+                    <p style={{ fontSize: "0.78rem", color: "#64748b", margin: 0 }}>
+                      Please review the query remarks above. You can resubmit this request for manager approval once corrected.
+                    </p>
+                    <button 
+                      style={{ ...styles.primaryBtn, background: "#0038a8", width: "100%" }}
+                      onClick={handleResubmitPR}
+                    >
+                      🔄 Resubmit Requisition
+                    </button>
+                  </div>
                 </div>
               )}
 
