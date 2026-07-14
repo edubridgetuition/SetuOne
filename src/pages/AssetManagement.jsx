@@ -15,14 +15,12 @@ const CODE39_MAP = {
   '-': '010000101', '.': '110000100', ' ': '011000100', '*': '010010100'
 };
 
-// 1. Beautiful SVG Barcode Generator Component (Standard Code 39)
-// Encodes Asset Code, Location, and Purchase Date for standard barcode scanners
+// Beautiful SVG Barcode Generator Component (Standard Code 39)
 function BarcodeRenderer({ value }) {
   if (!value) return null;
 
-  // Code 39 supports uppercase A-Z, 0-9, space, dot, and dash. Replace pipe and other signs with dash.
   const cleanVal = value.toUpperCase().replace(/[^A-Z0-9\-\.\s]/g, "-");
-  const fullString = `*${cleanVal}*`; // Start and stop characters
+  const fullString = `*${cleanVal}*`;
   
   const narrowWidth = 1.6;
   const wideWidth = 4.0;
@@ -33,7 +31,7 @@ function BarcodeRenderer({ value }) {
   
   for (let i = 0; i < fullString.length; i++) {
     const char = fullString[i];
-    const pattern = CODE39_MAP[char] || CODE39_MAP['-']; // fallback to dash if not supported
+    const pattern = CODE39_MAP[char] || CODE39_MAP['-'];
     
     for (let j = 0; j < 9; j++) {
       const isBar = (j % 2 === 0);
@@ -45,7 +43,6 @@ function BarcodeRenderer({ value }) {
       }
       x += width;
     }
-    // Inter-character narrow space gap
     x += narrowWidth;
   }
 
@@ -87,6 +84,7 @@ export default function AssetManagement() {
 
   // Filters and Pagination
   const [search, setSearch] = useState("");
+  const [divFilter, setDivFilter] = useState("");
   const [catFilter, setCatFilter] = useState("");
   const [brandFilter, setBrandFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -101,41 +99,78 @@ export default function AssetManagement() {
   const [showUploadForm, setShowUploadForm] = useState(false);
   const [showAddCategoryForm, setShowAddCategoryForm] = useState(false);
 
-  // Setup Admin dynamic category name
+  // Setup Admin dynamic category fields
   const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryDivision, setNewCategoryDivision] = useState("Facility Assets");
 
-  // Category Asset Types definition with default prefix mappings
+  // Hierarchical category lists and sub-type mappings
   const categoryAssetTypes = {
-    "Furniture": [
-      { name: "Chair", prefix: "CHR" },
-      { name: "Table", prefix: "TBL" },
-      { name: "Wardrobe", prefix: "WRD" },
-      { name: "Cupboard", prefix: "CPB" },
-      { name: "Round Table", prefix: "RTB" },
-      { name: "Square Table", prefix: "STB" },
-      { name: "Sofa", prefix: "SOF" },
-      { name: "Cabinet", prefix: "CAB" }
-    ],
-    "IT Asset": [
-      { name: "Laptop", prefix: "LAP" },
-      { name: "Monitor", prefix: "MON" },
-      { name: "CPU", prefix: "CPU" },
-      { name: "Mouse", prefix: "MSE" },
-      { name: "Keyboard", prefix: "KYB" },
-      { name: "Printer", prefix: "PRN" },
-      { name: "UPS", prefix: "UPS" },
-      { name: "Server", prefix: "SRV" },
-      { name: "Switch", prefix: "SWT" },
-      { name: "Router", prefix: "RTR" }
-    ],
+    // IT Assets
+    "Mobile": [{ name: "Mobile Phone", prefix: "MBL" }],
+    "SIM": [{ name: "SIM Card", prefix: "SIM" }],
+    "Laptop": [{ name: "Laptop", prefix: "LAP" }],
+    "Desktop": [{ name: "Desktop CPU/Workstation", prefix: "DSK" }],
+    "Monitor": [{ name: "LCD/LED Monitor", prefix: "MON" }],
+    "Printer": [{ name: "Printer/Scanner", prefix: "PRN" }],
+    "Networking": [{ name: "Network Switch/Router", prefix: "NET" }],
+    "CCTV": [{ name: "CCTV Camera/NVR", prefix: "CTV" }],
+    
+    // Facility Assets
     "HVAC": [
       { name: "Split AC", prefix: "SAC" },
       { name: "Cassette AC", prefix: "CAC" },
-      { name: "Window AC", prefix: "WAC" },
-      { name: "Tower AC", prefix: "TAC" },
+      { name: "Ductable AC", prefix: "DAC" },
+      { name: "VRV", prefix: "VRV" },
+      { name: "VRF", prefix: "VRF" },
       { name: "AHU", prefix: "AHU" },
-      { name: "Chiller", prefix: "CHL" }
-    ]
+      { name: "FCU", prefix: "FCU" },
+      { name: "Exhaust Fan", prefix: "EXH" },
+      { name: "Air Curtain", prefix: "ACU" },
+      { name: "Ventilation", prefix: "VNT" },
+      { name: "Compressor", prefix: "CMP" }
+    ],
+    "Electrical": [
+      { name: "UPS", prefix: "UPS" },
+      { name: "Inverter", prefix: "INV" },
+      { name: "Battery", prefix: "BAT" },
+      { name: "Stabilizer", prefix: "STB" },
+      { name: "Distribution Board", prefix: "DTB" },
+      { name: "Transformer", prefix: "TRF" },
+      { name: "LT Panel", prefix: "LTP" },
+      { name: "MCB", prefix: "MCB" },
+      { name: "ELCB", prefix: "ELC" },
+      { name: "Energy Meter", prefix: "ENM" },
+      { name: "DG Meter", prefix: "DGM" },
+      { name: "UGVCL Meter", prefix: "UGM" },
+      { name: "Others", prefix: "OTH" }
+    ],
+    "Machinery": [
+      { name: "Packing Machine", prefix: "PKM" },
+      { name: "Conveyor", prefix: "CVR" },
+      { name: "Compressor", prefix: "MAC" },
+      { name: "Pump", prefix: "PMP" },
+      { name: "Boiler", prefix: "BLR" },
+      { name: "Mixer", prefix: "MXR" },
+      { name: "RO Plant", prefix: "ROP" },
+      { name: "Generator", prefix: "GEN" },
+      { name: "Air Compressor", prefix: "ACP" },
+      { name: "Custom", prefix: "CST" }
+    ],
+    "Furniture": [
+      { name: "Office Chair", prefix: "OFC" },
+      { name: "Table", prefix: "TBL" },
+      { name: "Workstation", prefix: "WKS" },
+      { name: "Sofa", prefix: "SOF" },
+      { name: "Cupboard", prefix: "CPB" },
+      { name: "Locker", prefix: "LKR" },
+      { name: "Cabinet", prefix: "CAB" },
+      { name: "Rack", prefix: "RCK" },
+      { name: "Conference Table", prefix: "CFT" },
+      { name: "Others", prefix: "FUR" }
+    ],
+    "Vehicles": [{ name: "Vehicles", prefix: "VEH" }],
+    "Safety Equipment": [{ name: "Safety Equipment", prefix: "SFE" }],
+    "Others": [{ name: "Others", prefix: "OTH" }]
   };
 
   const indianStates = [
@@ -145,9 +180,10 @@ export default function AssetManagement() {
 
   // Forms states
   const [addForm, setAddForm] = useState({
+    division: "IT Assets",
     name: "",
     categoryId: "",
-    assetType: "Laptop",
+    assetType: "",
     customPrefix: "LAP",
     brandId: "",
     modelId: "",
@@ -170,18 +206,18 @@ export default function AssetManagement() {
     cgstAmount: "450",
     sgstAmount: "450",
     igstAmount: "0",
-    gstType: "CGST_SGST", // CGST_SGST or IGST
+    gstType: "CGST_SGST",
     manualTaxMode: false,
     branchState: "Gujarat",
     vendorState: "Gujarat",
 
     // Depreciation
     depreciationRate: "10.0",
-    depreciationMethod: "SLM", // SLM or WDV
-    shortLifeYears: "", // Optional, blank by default
+    depreciationMethod: "SLM",
+    shortLifeYears: "",
 
     // Extra specs
-    starRating: "5", // 1 to 5 Stars
+    starRating: "5",
     makeBrand: "",
     serialNo: ""
   });
@@ -224,7 +260,7 @@ export default function AssetManagement() {
   });
 
   const [transferForm, setTransferForm] = useState({
-    type: "Internal", // Internal or External
+    type: "Internal",
     newLocationId: "",
     newFloorNumber: "",
     newRoomNumber: "",
@@ -235,7 +271,7 @@ export default function AssetManagement() {
   });
 
   const [disposeForm, setDisposeForm] = useState({
-    status: "Disposed", // Disposed or Stolen
+    status: "Disposed",
     disposeDate: new Date().toISOString().split("T")[0],
     disposeReason: ""
   });
@@ -248,6 +284,45 @@ export default function AssetManagement() {
     loadAssetMetadata();
   }, []);
 
+  // Filter Categories dropdown based on Division Selection
+  const filteredCategories = assetMetadata?.categories.filter(c => {
+    if (c.division) {
+      return c.division === addForm.division;
+    }
+    const itCats = ["Mobile", "SIM", "Laptop", "Desktop", "Monitor", "Printer", "Networking", "CCTV"];
+    if (addForm.division === "IT Assets") {
+      return itCats.includes(c.name);
+    } else {
+      return !itCats.includes(c.name);
+    }
+  }) || [];
+
+  const filteredEditCategories = assetMetadata?.categories.filter(c => {
+    // For edit mode, we check category of edited item
+    const selectedCat = assetMetadata?.categories.find(cat => cat.id === editForm.categoryId);
+    const div = selectedCat?.division || "Facility Assets";
+    if (c.division) {
+      return c.division === div;
+    }
+    const itCats = ["Mobile", "SIM", "Laptop", "Desktop", "Monitor", "Printer", "Networking", "CCTV"];
+    if (div === "IT Assets") {
+      return itCats.includes(c.name);
+    } else {
+      return !itCats.includes(c.name);
+    }
+  }) || [];
+
+  useEffect(() => {
+    // When division changes, auto-select first category in that division
+    if (filteredCategories.length > 0) {
+      setAddForm(prev => ({
+        ...prev,
+        categoryId: filteredCategories[0].id
+      }));
+    }
+  }, [addForm.division, assetMetadata]);
+
+  // Load list on filters update
   useEffect(() => {
     loadAssets(
       {
@@ -282,14 +357,14 @@ export default function AssetManagement() {
   // Sync default options when metadata loads
   useEffect(() => {
     if (assetMetadata && !addForm.categoryId) {
-      const firstCat = assetMetadata.categories[0];
+      const firstCat = filteredCategories[0] || assetMetadata.categories[0];
       const defaultTypes = firstCat ? (categoryAssetTypes[firstCat.name] || []) : [];
       setAddForm(prev => ({
         ...prev,
         categoryId: firstCat?.id || "",
         brandId: assetMetadata.brands[0]?.id || "",
         modelId: assetMetadata.models[0]?.id || "",
-        locationId: "", // Optional, blank by default
+        locationId: "",
         assetType: defaultTypes[0]?.name || "Other",
         customPrefix: defaultTypes[0]?.prefix || "AST"
       }));
@@ -303,8 +378,13 @@ export default function AssetManagement() {
     if (!cat) return;
 
     const types = categoryAssetTypes[cat.name] || [];
-    const match = types.find(t => t.name === addForm.assetType);
-    
+    // Default assetType to first if not set or not matching
+    let currentType = addForm.assetType;
+    if (types.length > 0 && !types.find(t => t.name === currentType)) {
+      currentType = types[0].name;
+    }
+
+    const match = types.find(t => t.name === currentType);
     let prefix = "AST";
     if (match) {
       prefix = match.prefix;
@@ -312,7 +392,11 @@ export default function AssetManagement() {
       prefix = cat.name.slice(0, 3).toUpperCase();
     }
     
-    setAddForm(prev => ({ ...prev, customPrefix: prefix }));
+    setAddForm(prev => ({
+      ...prev,
+      assetType: currentType || "Other",
+      customPrefix: prefix
+    }));
   }, [addForm.categoryId, addForm.assetType, assetMetadata]);
 
   // Dynamic GST tax calculation logic
@@ -391,7 +475,7 @@ export default function AssetManagement() {
     }
   }, [editForm.manualTaxMode, editForm.purchaseCost, editForm.purchaseQty, editForm.gstRate, editForm.branchState, editForm.vendorState, isEditing]);
 
-  // Admin dynamic category addition
+  // Admin dynamic category addition with division setup
   async function handleAddCategorySubmit(e) {
     e.preventDefault();
     if (!newCategoryName.trim()) return;
@@ -400,6 +484,7 @@ export default function AssetManagement() {
       .from("asset_categories")
       .insert({
         name: newCategoryName.trim(),
+        division: newCategoryDivision,
         schema_definition: {}
       })
       .select()
@@ -408,7 +493,7 @@ export default function AssetManagement() {
     if (error) {
       alert("Failed to create category: " + error.message);
     } else {
-      alert(`Category "${newCategoryName.trim()}" added successfully.`);
+      alert(`Category "${newCategoryName.trim()}" registered under division "${newCategoryDivision}".`);
       setNewCategoryName("");
       setShowAddCategoryForm(false);
       loadAssetMetadata();
@@ -522,7 +607,7 @@ export default function AssetManagement() {
       const sequenceNum = baseNum + q;
       const generatedCode = `${prefix}-${String(sequenceNum).padStart(4, "0")}`;
       
-      const barcodeValue = `${generatedCode} | ${locationName} (Floor ${addForm.floorNumber || "N/A"}, Room ${addForm.roomNumber || "N/A"}) | ${addForm.purchaseDate}`;
+      const barcodeValue = `${generatedCode} | ${locationName} (Floor ${addForm.floorNumber || "N/A"}, Room ${addForm.roomNumber || "N/A"}) | ${addForm.purchaseDate || "N/A"}`;
 
       const res = await createAsset({
         code: generatedCode,
@@ -530,7 +615,7 @@ export default function AssetManagement() {
         categoryId: addForm.categoryId,
         brandId: addForm.brandId || null,
         modelId: addForm.modelId || null,
-        locationId: addForm.locationId || null, // Optional, blank by default
+        locationId: addForm.locationId || null,
         purchaseDate: addForm.purchaseDate || null,
         warrantyExpiry: addForm.purchaseDate ? new Date(new Date(addForm.purchaseDate).setMonth(new Date(addForm.purchaseDate).getMonth() + Number(addForm.warrantyMonths))).toISOString().split("T")[0] : null,
         purchaseCost: Number(addForm.purchaseCost || 0),
@@ -549,7 +634,7 @@ export default function AssetManagement() {
         gstType: addForm.gstType,
         depreciationRate: Number(addForm.depreciationRate || 10.0),
         depreciationMethod: addForm.depreciationMethod,
-        shortLifeYears: addForm.shortLifeYears ? Number(addForm.shortLifeYears) : null, // Optional
+        shortLifeYears: addForm.shortLifeYears ? Number(addForm.shortLifeYears) : null,
         starRating: addForm.starRating ? Number(addForm.starRating) : null,
         makeBrand: addForm.makeBrand || null,
         roomNumber: addForm.roomNumber || null,
@@ -720,7 +805,7 @@ export default function AssetManagement() {
     ].join(",");
 
     const row = [
-      "Office Executive Chair", "Furniture", "Chair", "CHR", "Godrej", "Ergonomic V2", "GD-CHR-987", "N/A",
+      "Office Executive Chair", "Furniture", "Office Chair", "OFC", "Godrej", "Ergonomic V2", "GD-OFC-987", "N/A",
       "2026-07-14", "4500", "5", "Main Office", "2nd Floor", "Room 205", "18", "15", "24"
     ].join(",");
 
@@ -750,7 +835,6 @@ export default function AssetManagement() {
 
       const importedRows = [];
       const defaultCatId = assetMetadata?.categories[0]?.id;
-      const defaultLocId = assetMetadata?.locations[0]?.id;
 
       for (let i = 1; i < lines.length; i++) {
         const cols = lines[i].split(",").map(c => c.trim().replace(/"/g, ""));
@@ -758,8 +842,8 @@ export default function AssetManagement() {
 
         const name = cols[0] || "Imported Asset";
         const catName = cols[1] || "Furniture";
-        const subType = cols[2] || "Chair";
-        const prefix = cols[3] || "CHR";
+        const subType = cols[2] || "Office Chair";
+        const prefix = cols[3] || "OFC";
         const makeBrand = cols[4] || "";
         const model = cols[5] || "";
         const serialNo = cols[6] || "";
@@ -897,13 +981,20 @@ export default function AssetManagement() {
           {/* Add Category Admin Form */}
           {showAddCategoryForm && (
             <form onSubmit={handleAddCategorySubmit} style={styles.form}>
-              <div style={styles.panelTitle} style={{ fontSize: "0.85rem", borderBottom: "1px dashed #e2e8f0", paddingBottom: "8px" }}>
+              <div style={{ ...styles.panelTitle, fontSize: "0.85rem", borderBottom: "1px dashed #e2e8f0", paddingBottom: "8px" }}>
                 Add New Asset Category (Admin Setup)
               </div>
               <div style={styles.formGrid}>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>New Category Name</label>
-                  <input style={styles.input} required value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="e.g. Mobile Phones, Handtools" />
+                  <input style={styles.input} required value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="e.g. Vehicles, Safety Equipment" />
+                </div>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Asset Division</label>
+                  <select style={styles.input} value={newCategoryDivision} onChange={e => setNewCategoryDivision(e.target.value)}>
+                    <option value="IT Assets">IT Assets</option>
+                    <option value="Facility Assets">Facility Assets</option>
+                  </select>
                 </div>
               </div>
               <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
@@ -919,11 +1010,21 @@ export default function AssetManagement() {
               <div style={{ ...styles.panelTitle, fontSize: "0.85rem", borderBottom: "1px dashed #e2e8f0", paddingBottom: "8px" }}>
                 Basic Specifications
               </div>
+              
+              {/* Asset Division (IT vs Facility) */}
               <div style={styles.formGrid}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Asset Division</label>
+                  <select style={styles.input} value={addForm.division} onChange={e => setAddForm({ ...addForm, division: e.target.value })}>
+                    <option value="IT Assets">IT Assets</option>
+                    <option value="Facility Assets">Facility Assets</option>
+                  </select>
+                </div>
+
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Asset Category</label>
                   <select style={styles.input} value={addForm.categoryId} onChange={e => setAddForm({ ...addForm, categoryId: e.target.value })}>
-                    {assetMetadata?.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {filteredCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
 
@@ -935,7 +1036,7 @@ export default function AssetManagement() {
                       {activeAssetTypes.map(s => <option key={s.name} value={s.name}>{s.name}</option>)}
                     </select>
                   ) : (
-                    <input style={styles.input} required value={addForm.assetType} onChange={e => setAddForm({ ...addForm, assetType: e.target.value })} placeholder="e.g. Printer, Scanner" />
+                    <input style={styles.input} required value={addForm.assetType} onChange={e => setAddForm({ ...addForm, assetType: e.target.value })} placeholder="e.g. Compressor, Generator" />
                   )}
                 </div>
 
@@ -1116,9 +1217,22 @@ export default function AssetManagement() {
           {/* Search, filters, and status controls toolbar */}
           <div style={styles.toolbar}>
             <input style={{ ...styles.filterSelect, flex: 1.5 }} placeholder="Search name, invoice, purchase date (YYYY-MM-DD)..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+            
+            <select style={styles.filterSelect} value={divFilter} onChange={e => { 
+              setDivFilter(e.target.value); 
+              setCatFilter(""); // reset category filter
+              setPage(1); 
+            }}>
+              <option value="">All Divisions</option>
+              <option value="IT Assets">IT Assets</option>
+              <option value="Facility Assets">Facility Assets</option>
+            </select>
+
             <select style={styles.filterSelect} value={catFilter} onChange={e => { setCatFilter(e.target.value); setPage(1); }}>
               <option value="">All Categories</option>
-              {assetMetadata?.categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {assetMetadata?.categories
+                .filter(c => !divFilter || c.division === divFilter)
+                .map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
             <select style={styles.filterSelect} value={brandFilter} onChange={e => { setBrandFilter(e.target.value); setPage(1); }}>
               <option value="">All Brands</option>
@@ -1213,6 +1327,13 @@ export default function AssetManagement() {
                   <div style={styles.formGroup}>
                     <label style={styles.label}>Asset Name</label>
                     <input style={styles.input} required value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Asset Category</label>
+                    <select style={styles.input} value={editForm.categoryId} onChange={e => setEditForm({ ...editForm, categoryId: e.target.value })}>
+                      {filteredEditCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
                   </div>
 
                   <div style={styles.formGroup}>

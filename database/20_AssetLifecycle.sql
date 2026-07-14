@@ -33,7 +33,34 @@ ADD COLUMN IF NOT EXISTS asset_type TEXT;
 ALTER TABLE public.assets DROP CONSTRAINT IF EXISTS assets_status_check;
 ALTER TABLE public.assets ADD CONSTRAINT assets_status_check CHECK (status IN ('Active', 'Repair', 'Scrapped', 'Inactive', 'Disposed', 'Stolen'));
 
--- 3. CREATE ASSET TRANSFERS LOG TABLE
+-- 3. ADD DIVISION COLUMN TO public.asset_categories
+ALTER TABLE public.asset_categories ADD COLUMN IF NOT EXISTS division TEXT DEFAULT 'Facility Assets' CHECK (division IN ('IT Assets', 'Facility Assets'));
+
+-- 4. SEED THE NEW SPECIFIC CATEGORIES UNDER EACH DIVISION FOR ALL TENANTS
+INSERT INTO public.asset_categories (tenant_id, name, division)
+SELECT t.id, cat.name, cat.division
+FROM public.tenants t
+CROSS JOIN (
+    VALUES 
+    ('Mobile', 'IT Assets'),
+    ('SIM', 'IT Assets'),
+    ('Laptop', 'IT Assets'),
+    ('Desktop', 'IT Assets'),
+    ('Monitor', 'IT Assets'),
+    ('Printer', 'IT Assets'),
+    ('Networking', 'IT Assets'),
+    ('CCTV', 'IT Assets'),
+    ('HVAC', 'Facility Assets'),
+    ('Electrical', 'Facility Assets'),
+    ('Machinery', 'Facility Assets'),
+    ('Furniture', 'Facility Assets'),
+    ('Vehicles', 'Facility Assets'),
+    ('Safety Equipment', 'Facility Assets'),
+    ('Others', 'Facility Assets')
+) AS cat(name, division)
+ON CONFLICT (tenant_id, name) DO UPDATE SET division = EXCLUDED.division;
+
+-- 5. CREATE ASSET TRANSFERS LOG TABLE
 CREATE TABLE IF NOT EXISTS public.asset_transfers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     asset_id UUID NOT NULL REFERENCES public.assets(id) ON DELETE CASCADE,
@@ -47,7 +74,7 @@ CREATE TABLE IF NOT EXISTS public.asset_transfers (
     transfer_date TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 4. ENABLE RLS FOR public.asset_transfers
+-- 6. ENABLE RLS FOR public.asset_transfers
 ALTER TABLE public.asset_transfers ENABLE ROW LEVEL SECURITY;
 
 -- DROP AND RECREATE RLS POLICIES TO PREVENT "ALREADY EXISTS" ERRORS

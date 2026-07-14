@@ -240,7 +240,7 @@ export async function fetchAssetDetails(assetId) {
 export async function fetchAssetMetadata() {
   try {
     const [cats, brands, models, locs, profiles] = await Promise.all([
-      supabase.from('asset_categories').select('id, name, schema_definition'),
+      supabase.from('asset_categories').select('id, name, division, schema_definition'),
       supabase.from('brands').select('id, name'),
       supabase.from('models').select('id, name, brand_id'),
       supabase.from('locations').select('id, name, location_type'),
