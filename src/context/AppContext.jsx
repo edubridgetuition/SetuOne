@@ -641,15 +641,23 @@ export function AppProvider({ children }) {
   }
 
   async function createPurchaseRequest(prData) {
-    if (!session) return null;
+    if (!session) return { success: false, message: "No active session." };
     const res = await apiCreatePurchaseRequest(prData, session.companyId, session.id);
     if (res.success) {
       await loadPurchaseRequests();
-      return res.data;
+      return {
+        ...res.data,
+        success: true,
+        data: res.data,
+        message: res.message || "PR created successfully."
+      };
     } else {
       alert("Error creating PR: " + res.message);
+      return {
+        success: false,
+        message: res.message
+      };
     }
-    return null;
   }
 
   async function updatePRStatus(prId, status) {
