@@ -24,7 +24,7 @@ function AppContent() {
 
   if (!session) return <LoginPage />;
 
-  const renderView = (activeView) => {
+  const renderView = () => {
     switch (activeView) {
       case "dashboard": return <Dashboard />;
       case "checklist": return <Checklist />;
