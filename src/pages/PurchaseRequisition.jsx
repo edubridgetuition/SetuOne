@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useApp } from "../context/appContextCore";
+import { supabase } from "../lib/supabase";
 
 export default function PurchaseRequisition({ viewMode = "pr" }) {
   const {
@@ -12,7 +13,8 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
     loadQuotations,
     submitQuotationComparison,
     purchaseOrders,
-    loadPurchaseOrders
+    loadPurchaseOrders,
+    triggerInboxNotification
   } = useApp();
 
   const [selectedId, setSelectedId] = useState(null);
@@ -28,6 +30,30 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
 
   // Remarks state for comparison selection
   const [comparisonRemarks, setComparisonRemarks] = useState("");
+
+  const [vendorsList, setVendorsList] = useState([]);
+  const [showAddQuote, setShowAddQuote] = useState(false);
+  const [quoteVendorId, setQuoteVendorId] = useState("");
+  const [quoteUnitPrices, setQuoteUnitPrices] = useState({});
+
+  // GRN States
+  const [showAddGRN, setShowAddGRN] = useState(false);
+  const [grnChallanNo, setGrnChallanNo] = useState("");
+  const [grnReceivedQtys, setGrnReceivedQtys] = useState({});
+  const [grnAcceptedQtys, setGrnAcceptedQtys] = useState({});
+
+  useEffect(() => {
+    async function loadVendors() {
+      const { data, error } = await supabase
+        .from('vendors')
+        .select('id, name')
+        .order('name', { ascending: true });
+      if (!error && data) {
+        setVendorsList(data);
+      }
+    }
+    loadVendors();
+  }, []);
 
   const selectedPO = purchaseOrders.find(p => p.id === selectedPOId);
 
@@ -90,6 +116,10 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
 
     if (pr) {
       alert("Purchase Request raised successfully.");
+      await triggerInboxNotification(
+        "New Requisition Raised",
+        `PR ${pr.request_no || 'PR-50X'} sent for approval to manager, with copy to accounts and purchase team.`
+      );
       setShowAddForm(false);
       setItems([{ name: "", quantity: 1, targetPrice: 100 }]);
     }
@@ -101,6 +131,10 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
       const res = await updatePRStatus(selectedId, status);
       if (res.success) {
         alert(`PR ${status} successfully.`);
+        await triggerInboxNotification(
+          `PR ${status}`,
+          `Intimation sent to Purchase team and Accounts team for PR ${selectedPR?.no || 'PR-XXX'}.`
+        );
         setSelectedId(null);
       }
     }
@@ -112,12 +146,228 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
       const res = await submitQuotationComparison(selectedId, quoteId, comparisonRemarks);
       if (res.success) {
         alert("Quotation approved and Purchase Order issued!");
+        await triggerInboxNotification(
+          "PO Generated & Issued",
+          `Purchase Order copy generated for PR ${selectedPR?.no || 'PR-XXX'}. Accounts team received a copy for the same.`
+        );
         setSelectedId(null);
         setComparisonRemarks("");
+        loadPurchaseOrders();
+      }
+    }
+  }
+  async function handleAddQuotationSubmit(e) {
+    e.preventDefault();
+    if (!quoteVendorId) {
+      alert("Please select a vendor.");
+      return;
+    }
+
+    let calculatedTotal = 0;
+    selectedPR.items.forEach(item => {
+      const up = parseFloat(quoteUnitPrices[item.id] || 0);
+      calculatedTotal += up * item.quantity;
+    });
+
+    const { data: quote, error: qErr } = await supabase
+      .from('quotations')
+      .insert({
+        request_id: selectedId,
+        vendor_id: quoteVendorId,
+        total_amount: calculatedTotal
+      })
+      .select()
+      .single();
+
+    if (qErr) {
+      alert("Failed to save quotation: " + qErr.message);
+      return;
+    }
+
+    const qItems = selectedPR.items.map(item => ({
+      quotation_id: quote.id,
+      item_name: item.item_name,
+      quantity: item.quantity,
+      unit_price: parseFloat(quoteUnitPrices[item.id] || 0)
+    }));
+
+    const { error: qiErr } = await supabase
+      .from('quotation_items')
+      .insert(qItems);
+
+    if (qiErr) {
+      alert("Failed to save quotation line items: " + qiErr.message);
+    } else {
+      alert("Quotation added successfully.");
+      setShowAddQuote(false);
+      setQuoteVendorId("");
+      setQuoteUnitPrices({});
+      
+      const res = await loadQuotations(selectedId);
+      if (res.success) {
+        setQuotes(res.data);
       }
     }
   }
 
+  async function handleGRNSubmit(e) {
+    e.preventDefault();
+    if (!grnChallanNo.trim()) {
+      alert("Please enter a Challan / Invoice number.");
+      return;
+    }
+
+    const { data: latest } = await supabase
+      .from('grns')
+      .select('grn_no')
+      .order('grn_no', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let nextGrnNo = 'GRN-001';
+    if (latest && latest.grn_no) {
+      const match = latest.grn_no.match(/GRN-(\d+)/);
+      if (match) {
+        nextGrnNo = `GRN-${String(parseInt(match[1], 10) + 1).padStart(3, '0')}`;
+      }
+    }
+
+    const { data: grn, error: grnErr } = await supabase
+      .from('grns')
+      .insert({
+        po_id: selectedPOId,
+        grn_no: nextGrnNo,
+        received_by_profile_id: session.id,
+        status: 'Verified'
+      })
+      .select()
+      .single();
+
+    if (grnErr) {
+      alert("Failed to create GRN: " + grnErr.message);
+      return;
+    }
+
+    const grnItems = (selectedPO.items || []).map(item => ({
+      grn_id: grn.id,
+      item_name: item.item_name,
+      quantity_ordered: item.quantity,
+      quantity_received: parseFloat(grnReceivedQtys[item.id] ?? item.quantity),
+      quantity_accepted: parseFloat(grnAcceptedQtys[item.id] ?? item.quantity)
+    }));
+
+    const { error: itemsErr } = await supabase
+      .from('grn_items')
+      .insert(grnItems);
+
+    if (itemsErr) {
+      alert("Failed to create GRN line items: " + itemsErr.message);
+      return;
+    }
+
+    const { error: poErr } = await supabase
+      .from('purchase_orders')
+      .update({
+        status: 'Delivered',
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', selectedPOId);
+
+    if (poErr) {
+      alert("Failed to update PO status: " + poErr.message);
+      return;
+    }
+
+    alert(`GRN ${nextGrnNo} successfully registered.`);
+    await triggerInboxNotification(
+      "GRN Entry Received",
+      `Goods Receipt Note ${nextGrnNo} registered by store team for PO ${selectedPO.no}. Notification copy sent to Accounts team.`
+    );
+
+    setShowAddGRN(false);
+    setGrnChallanNo("");
+    setGrnReceivedQtys({});
+    setGrnAcceptedQtys({});
+    
+    loadPurchaseOrders();
+  }
+
+  function downloadPO_PDF(po) {
+    const printWindow = window.open("", "_blank");
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Purchase Order - \${po.no}</title>
+          <style>
+            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #1e293b; background: #fff; }
+            .header { display: flex; justify-content: space-between; border-bottom: 2px solid #0038a8; padding-bottom: 20px; margin-bottom: 30px; }
+            .title { font-size: 26px; font-weight: 800; color: #0038a8; letter-spacing: 0.5px; }
+            .meta { text-align: right; font-size: 14px; color: #475569; }
+            .details { margin-bottom: 30px; font-size: 14px; line-height: 1.5; color: #334155; }
+            .table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+            .table th, .table td { border: 1px solid #cbd5e1; padding: 12px; text-align: left; font-size: 13px; }
+            .table th { background: #f8fafc; color: #475569; font-weight: bold; }
+            .total { text-align: right; font-size: 16px; font-weight: bold; color: #0f172a; margin-top: 10px; }
+            .footer { margin-top: 60px; font-size: 12px; text-align: center; color: #94a3b8; border-top: 1px dashed #e2e8f0; padding-top: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <div class="title">PURCHASE ORDER</div>
+              <div style="font-size: 14px; margin-top: 5px; color: #64748b;">Orion Corporate Park</div>
+            </div>
+            <div class="meta">
+              <div><strong>PO Number:</strong> \${po.no}</div>
+              <div><strong>Date:</strong> \${po.createdAt}</div>
+              <div><strong>Status:</strong> \${po.status}</div>
+            </div>
+          </div>
+          
+          <div class="details">
+            <strong>Vendor Information:</strong><br/>
+            <span style="font-size: 16px; font-weight: bold; color: #0f172a;">\${po.vendorName}</span>
+          </div>
+          
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Item Description</th>
+                <th>Quantity</th>
+                <th>Unit Price (INR)</th>
+                <th>Total Price (INR)</th>
+              </tr>
+            </thead>
+            <tbody>
+              \${(po.items || []).map(item => \`
+                <tr>
+                  <td>\${item.item_name}</td>
+                  <td>\${item.quantity}</td>
+                  <td>₹\${item.unit_price}</td>
+                  <td>₹\${(item.quantity * item.unit_price).toFixed(2)}</td>
+                </tr>
+              \`).join("")}
+            </tbody>
+          </table>
+          
+          <div class="total">
+            Total Amount: ₹\${po.amount}
+          </div>
+          
+          <div class="footer">
+            This is a computer-generated Purchase Order copy. Copy archived for Accounts Audit.
+          </div>
+          
+          <script>
+            window.onload = function() {
+              window.print();
+            }
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }
   const isManager = activeRole === "Admin Manager" || activeRole === "Super Admin";
 
   return (
@@ -264,6 +514,55 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
                 </div>
               )}
 
+              {/* Quotations Creation Form & Comparison Matrix */}
+              {selectedPR.status === "Approved" && (
+                <div style={styles.descBox}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+                    <div style={styles.muted}>Quotation Matrix</div>
+                    <button style={styles.secondaryBtn} onClick={() => setShowAddQuote(!showAddQuote)}>
+                      {showAddQuote ? "Cancel" : "+ Add Vendor Quotation"}
+                    </button>
+                  </div>
+
+                  {showAddQuote && (
+                    <form onSubmit={handleAddQuotationSubmit} style={{ ...styles.form, marginBottom: "15px" }}>
+                      <div style={styles.formRow}>
+                        <select 
+                          style={{ ...styles.input, flex: 1 }} 
+                          required 
+                          value={quoteVendorId} 
+                          onChange={e => setQuoteVendorId(e.target.value)}
+                        >
+                          <option value="">Select Vendor...</option>
+                          {vendorsList.map(v => (
+                            <option key={v.id} value={v.id}>{v.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div style={{ marginTop: "10px" }}>
+                        <div style={{ ...styles.muted, marginBottom: "8px" }}>Enter Unit Prices</div>
+                        {selectedPR.items.map(item => (
+                          <div key={item.id} style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "8px" }}>
+                            <span style={{ fontSize: "0.8rem", flex: 2 }}>{item.item_name} (x{item.quantity})</span>
+                            <input 
+                              type="number" 
+                              style={{ ...styles.input, flex: 1 }} 
+                              required 
+                              placeholder="Unit Price" 
+                              value={quoteUnitPrices[item.id] || ""} 
+                              onChange={e => setQuoteUnitPrices({ ...quoteUnitPrices, [item.id]: e.target.value })} 
+                            />
+                          </div>
+                        ))}
+                      </div>
+                      <button style={{ ...styles.primaryBtn, width: "100%", marginTop: "10px" }} type="submit">
+                        Save Quotation
+                      </button>
+                    </form>
+                  )}
+                </div>
+              )}
+
               {/* Quotes comparison matrix */}
               {(selectedPR.status === "Approved" || selectedPR.status === "Pending Approval") && (
                 <div style={styles.timelineBox}>
@@ -338,12 +637,75 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
               </div>
 
               <div style={styles.descBox}>
-                <div style={styles.muted}>Order Status</div>
+                <div style={styles.muted}>Order Status & Actions</div>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "10px" }}>
                   <span style={{ ...styles.badge, background: selectedPO.status === "Delivered" ? "#22c55e22" : "#6366f122", color: selectedPO.status === "Delivered" ? "#22c55e" : "#6366f1" }}>
                     {selectedPO.status}
                   </span>
                 </div>
+                
+                {/* Print/Download PO button */}
+                <button 
+                  style={{ ...styles.secondaryBtn, width: "100%", marginTop: "12px", background: "#f8fafc" }}
+                  onClick={() => downloadPO_PDF(selectedPO)}
+                >
+                  📄 Download PO Copy (PDF)
+                </button>
+
+                {/* GRN entry action */}
+                {selectedPO.status === "Issued" && (
+                  <div style={{ marginTop: "15px", paddingTop: "15px", borderTop: "1px dashed #cbd5e1" }}>
+                    <button 
+                      style={{ ...styles.primaryBtn, width: "100%", background: "#22c55e" }}
+                      onClick={() => setShowAddGRN(!showAddGRN)}
+                    >
+                      {showAddGRN ? "Cancel GRN Entry" : "Register GRN (Material Received)"}
+                    </button>
+
+                    {showAddGRN && (
+                      <form onSubmit={handleGRNSubmit} style={{ ...styles.form, marginTop: "10px" }}>
+                        <div style={styles.muted}>Register Material Receipt (GRN)</div>
+                        <div style={styles.formRow}>
+                          <input 
+                            style={{ ...styles.input, flex: 1 }} 
+                            required 
+                            placeholder="Challan / Invoice Number" 
+                            value={grnChallanNo} 
+                            onChange={e => setGrnChallanNo(e.target.value)} 
+                          />
+                        </div>
+                        <div style={{ marginTop: "10px" }}>
+                          {selectedPO.items.map(item => (
+                            <div key={item.id} style={{ display: "flex", gap: "8px", flexDirection: "column", borderBottom: "1px dashed #e2e8f0", paddingBottom: "8px", marginBottom: "8px" }}>
+                              <span style={{ fontSize: "0.8rem", fontWeight: "bold" }}>{item.item_name} (Ordered: {item.quantity})</span>
+                              <div style={{ display: "flex", gap: "10px" }}>
+                                <input 
+                                  type="number" 
+                                  style={{ ...styles.input, flex: 1 }} 
+                                  required 
+                                  placeholder="Qty Received" 
+                                  value={grnReceivedQtys[item.id] ?? item.quantity} 
+                                  onChange={e => setGrnReceivedQtys({ ...grnReceivedQtys, [item.id]: e.target.value })} 
+                                />
+                                <input 
+                                  type="number" 
+                                  style={{ ...styles.input, flex: 1 }} 
+                                  required 
+                                  placeholder="Qty Accepted" 
+                                  value={grnAcceptedQtys[item.id] ?? item.quantity} 
+                                  onChange={e => setGrnAcceptedQtys({ ...grnAcceptedQtys, [item.id]: e.target.value })} 
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <button style={{ ...styles.primaryBtn, width: "100%", background: "#22c55e" }} type="submit">
+                          Submit GRN & Receive Stock
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )

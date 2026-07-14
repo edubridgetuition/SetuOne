@@ -1059,6 +1059,21 @@ export function AppProvider({ children }) {
     return res;
   }
 
+  async function triggerInboxNotification(title, message) {
+    if (!session) return;
+    const { error } = await supabase
+      .from('notifications')
+      .insert({
+        profile_id: session.id,
+        title,
+        message,
+        is_read: false
+      });
+    if (!error) {
+      await loadInboxNotifications();
+    }
+  }
+
   async function loadNotificationRules() {
     if (!session) return;
     const res = await apiFetchNotificationRules(session.companyId);
@@ -1662,7 +1677,7 @@ export function AppProvider({ children }) {
 
       // Notification values
       inboxNotifications, rulesList, recipientGroups, emailTemplatesList, notificationChannels, notificationPreferences, automationLogsList,
-      loadInboxNotifications, markRead, loadNotificationRules, saveRule, loadRecipientGroups, saveGroup,
+      loadInboxNotifications, markRead, triggerInboxNotification, loadNotificationRules, saveRule, loadRecipientGroups, saveGroup,
       loadEmailTemplates, saveTemplate, loadChannels, loadPreferences, updatePreference, loadAutomationLogs,
       dispatchNotification: apiDispatchNotification,
 

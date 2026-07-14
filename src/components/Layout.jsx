@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../context/appContextCore";
 import { menuBar } from "../data/menuBar";
 import {
@@ -13,7 +13,9 @@ import {
   MdAssessment,
   MdAttachMoney,
   MdSettings,
-  MdFolder
+  MdFolder,
+  MdNotifications,
+  MdNotificationsActive
 } from "react-icons/md";
 const appIconColors = {
   dashboard: ["#eef2ff", "#4f46e5"],
@@ -31,11 +33,31 @@ const appIconColors = {
 };
 
 export default function Layout({ children }) {
-  const { session, activeView, setActiveView, activeRole, activeTenant, canAccess, logout } = useApp();
+  const { 
+    session, 
+    activeView, 
+    setActiveView, 
+    activeRole, 
+    activeTenant, 
+    canAccess, 
+    logout,
+    inboxNotifications = [],
+    loadInboxNotifications,
+    markRead 
+  } = useApp();
   const [launcherOpen, setLauncherOpen] = useState(false);
   const [hoveredTab, setHoveredTab] = useState(null);
   const [hoveredItemKey, setHoveredItemKey] = useState(null);
+  const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const closeTimer = useRef(null);
+
+  useEffect(() => {
+    if (session) {
+      loadInboxNotifications();
+      const interval = setInterval(loadInboxNotifications, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [session]);
 
   const accessibleModules = useMemo(() => menuBar
     .map((mod) => ({
@@ -285,6 +307,109 @@ function getModuleIcon(key) {
         </div>
 
         <div style={s.topRight}>
+          {/* Notification Bell */}
+          <div style={{ position: "relative" }}>
+            <button 
+              type="button" 
+              onClick={() => setNotifDropdownOpen(!notifDropdownOpen)}
+              style={{
+                background: "none",
+                border: "none",
+                fontSize: "1.3rem",
+                color: inboxNotifications.filter(n => !n.is_read).length > 0 ? "#0038a8" : "#64748b",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                padding: "8px",
+                position: "relative"
+              }}
+            >
+              {inboxNotifications.filter(n => !n.is_read).length > 0 ? <MdNotificationsActive /> : <MdNotifications />}
+              {inboxNotifications.filter(n => !n.is_read).length > 0 && (
+                <span style={{
+                  position: "absolute",
+                  top: "2px",
+                  right: "2px",
+                  background: "#ef4444",
+                  color: "#fff",
+                  fontSize: "9px",
+                  fontWeight: "bold",
+                  borderRadius: "50%",
+                  width: "14px",
+                  height: "14px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}>
+                  {inboxNotifications.filter(n => !n.is_read).length}
+                </span>
+              )}
+            </button>
+
+            {notifDropdownOpen && (
+              <div style={{
+                position: "absolute",
+                top: "40px",
+                right: "0",
+                background: "#fff",
+                border: "1px solid #cbd5e1",
+                borderRadius: "6px",
+                boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05)",
+                width: "320px",
+                zIndex: 999,
+                maxHeight: "360px",
+                overflowY: "auto",
+                padding: "12px"
+              }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: "1px solid #f1f5f9", paddingBottom: "8px", marginBottom: "8px" }}>
+                  <span style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#111625" }}>System Alerts ({inboxNotifications.filter(n => !n.is_read).length})</span>
+                  {inboxNotifications.filter(n => !n.is_read).length > 0 && (
+                    <button 
+                      onClick={() => {
+                        inboxNotifications.forEach(n => {
+                          if (!n.is_read) markRead(n.id);
+                        });
+                        setNotifDropdownOpen(false);
+                      }}
+                      style={{ background: "none", border: "none", color: "#0038a8", fontSize: "0.72rem", cursor: "pointer", fontWeight: "bold" }}
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+                {inboxNotifications.length === 0 ? (
+                  <div style={{ fontSize: "0.78rem", color: "#94a3b8", textAlign: "center", padding: "20px" }}>No recent alerts.</div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                    {inboxNotifications.map(n => (
+                      <div 
+                        key={n.id} 
+                        style={{
+                          background: n.is_read ? "#fff" : "#f8fafc",
+                          borderLeft: n.is_read ? "3px solid #e2e8f0" : "3px solid #0038a8",
+                          padding: "8px",
+                          borderRadius: "4px",
+                          position: "relative"
+                        }}
+                      >
+                        <div style={{ fontSize: "0.78rem", fontWeight: n.is_read ? "normal" : "bold", color: "#1e293b" }}>{n.title}</div>
+                        <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "2px", lineHeight: "1.2" }}>{n.message}</div>
+                        {!n.is_read && (
+                          <button 
+                            onClick={() => markRead(n.id)}
+                            style={{ position: "absolute", top: "8px", right: "8px", background: "none", border: "none", color: "#cbd5e1", fontSize: "0.65rem", cursor: "pointer" }}
+                          >
+                            Mark read
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <div style={s.tenantChip}>
             <span style={s.tenantDot} />
             <span style={s.tenantName}>{tenantName}</span>
