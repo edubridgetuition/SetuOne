@@ -543,33 +543,10 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
           <div style={styles.panel}>
             <div style={styles.panelHeader}>
               <div>
-                <div style={styles.panelTitle}>Purchase Requisitions (PR)</div>
-                <div style={styles.panelSub}>Raise, compare, and approve procurement workflows.</div>
+                <div style={styles.panelTitle}>Purchase Requisitions (PR) List</div>
+                <div style={styles.panelSub}>Review, compare quotes, and approve procurement workflows.</div>
               </div>
-              <button style={styles.primaryBtn} onClick={() => setShowAddForm(!showAddForm)}>
-                {showAddForm ? "Cancel" : "+ New Requisition"}
-              </button>
             </div>
-
-            {/* New PR Form */}
-            {showAddForm && (
-              <form onSubmit={handleRaisePR} style={styles.form}>
-                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px" }}>
-                  <span style={styles.muted}>Estimated Amount: <strong>₹{estimatedAmount}</strong></span>
-                  <button type="button" style={styles.secondaryBtn} onClick={handleAddItem}>+ Add Item</button>
-                </div>
-
-                {items.map((item, idx) => (
-                  <div key={idx} style={styles.formRow}>
-                    <input style={{ ...styles.input, flex: 2 }} required placeholder="Item Name (e.g. Printer Toner)" value={item.name} onChange={e => handleItemChange(idx, "name", e.target.value)} />
-                    <input style={{ ...styles.input, flex: 0.8 }} type="number" required min="1" placeholder="Qty" value={item.quantity} onChange={e => handleItemChange(idx, "quantity", Number(e.target.value))} />
-                    <input style={{ ...styles.input, flex: 1 }} type="number" required min="1" placeholder="Target Price" value={item.targetPrice} onChange={e => handleItemChange(idx, "targetPrice", Number(e.target.value))} />
-                  </div>
-                ))}
-
-                <button style={{ ...styles.primaryBtn, marginTop: "10px" }} type="submit">Submit Requisition</button>
-              </form>
-            )}
 
             {/* PR Table List */}
             <div style={styles.tableWrap}>
