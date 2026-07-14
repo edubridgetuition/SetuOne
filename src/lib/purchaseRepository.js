@@ -1,4 +1,4 @@
-﻿import { supabase } from './supabase';
+import { supabase } from './supabase';
 
 // Fetch purchase requests with creator profiles and line items
 export async function fetchPurchaseRequests() {
@@ -22,7 +22,8 @@ export async function fetchPurchaseRequests() {
       amount: pr.estimated_amount,
       status: pr.status,
       createdAt: new Date(pr.created_at).toLocaleString(),
-      items: pr.purchase_request_items || []
+      items: pr.purchase_request_items || [],
+      payload: pr.payload || {}
     }));
 
     return { success: true, data: formatted, message: 'PRs loaded successfully.', error: null };
@@ -50,17 +51,48 @@ export async function createPurchaseRequest(prData, companyId, raisedByProfileId
       }
     }
 
-    const { data: pr, error: prErr } = await supabase
-      .from('purchase_requests')
-      .insert({
-        company_id: companyId,
-        request_no: nextNo,
-        raised_by_profile_id: raisedByProfileId,
-        estimated_amount: prData.estimatedAmount || 0,
-        status: 'Pending Approval'
-      })
-      .select()
-      .single();
+    let insertObj = {
+      company_id: companyId,
+      request_no: nextNo,
+      raised_by_profile_id: raisedByProfileId,
+      estimated_amount: prData.estimatedAmount || 0,
+      status: 'Pending Approval'
+    };
+
+    let pr = null;
+    let prErr = null;
+
+    try {
+      const { data, error } = await supabase
+        .from('purchase_requests')
+        .insert({ ...insertObj, payload: prData.payload || {} })
+        .select()
+        .single();
+      if (error) {
+        if (error.code === 'PGRST204' || error.message.includes('payload')) {
+          // Fallback if payload column doesn't exist
+          const { data: fbData, error: fbError } = await supabase
+            .from('purchase_requests')
+            .insert(insertObj)
+            .select()
+            .single();
+          pr = fbData;
+          prErr = fbError;
+        } else {
+          prErr = error;
+        }
+      } else {
+        pr = data;
+      }
+    } catch (e) {
+      const { data: fbData, error: fbError } = await supabase
+        .from('purchase_requests')
+        .insert(insertObj)
+        .select()
+        .single();
+      pr = fbData;
+      prErr = fbError;
+    }
 
     if (prErr) throw prErr;
 

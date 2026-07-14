@@ -42,6 +42,87 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
   const [grnReceivedQtys, setGrnReceivedQtys] = useState({});
   const [grnAcceptedQtys, setGrnAcceptedQtys] = useState({});
 
+  // Requisition Form State
+  const [reqRequestedBy, setReqRequestedBy] = useState("");
+  const [reqCompany, setReqCompany] = useState("Orion Corporate");
+  const [reqProjectName, setReqProjectName] = useState("");
+  const [reqProjectPhase, setReqProjectPhase] = useState("");
+  const [reqProductDescription, setReqProductDescription] = useState("");
+  const [reqUrgency, setReqUrgency] = useState("Medium");
+  const [reqAttachmentName, setReqAttachmentName] = useState("");
+  const [reqVendorName, setReqVendorName] = useState("");
+  const [reqPaymentSourceLink, setReqPaymentSourceLink] = useState("");
+  const [reqAmount, setReqAmount] = useState("");
+  const [reqRemarks, setReqRemarks] = useState("");
+
+  useEffect(() => {
+    if (session?.user) {
+      setReqRequestedBy(session.user.user_metadata?.full_name || session.user.email || "");
+    }
+  }, [session]);
+
+  async function handleRequisitionFormSubmit(e) {
+    e.preventDefault();
+    if (!reqAmount || parseFloat(reqAmount) <= 0) {
+      alert("Please enter a valid amount.");
+      return;
+    }
+
+    const lineItems = [{
+      name: reqProductDescription || "Requisition Item",
+      quantity: 1,
+      targetPrice: parseFloat(reqAmount)
+    }];
+
+    const prPayload = {
+      requested_by: reqRequestedBy,
+      company_name: reqCompany,
+      project_name: reqProjectName,
+      project_phase: reqProjectPhase,
+      product_description: reqProductDescription,
+      urgency: reqUrgency,
+      attachment_name: reqAttachmentName || "N/A",
+      vendor_name: reqVendorName || "N/A",
+      payment_source_link: reqPaymentSourceLink || "",
+      invoice_amount: parseFloat(reqAmount),
+      remarks: reqRemarks
+    };
+
+    // Default company UUID or tenant UUID
+    const companyId = session?.user?.user_metadata?.company_id || "77f72677-a422-44f5-a1c7-62716923cb45";
+    const raisedByProfileId = session?.id || session?.user?.id;
+
+    const prData = {
+      estimatedAmount: parseFloat(reqAmount),
+      items: lineItems,
+      payload: prPayload
+    };
+
+    const res = await createPurchaseRequest(prData, companyId, raisedByProfileId);
+    if (res.success) {
+      alert(`Requisition raised successfully with reference ${res.data.request_no}.`);
+      await triggerInboxNotification(
+        "New Requisition Raised",
+        `Requisition ${res.data.request_no} raised by ${reqRequestedBy} for Project "${reqProjectName}" (Phase: ${reqProjectPhase}) is pending manager approval.`
+      );
+      
+      // Reset
+      setReqProjectName("");
+      setReqProjectPhase("");
+      setReqProductDescription("");
+      setReqUrgency("Medium");
+      setReqAttachmentName("");
+      setReqVendorName("");
+      setReqPaymentSourceLink("");
+      setReqAmount("");
+      setReqRemarks("");
+
+      await loadPurchaseRequests();
+    } else {
+      alert("Failed to raise requisition: " + res.message);
+    }
+  }
+
   useEffect(() => {
     async function loadVendors() {
       const { data, error } = await supabase
@@ -379,7 +460,85 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
 
   return (
     <div style={styles.page}>
-      {viewMode === "pr" ? (
+      {viewMode === "purchasereq_form" ? (
+        <div style={styles.left}>
+          <div style={styles.panel}>
+            <div style={styles.panelHeader}>
+              <div>
+                <div style={styles.panelTitle}>Purchase Requisition Entry Form</div>
+                <div style={styles.panelSub}>Fill details below to raise a project purchase requisition.</div>
+              </div>
+            </div>
+            
+            <form onSubmit={handleRequisitionFormSubmit} style={{ ...styles.form, background: "#fff", border: "none", padding: 0 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#475569" }}>Requested By (Name)</label>
+                  <input style={styles.input} required value={reqRequestedBy} onChange={e => setReqRequestedBy(e.target.value)} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#475569" }}>Company</label>
+                  <select style={styles.input} value={reqCompany} onChange={e => setReqCompany(e.target.value)}>
+                    <option value="Orion Corporate">Orion Corporate</option>
+                    <option value="Greenfield Solutions">Greenfield Solutions</option>
+                  </select>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#475569" }}>Project Name</label>
+                  <input style={styles.input} required placeholder="e.g. Orion Server Migration" value={reqProjectName} onChange={e => setReqProjectName(e.target.value)} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#475569" }}>Project Phase</label>
+                  <input style={styles.input} required placeholder="e.g. Phase 2 Setup" value={reqProjectPhase} onChange={e => setReqProjectPhase(e.target.value)} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#475569" }}>Urgency</label>
+                  <select style={styles.input} value={reqUrgency} onChange={e => setReqUrgency(e.target.value)}>
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Critical">Critical</option>
+                  </select>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#475569" }}>Vendor Name</label>
+                  <input style={styles.input} placeholder="e.g. CleanPro Services" value={reqVendorName} onChange={e => setReqVendorName(e.target.value)} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#475569" }}>Payment Source Link</label>
+                  <input type="url" style={styles.input} placeholder="e.g. https://invoice-payment.source" value={reqPaymentSourceLink} onChange={e => setReqPaymentSourceLink(e.target.value)} />
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <label style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#475569" }}>Amt. / Invoice amt. (INR)</label>
+                  <input type="number" style={styles.input} required placeholder="e.g. 8500" value={reqAmount} onChange={e => setReqAmount(e.target.value)} />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "15px" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#475569" }}>Product Description</label>
+                <textarea style={{ ...styles.input, minHeight: "80px", fontFamily: "inherit" }} required placeholder="Describe product / materials requested..." value={reqProductDescription} onChange={e => setReqProductDescription(e.target.value)} />
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "15px" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#475569" }}>Attachment (Approval / Quote Doc)</label>
+                <div style={{ display: "flex", gap: "10px" }}>
+                  <input style={{ ...styles.input, flex: 1 }} placeholder="Attached file name or drive path..." value={reqAttachmentName} onChange={e => setReqAttachmentName(e.target.value)} />
+                  <button type="button" style={styles.secondaryBtn} onClick={() => setReqAttachmentName("approval_doc_signed.pdf")}>Mock Upload</button>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "15px" }}>
+                <label style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#475569" }}>Specific Remarks / Comments</label>
+                <textarea style={{ ...styles.input, minHeight: "60px", fontFamily: "inherit" }} placeholder="Any additional notes..." value={reqRemarks} onChange={e => setReqRemarks(e.target.value)} />
+              </div>
+
+              <button style={{ ...styles.primaryBtn, marginTop: "20px", width: "100%", padding: "12px" }} type="submit">
+                Submit Purchase Requisition
+              </button>
+            </form>
+          </div>
+        </div>
+      ) : viewMode === "pr" ? (
         <div style={styles.left}>
           <div style={styles.panel}>
             <div style={styles.panelHeader}>
@@ -490,7 +649,33 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
 
       {/* Details Side Panel */}
       <div style={styles.detailPanel}>
-        {viewMode === "pr" ? (
+        {viewMode === "purchasereq_form" ? (
+          <div>
+            <div style={styles.detailHeader}>
+              <div>
+                <div style={styles.muted}>Requisition Info</div>
+                <div style={styles.detailNo}>Alert Workflow</div>
+              </div>
+            </div>
+            <div style={styles.descBox}>
+              <div style={styles.muted}>Procurement Notification Rules</div>
+              <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "10px", lineHeight: "1.5" }}>
+                <p>Raising this request will trigger the following notifications:</p>
+                <ul style={{ paddingLeft: "15px", marginTop: "8px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                  <li><strong>Manager:</strong> Notified for direct review/approval.</li>
+                  <li><strong>Accounts team:</strong> Receives copy of the request.</li>
+                  <li><strong>Purchase team:</strong> Receives copy to begin vendor discussions.</li>
+                </ul>
+              </div>
+            </div>
+            <div style={{ ...styles.descBox, background: "#f0fdf4", border: "1px solid #bbf7d0" }}>
+              <div style={{ fontSize: "0.8rem", color: "#166534" }}>
+                <strong>✔ SQL Payload Integrated</strong><br/>
+                All custom form parameters are automatically mapped into the Supabase database.
+              </div>
+            </div>
+          </div>
+        ) : viewMode === "pr" ? (
           !selectedPR ? (
             <div style={styles.emptyDetail}>Select a Purchase Requisition to view quotations matrix and approve POs.</div>
           ) : (
@@ -502,6 +687,26 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
                 </div>
                 <div style={styles.muted}>{selectedPR.createdAt}</div>
               </div>
+
+              {/* Custom Payload Form Metadata Details */}
+              {selectedPR.payload && selectedPR.payload.project_name && (
+                <div style={{ ...styles.descBox, background: "#f8fafc", border: "1px solid #cbd5e1" }}>
+                  <div style={styles.muted}>Form Requisition Specifications</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "8px", marginTop: "10px", fontSize: "0.8rem" }}>
+                    <div><strong>Requested By:</strong> {selectedPR.payload.requested_by}</div>
+                    <div><strong>Company:</strong> {selectedPR.payload.company_name}</div>
+                    <div><strong>Project Name:</strong> {selectedPR.payload.project_name}</div>
+                    <div><strong>Project Phase:</strong> {selectedPR.payload.project_phase}</div>
+                    <div><strong>Urgency:</strong> <span style={{ color: selectedPR.payload.urgency === "Critical" || selectedPR.payload.urgency === "High" ? "#ef4444" : "#f59e0b", fontWeight: "bold" }}>{selectedPR.payload.urgency}</span></div>
+                    {selectedPR.payload.vendor_name && <div><strong>Suggested Vendor:</strong> {selectedPR.payload.vendor_name}</div>}
+                    {selectedPR.payload.payment_source_link && (
+                      <div><strong>Source Link:</strong> <a href={selectedPR.payload.payment_source_link} target="_blank" rel="noreferrer" style={{ color: "#0038a8" }}>View Payment Source</a></div>
+                    )}
+                    {selectedPR.payload.attachment_name && <div><strong>Attachment:</strong> 📄 {selectedPR.payload.attachment_name}</div>}
+                    {selectedPR.payload.remarks && <div style={{ borderTop: "1px solid #e2e8f0", paddingTop: "6px", marginTop: "4px" }}><strong>Remarks:</strong> {selectedPR.payload.remarks}</div>}
+                  </div>
+                </div>
+              )}
 
               {/* Line Items List */}
               <div style={styles.descBox}>

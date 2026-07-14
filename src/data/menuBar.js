@@ -29,6 +29,7 @@ export const menuBar = [
     key: "purchase",
     label: "Purchase",
     subItems: [
+      { key: "purchasereq_form", label: "Requisition Form" },
       { key: "purchase", label: "Purchase Request" },
       { key: "workorders", label: "Work Order / PO" },
       { key: "grn", label: "Goods Received (GRN)" },
