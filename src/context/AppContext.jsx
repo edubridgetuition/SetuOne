@@ -312,16 +312,51 @@ export function AppProvider({ children }) {
         setActiveRole(user.role);
       } else {
         // Dynamic fallback using Supabase Auth raw user metadata
+        let resolvedCompanyId = authSession.user.user_metadata?.company_id || null;
+        let resolvedCompanyName = authSession.user.user_metadata?.company_name || "Orion Corporate Park";
+        
+        // Fetch live company fallback
+        try {
+          const { data: cos } = await supabase.from('companies').select('id, name').limit(1);
+          if (cos && cos.length > 0) {
+            resolvedCompanyId = cos[0].id;
+            resolvedCompanyName = cos[0].name;
+          } else {
+            resolvedCompanyId = "77f72677-a422-44f5-a1c7-62716923cb45"; // Seed fallback
+          }
+        } catch (e) {
+          resolvedCompanyId = "77f72677-a422-44f5-a1c7-62716923cb45";
+        }
+
+        const fallbackRoleName = authSession.user.user_metadata?.role || "Admin Manager";
+        
+        // Try creating/insuring the profile in public.profiles to satisfy foreign keys
+        try {
+          const { data: rData } = await supabase.from('roles').select('id').eq('name', fallbackRoleName).maybeSingle();
+          const roleId = rData?.id || "d41d8ba7-4d70-4651-9a76-429319eed00a"; // Super Admin default
+          
+          await supabase.from('profiles').insert({
+            id: authSession.user.id,
+            email: authSession.user.email,
+            full_name: authSession.user.user_metadata?.full_name || authSession.user.email.split('@')[0],
+            role_id: roleId,
+            company_id: resolvedCompanyId
+          });
+        } catch (err) {
+          console.warn("Profile already exists or insert skipped:", err);
+        }
+
         setSession({
           id: authSession.user.id,
           email: authSession.user.email,
           name: authSession.user.user_metadata?.full_name || authSession.user.email.split('@')[0],
-          companyId: authSession.user.user_metadata?.company_id || null,
-          companyName: authSession.user.user_metadata?.company_name || "Orion Corporate Park",
-          branchId: authSession.user.user_metadata?.branch_id || null,
+          companyId: resolvedCompanyId,
+          companyName: resolvedCompanyName,
+          branchId: null,
+          departmentId: null,
           tenantId: "orion"
         });
-        setActiveRole(authSession.user.user_metadata?.role || "Admin Manager");
+        setActiveRole(fallbackRoleName);
         setActiveTenant("orion");
       }
     }
