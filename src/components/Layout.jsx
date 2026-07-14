@@ -42,8 +42,50 @@ export default function Layout({ children }) {
     }))
     .filter((mod) => mod.subItems.length > 0), [canAccess]);
 
-  const activeModule = accessibleModules.find((mod) => mod.subItems.some((sub) => sub.key === activeView)) || accessibleModules[0];
-  const activeSubLabel = activeModule?.subItems.find((sub) => sub.key === activeView)?.label || "Dashboard";
+  const activeModule = accessibleModules.find((mod) => {
+    if (mod.key === "asset") {
+      const allAssetKeys = [
+        "assets_it", "mobile", "sim", "laptop", "desktop", "monitor", "printer", "networking", "cctv",
+        "assets_facility", "inventory", "hvac", "electrical", "machinery", "furniture", "vehicles", "safety", "others"
+      ];
+      return allAssetKeys.includes(activeView);
+    }
+    return mod.subItems.some((sub) => sub.key === activeView);
+  }) || accessibleModules[0];
+
+  const itViewKeys = ["assets_it", "mobile", "sim", "laptop", "desktop", "monitor", "printer", "networking", "cctv"];
+  const activeAssetDivision = itViewKeys.includes(activeView) ? "IT Assets" : "Facility Assets";
+
+  const itCategories = [
+    { key: "assets_it", label: "Asset Management" },
+    { key: "mobile", label: "Mobile" },
+    { key: "sim", label: "SIM" },
+    { key: "laptop", label: "Laptop" },
+    { key: "desktop", label: "Desktop" },
+    { key: "monitor", label: "Monitor" },
+    { key: "printer", label: "Printer" },
+    { key: "networking", label: "Networking" },
+    { key: "cctv", label: "CCTV" }
+  ];
+
+  const facilityCategories = [
+    { key: "assets_facility", label: "Asset Management" },
+    { key: "inventory", label: "Inventory" },
+    { key: "hvac", label: "HVAC" },
+    { key: "electrical", label: "Electrical" },
+    { key: "machinery", label: "Machinery" },
+    { key: "furniture", label: "Furniture" },
+    { key: "vehicles", label: "Vehicles" },
+    { key: "safety", label: "Safety Equipment" },
+    { key: "others", label: "Others" }
+  ];
+
+  const currentSubCategories = activeAssetDivision === "IT Assets" ? itCategories : facilityCategories;
+
+  const activeSubLabel = activeModule?.key === "asset"
+    ? (currentSubCategories.find((c) => c.key === activeView)?.label || activeAssetDivision)
+    : (activeModule?.subItems.find((sub) => sub.key === activeView)?.label || "Dashboard");
+
   const tenantName = activeRole === "Super Admin" ? (activeTenant === "orion" ? "Orion Corporate Park" : "Greenfield School") : (session?.companyName || "Orion Corporate Park");
 
   function openLauncher() {
@@ -68,7 +110,15 @@ export default function Layout({ children }) {
   }
 
   function selectSubItem(sub) {
-    setActiveView(sub.key);
+    if (activeModule?.key === "asset") {
+      if (sub.key === "assets_it") {
+        setActiveView("assets_it");
+      } else if (sub.key === "assets_facility") {
+        setActiveView("assets_facility");
+      }
+    } else {
+      setActiveView(sub.key);
+    }
   }
 
   function getIcon(mod) {
@@ -167,16 +217,21 @@ function getModuleIcon(key) {
 
           {activeModule && <span style={s.activeAppPill}>{activeModule.label}</span>}
           <nav style={s.subNav} aria-label="Module menu">
-            {activeModule?.subItems.map((sub) => (
-              <button
-                type="button"
-                key={sub.key}
-                style={{ ...s.subNavButton, ...(activeView === sub.key ? s.subNavButtonActive : {}) }}
-                onClick={() => selectSubItem(sub)}
-              >
-                {sub.label}
-              </button>
-            ))}
+            {activeModule?.subItems.map((sub) => {
+              const isActive = activeModule.key === "asset"
+                ? (sub.label === activeAssetDivision)
+                : (activeView === sub.key);
+              return (
+                <button
+                  type="button"
+                  key={sub.key}
+                  style={{ ...s.subNavButton, ...(isActive ? s.subNavButtonActive : {}) }}
+                  onClick={() => selectSubItem(sub)}
+                >
+                  {sub.label}
+                </button>
+              );
+            })}
           </nav>
         </div>
 
@@ -195,6 +250,23 @@ function getModuleIcon(key) {
           <button style={s.logoutBtn} onClick={logout}>Sign out</button>
         </div>
       </header>
+
+      {activeModule?.key === "asset" && (
+        <div style={s.secBar}>
+          <nav style={s.secSubNav} aria-label="Sub-category menu">
+            {currentSubCategories.map((sub) => (
+              <button
+                type="button"
+                key={sub.key}
+                style={{ ...s.secNavButton, ...(activeView === sub.key ? s.secNavButtonActive : {}) }}
+                onClick={() => setActiveView(sub.key)}
+              >
+                {sub.label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      )}
 
       <main style={s.mainWrap}>
         <section style={s.pageHeader}>
@@ -278,5 +350,9 @@ const s = {
   pageTitle: { fontSize: "18px", fontWeight: 900, color: "#0f172a" },
   pageSub: { fontSize: "12px", color: "#94a3b8", marginTop: "2px" },
   content: { flex: 1, overflow: "auto", padding: "15px" },
+  secBar: { height: "36px", background: "#ffffff", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", padding: "0 14px", flexShrink: 0 },
+  secSubNav: { display: "flex", alignItems: "center", gap: "4px", minWidth: 0, overflowX: "auto", height: "100%" },
+  secNavButton: { height: "26px", border: "none", background: "transparent", color: "#64748b", padding: "0 10px", borderRadius: "6px", fontSize: "12px", fontWeight: 650, cursor: "pointer", whiteSpace: "nowrap", transition: "all 0.15s ease" },
+  secNavButtonActive: { color: "#0038a8", background: "#eff6ff", fontWeight: 700 }
 };
 
