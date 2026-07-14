@@ -16,7 +16,11 @@ const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 async function run() {
-  const sql = "ALTER TABLE public.purchase_requests ADD COLUMN IF NOT EXISTS payload JSONB DEFAULT '{}'::jsonb;";
+  const sql = `
+    ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS address TEXT;
+    ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS gst TEXT;
+    ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS owner_name TEXT;
+  `;
   console.log('Executing SQL migration on Supabase via RPC...');
   const { data, error } = await supabase.rpc('exec_sql', { sql });
   if (error) {

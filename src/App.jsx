@@ -17,24 +17,21 @@ import Reports from "./pages/Reports";
 import AutomationSettings from "./pages/AutomationSettings";
 import AdminConsoleSettings from "./pages/AdminConsoleSettings";
 import EnergyMonitoring from "./pages/EnergyMonitoring";
+import VendorManagement from "./pages/VendorManagement";
 
 function AppContent() {
   const { session, activeView } = useApp();
 
   if (!session) return <LoginPage />;
 
-  const renderView = () => {
+  const renderView = (activeView) => {
     switch (activeView) {
       case "dashboard": return <Dashboard />;
-      case "tickets": return <Tickets />;
       case "checklist": return <Checklist />;
-      case "permission_manager": return <PermissionManager />;
-      case "assets": return <AssetManagement />;
+      case "tickets": return <Tickets />;
       
       // IT Assets Hierarchical Views
       case "it_assets": return <AssetManagement defaultDivision="IT Assets" />;
-      case "mobile": return <AssetManagement defaultDivision="IT Assets" defaultCategory="Mobile" />;
-      case "sim": return <AssetManagement defaultDivision="IT Assets" defaultCategory="SIM" />;
       case "laptop": return <AssetManagement defaultDivision="IT Assets" defaultCategory="Laptop" />;
       case "desktop": return <AssetManagement defaultDivision="IT Assets" defaultCategory="Desktop" />;
       case "monitor": return <AssetManagement defaultDivision="IT Assets" defaultCategory="Monitor" />;
@@ -56,6 +53,7 @@ function AppContent() {
       case "purchase": return <PurchaseRequisition viewMode="pr" />;
       case "workorders": return <PurchaseRequisition viewMode="po" />;
       case "grn": return <PurchaseRequisition viewMode="grn" />;
+      case "vendors": return <VendorManagement />;
       case "inventory": return <InventoryManagement />;
       case "ppm": return <PPMScheduler />;
       case "visitors": return <VisitorManagement />;

@@ -6,6 +6,7 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
   const {
     session,
     activeRole,
+    setActiveView,
     purchaseRequests,
     loadPurchaseRequests,
     createPurchaseRequest,
@@ -41,7 +42,9 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
   const [grnChallanNo, setGrnChallanNo] = useState("");
   const [grnReceivedQtys, setGrnReceivedQtys] = useState({});
   const [grnAcceptedQtys, setGrnAcceptedQtys] = useState({});
-
+  // Return with Query States
+  const [showQueryForm, setShowQueryForm] = useState(false);
+  const [queryRemarks, setQueryRemarks] = useState("");
   // Requisition Form State
   const [reqRequestedBy, setReqRequestedBy] = useState("");
   const [reqCompany, setReqCompany] = useState("Orion Corporate");
@@ -118,6 +121,7 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
       setReqRemarks("");
 
       await loadPurchaseRequests();
+      setActiveView("purchase");
     } else {
       alert("Failed to raise requisition: " + res.message);
     }
@@ -225,6 +229,43 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
         );
         setSelectedId(null);
       }
+    }
+  }
+
+  async function handleRaiseQuery(e) {
+    e.preventDefault();
+    if (!queryRemarks.trim()) {
+      alert("Please enter query remarks.");
+      return;
+    }
+
+    const updatedPayload = {
+      ...(selectedPR.payload || {}),
+      query_raised: true,
+      query_remarks: queryRemarks
+    };
+
+    const { error } = await supabase
+      .from('purchase_requests')
+      .update({
+        status: 'Draft',
+        payload: updatedPayload,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', selectedId);
+
+    if (error) {
+      alert("Failed to raise query: " + error.message);
+    } else {
+      alert("Query successfully sent back to owner.");
+      await triggerInboxNotification(
+        "Requisition Returned with Queries",
+        `Requisition ${selectedPR.no} was returned to owner with queries: "${queryRemarks}".`
+      );
+      setQueryRemarks("");
+      setShowQueryForm(false);
+      setSelectedId(null);
+      await loadPurchaseRequests();
     }
   }
 
@@ -421,18 +462,20 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
             <thead>
               <tr>
                 <th>Item Description</th>
-                <th>Quantity</th>
-                <th>Unit Price (INR)</th>
-                <th>Total Price (INR)</th>
+                <th style="text-align: center;">Unit</th>
+                <th style="text-align: center;">Quantity</th>
+                <th style="text-align: right;">Unit Price (INR)</th>
+                <th style="text-align: right;">Total Price (INR)</th>
               </tr>
             </thead>
             <tbody>
               \${(po.items || []).map(item => \`
                 <tr>
                   <td>\${item.item_name}</td>
-                  <td>\${item.quantity}</td>
-                  <td>₹\${item.unit_price}</td>
-                  <td>₹\${(item.quantity * item.unit_price).toFixed(2)}</td>
+                  <td style="text-align: center; color: #64748b;">Nos</td>
+                  <td style="text-align: center;">\${item.quantity}</td>
+                  <td style="text-align: right;">₹\${item.unit_price}</td>
+                  <td style="text-align: right; font-weight: bold;">₹\${(item.quantity * item.unit_price).toFixed(2)}</td>
                 </tr>
               \`).join("")}
             </tbody>
@@ -501,8 +544,13 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
                   </select>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                  <label style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#475569" }}>Vendor Name</label>
-                  <input style={styles.input} placeholder="e.g. CleanPro Services" value={reqVendorName} onChange={e => setReqVendorName(e.target.value)} />
+                  <label style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#475569" }}>Suggested Vendor</label>
+                  <select style={styles.input} value={reqVendorName} onChange={e => setReqVendorName(e.target.value)}>
+                    <option value="">Select Suggested Vendor...</option>
+                    {vendorsList.map(v => (
+                      <option key={v.id} value={v.name}>{v.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
                   <label style={{ fontSize: "0.8rem", fontWeight: "bold", color: "#475569" }}>Payment Source Link</label>
@@ -566,9 +614,15 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
                       <td style={styles.td}>₹{pr.amount}</td>
                       <td style={styles.td}>{pr.createdAt}</td>
                       <td style={styles.td}>
-                        <span style={{ ...styles.badge, background: pr.status === "Approved" ? "#22c55e22" : pr.status === "Pending Approval" ? "#f59e0b22" : "#cbd5e122", color: pr.status === "Approved" ? "#22c55e" : pr.status === "Pending Approval" ? "#f59e0b" : "#64748b" }}>
-                          {pr.status}
-                        </span>
+                        {pr.status === "Draft" && pr.payload?.query_raised ? (
+                          <span style={{ ...styles.badge, background: "#f59e0b22", color: "#f59e0b" }}>
+                            Returned with Query
+                          </span>
+                        ) : (
+                          <span style={{ ...styles.badge, background: pr.status === "Approved" ? "#22c55e22" : pr.status === "Pending Approval" ? "#f59e0b22" : "#cbd5e122", color: pr.status === "Approved" ? "#22c55e" : pr.status === "Pending Approval" ? "#f59e0b" : "#64748b" }}>
+                            {pr.status}
+                          </span>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -665,6 +719,18 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
                 <div style={styles.muted}>{selectedPR.createdAt}</div>
               </div>
 
+              {/* Returned with Query Remarks Alert */}
+              {selectedPR.payload?.query_raised && (
+                <div style={{ ...styles.descBox, background: "#fef3c7", border: "1px solid #f59e0b" }}>
+                  <div style={{ display: "flex", gap: "6px", alignItems: "center", fontSize: "0.82rem", fontWeight: "bold", color: "#d97706" }}>
+                    <span>⚠️ Returned with Query Remarks</span>
+                  </div>
+                  <div style={{ fontSize: "0.8rem", color: "#b45309", marginTop: "6px", lineHeight: "1.4" }}>
+                    "{selectedPR.payload.query_remarks}"
+                  </div>
+                </div>
+              )}
+
               {/* Custom Payload Form Metadata Details */}
               {selectedPR.payload && selectedPR.payload.project_name && (
                 <div style={{ ...styles.descBox, background: "#f8fafc", border: "1px solid #cbd5e1" }}>
@@ -702,10 +768,29 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
               {selectedPR.status === "Pending Approval" && isManager && (
                 <div style={styles.descBox}>
                   <div style={styles.muted}>Awaiting Manager Approval</div>
-                  <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                  <div style={{ display: "flex", gap: "10px", marginTop: "10px", flexWrap: "wrap" }}>
                     <button style={{ ...styles.primaryBtn, flex: 1, background: "#22c55e" }} onClick={() => handlePRApproveReject("Approved")}>Approve PR</button>
                     <button style={{ ...styles.secondaryBtn, flex: 1, color: "#ef4444", borderColor: "#ef4444" }} onClick={() => handlePRApproveReject("Rejected")}>Reject PR</button>
+                    <button style={{ ...styles.secondaryBtn, flex: 1.2, color: "#f59e0b", borderColor: "#f59e0b" }} onClick={() => setShowQueryForm(!showQueryForm)}>
+                      {showQueryForm ? "Cancel Query" : "❓ Raise Query"}
+                    </button>
                   </div>
+
+                  {showQueryForm && (
+                    <form onSubmit={handleRaiseQuery} style={{ ...styles.form, marginTop: "12px", background: "#fff" }}>
+                      <div style={styles.muted}>Send Back with Query Remarks</div>
+                      <textarea
+                        style={{ ...styles.input, minHeight: "60px", marginTop: "8px", width: "100%", boxSizing: "border-box" }}
+                        required
+                        placeholder="Enter questions or missing details remarks..."
+                        value={queryRemarks}
+                        onChange={e => setQueryRemarks(e.target.value)}
+                      />
+                      <button style={{ ...styles.primaryBtn, marginTop: "8px", background: "#f59e0b", width: "100%" }} type="submit">
+                        Send back to Owner
+                      </button>
+                    </form>
+                  )}
                 </div>
               )}
 
@@ -816,16 +901,32 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
               </div>
 
               <div style={styles.descBox}>
-                <div style={styles.muted}>PO Line Items</div>
-                <div style={{ marginTop: "10px" }}>
-                  {(selectedPO.items || []).map((item, idx) => (
-                    <div key={idx} style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", borderBottom: "1px dashed #f1f5f9", paddingBottom: "6px", marginBottom: "6px" }}>
-                      <div>{item.item_name} (x{item.quantity})</div>
-                      <div>₹{item.unit_price} / unit</div>
-                    </div>
-                  ))}
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.85rem", fontWeight: "bold", marginTop: "10px", paddingTop: "10px", borderTop: "1px solid #e2e8f0" }}>
-                    <div>Total Amount</div>
+                <div style={styles.muted}>PO Line Items Table</div>
+                <div style={{ overflowX: "auto", marginTop: "10px" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
+                    <thead>
+                      <tr style={{ background: "#f8fafc", borderBottom: "1px solid #cbd5e1" }}>
+                        <th style={{ padding: "8px", textAlign: "left", color: "#475569" }}>Description</th>
+                        <th style={{ padding: "8px", textAlign: "center", color: "#475569" }}>Unit</th>
+                        <th style={{ padding: "8px", textAlign: "center", color: "#475569" }}>Qty</th>
+                        <th style={{ padding: "8px", textAlign: "right", color: "#475569" }}>Rate</th>
+                        <th style={{ padding: "8px", textAlign: "right", color: "#475569" }}>Amt</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(selectedPO.items || []).map((item, idx) => (
+                        <tr key={idx} style={{ borderBottom: "1px dashed #e2e8f0" }}>
+                          <td style={{ padding: "8px", textAlign: "left" }}>{item.item_name}</td>
+                          <td style={{ padding: "8px", textAlign: "center", color: "#64748b" }}>Nos</td>
+                          <td style={{ padding: "8px", textAlign: "center" }}>{item.quantity}</td>
+                          <td style={{ padding: "8px", textAlign: "right" }}>₹{item.unit_price}</td>
+                          <td style={{ padding: "8px", textAlign: "right", fontWeight: "600" }}>₹{(item.quantity * item.unit_price).toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.82rem", fontWeight: "bold", marginTop: "12px", paddingTop: "8px", borderTop: "1px solid #e2e8f0" }}>
+                    <div>Total Amount (INR)</div>
                     <div>₹{selectedPO.amount}</div>
                   </div>
                 </div>
