@@ -16,17 +16,34 @@ export const menuBar = [
     ],
   },
   {
-    key: "asset",
-    label: "Asset",
+    key: "it_assets",
+    label: "IT Assets",
     subItems: [
-      { key: "assets", label: "Asset Management" },
-      { key: "inventory", label: "Inventory" },
-      { key: "itasset", label: "IT Asset" },
+      { key: "assets_it", label: "Asset Management" },
       { key: "mobile", label: "Mobile" },
       { key: "sim", label: "SIM" },
-      { key: "furniture", label: "Furniture" },
+      { key: "laptop", label: "Laptop" },
+      { key: "desktop", label: "Desktop" },
+      { key: "monitor", label: "Monitor" },
+      { key: "printer", label: "Printer" },
+      { key: "networking", label: "Networking" },
+      { key: "cctv", label: "CCTV" }
+    ]
+  },
+  {
+    key: "facility_assets",
+    label: "Facility Assets",
+    subItems: [
+      { key: "assets_facility", label: "Asset Management" },
+      { key: "inventory", label: "Inventory" },
       { key: "hvac", label: "HVAC" },
-    ],
+      { key: "electrical", label: "Electrical" },
+      { key: "machinery", label: "Machinery" },
+      { key: "furniture", label: "Furniture" },
+      { key: "vehicles", label: "Vehicles" },
+      { key: "safety", label: "Safety Equipment" },
+      { key: "others", label: "Others" }
+    ]
   },
   {
     key: "purchase",

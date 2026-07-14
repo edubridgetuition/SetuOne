@@ -58,7 +58,7 @@ function BarcodeRenderer({ value }) {
   );
 }
 
-export default function AssetManagement() {
+export default function AssetManagement({ defaultDivision = "", defaultCategory = "" }) {
   const {
     assets,
     totalAssetsCount,
@@ -84,7 +84,7 @@ export default function AssetManagement() {
 
   // Filters and Pagination
   const [search, setSearch] = useState("");
-  const [divFilter, setDivFilter] = useState("");
+  const [divFilter, setDivFilter] = useState(defaultDivision);
   const [catFilter, setCatFilter] = useState("");
   const [brandFilter, setBrandFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -279,10 +279,33 @@ export default function AssetManagement() {
   const [assignForm, setAssignForm] = useState({ employeeId: "", remarks: "" });
   const [uploadForm, setUploadForm] = useState({ category: "Warranty", fileName: "", fileBlob: null });
 
-  // Load Metadata & Assets list
   useEffect(() => {
     loadAssetMetadata();
   }, []);
+
+  // Sync props filters when defaultDivision or defaultCategory changes
+  useEffect(() => {
+    if (defaultDivision) {
+      setDivFilter(defaultDivision);
+    } else {
+      setDivFilter("");
+    }
+    if (defaultCategory && assetMetadata?.categories) {
+      const match = assetMetadata.categories.find(c => c.name.toLowerCase() === defaultCategory.toLowerCase());
+      if (match) {
+        setCatFilter(match.id);
+        // Also pre-fill addForm
+        setAddForm(prev => ({
+          ...prev,
+          division: defaultDivision || prev.division,
+          categoryId: match.id,
+          assetType: defaultCategory
+        }));
+      }
+    } else {
+      setCatFilter("");
+    }
+  }, [defaultDivision, defaultCategory, assetMetadata]);
 
   // Filter Categories dropdown based on Division Selection
   const filteredCategories = assetMetadata?.categories.filter(c => {
@@ -327,6 +350,7 @@ export default function AssetManagement() {
     loadAssets(
       {
         search,
+        division: divFilter,
         categoryId: catFilter,
         brandId: brandFilter,
         status: statusFilter
@@ -334,7 +358,7 @@ export default function AssetManagement() {
       page,
       pageSize
     );
-  }, [search, catFilter, brandFilter, statusFilter, page]);
+  }, [search, divFilter, catFilter, brandFilter, statusFilter, page]);
 
   // Load Details once selectedId changes
   useEffect(() => {

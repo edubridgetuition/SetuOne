@@ -346,7 +346,7 @@ export function AppProvider({ children }) {
     setActiveView("dashboard");
   }
 
-    function canAccess(view) {
+  function canAccessRaw(view) {
     const saved = localStorage.getItem("setuone_company_permissions");
     if (saved) {
       try {
@@ -361,6 +361,18 @@ export function AppProvider({ children }) {
       }
     }
     return (rolePermissions[activeRole] || []).includes(view);
+  }
+
+  function canAccess(view) {
+    const itKeys = ["assets_it", "mobile", "sim", "laptop", "desktop", "monitor", "printer", "networking", "cctv"];
+    const facilityKeys = ["assets_facility", "hvac", "electrical", "machinery", "furniture", "vehicles", "safety", "others"];
+    if (itKeys.includes(view)) {
+      return canAccessRaw("assets") || canAccessRaw("itasset");
+    }
+    if (facilityKeys.includes(view)) {
+      return canAccessRaw("assets") || canAccessRaw("hvac");
+    }
+    return canAccessRaw(view);
   }
 
   // API wrappers to raise a ticket

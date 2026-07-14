@@ -19,6 +19,8 @@ const appIconColors = {
   dashboard: ["#eef2ff", "#4f46e5"],
   maintenance: ["#ecfeff", "#0891b2"],
   asset: ["#f5f3ff", "#7c3aed"],
+  it_assets: ["#f5f3ff", "#7c3aed"],
+  facility_assets: ["#fdf2f8", "#db2777"],
   purchase: ["#fff7ed", "#ea580c"],
   vendors: ["#f0fdf4", "#16a34a"],
   visitors: ["#eff6ff", "#2563eb"],
@@ -82,7 +84,11 @@ function getModuleIcon(key) {
       return <MdBuild />;
 
     case "asset":
+    case "it_assets":
       return <MdInventory />;
+
+    case "facility_assets":
+      return <MdApartment />;
 
     case "purchase":
       return <MdShoppingCart />;

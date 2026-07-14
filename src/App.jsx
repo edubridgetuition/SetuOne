@@ -30,6 +30,28 @@ function AppContent() {
       case "checklist": return <Checklist />;
       case "permission_manager": return <PermissionManager />;
       case "assets": return <AssetManagement />;
+      
+      // IT Assets Hierarchical Views
+      case "assets_it": return <AssetManagement defaultDivision="IT Assets" />;
+      case "mobile": return <AssetManagement defaultDivision="IT Assets" defaultCategory="Mobile" />;
+      case "sim": return <AssetManagement defaultDivision="IT Assets" defaultCategory="SIM" />;
+      case "laptop": return <AssetManagement defaultDivision="IT Assets" defaultCategory="Laptop" />;
+      case "desktop": return <AssetManagement defaultDivision="IT Assets" defaultCategory="Desktop" />;
+      case "monitor": return <AssetManagement defaultDivision="IT Assets" defaultCategory="Monitor" />;
+      case "printer": return <AssetManagement defaultDivision="IT Assets" defaultCategory="Printer" />;
+      case "networking": return <AssetManagement defaultDivision="IT Assets" defaultCategory="Networking" />;
+      case "cctv": return <AssetManagement defaultDivision="IT Assets" defaultCategory="CCTV" />;
+      
+      // Facility Assets Hierarchical Views
+      case "assets_facility": return <AssetManagement defaultDivision="Facility Assets" />;
+      case "hvac": return <AssetManagement defaultDivision="Facility Assets" defaultCategory="HVAC" />;
+      case "electrical": return <AssetManagement defaultDivision="Facility Assets" defaultCategory="Electrical" />;
+      case "machinery": return <AssetManagement defaultDivision="Facility Assets" defaultCategory="Machinery" />;
+      case "furniture": return <AssetManagement defaultDivision="Facility Assets" defaultCategory="Furniture" />;
+      case "vehicles": return <AssetManagement defaultDivision="Facility Assets" defaultCategory="Vehicles" />;
+      case "safety": return <AssetManagement defaultDivision="Facility Assets" defaultCategory="Safety Equipment" />;
+      case "others": return <AssetManagement defaultDivision="Facility Assets" defaultCategory="Others" />;
+
       case "purchase": return <PurchaseRequisition />;
       case "inventory": return <InventoryManagement />;
       case "ppm": return <PPMScheduler />;

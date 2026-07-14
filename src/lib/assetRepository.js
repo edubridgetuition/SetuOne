@@ -25,7 +25,20 @@ export async function fetchAssets(filters = {}, page = 1, pageSize = 10) {
     }
 
     // Category / Brand / Status / Location filters
-    if (filters.categoryId) query = query.eq('category_id', filters.categoryId);
+    if (filters.categoryId) {
+      query = query.eq('category_id', filters.categoryId);
+    } else if (filters.division) {
+      const { data: divCats } = await supabase
+        .from('asset_categories')
+        .select('id')
+        .eq('division', filters.division);
+      if (divCats && divCats.length > 0) {
+        const catIds = divCats.map(c => c.id);
+        query = query.in('category_id', catIds);
+      } else {
+        query = query.eq('category_id', '00000000-0000-0000-0000-000000000000');
+      }
+    }
     if (filters.brandId) query = query.eq('brand_id', filters.brandId);
     if (filters.status) query = query.eq('status', filters.status);
     if (filters.locationId) query = query.eq('location_id', filters.locationId);
