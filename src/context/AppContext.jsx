@@ -364,8 +364,8 @@ export function AppProvider({ children }) {
   }
 
   function canAccess(view) {
-    const itKeys = ["assets_it", "mobile", "sim", "laptop", "desktop", "monitor", "printer", "networking", "cctv"];
-    const facilityKeys = ["assets_facility", "hvac", "electrical", "machinery", "furniture", "vehicles", "safety", "others"];
+    const itKeys = ["it_assets", "assets_it", "mobile", "sim", "laptop", "desktop", "monitor", "printer", "networking", "cctv"];
+    const facilityKeys = ["facility_assets", "assets_facility", "hvac", "electrical", "machinery", "furniture", "vehicles", "safety", "others"];
     if (itKeys.includes(view)) {
       return canAccessRaw("assets") || canAccessRaw("itasset");
     }
