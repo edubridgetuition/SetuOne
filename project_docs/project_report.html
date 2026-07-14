@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SetuOne Integrated Facility ERP - Technical Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      securityLevel: 'loose',
+      flowchart: { useMaxWidth: true, htmlLabels: true }
+    });
+  </script>
+  <style>
+    :root {
+      --primary: #0038a8;
+      --primary-light: #eff6ff;
+      --text-dark: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --bg: #f8fafc;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: var(--text-dark);
+      background-color: var(--bg);
+      margin: 0;
+      padding: 0;
+      line-height: 1.6;
+    }
+    header {
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      padding: 20px 40px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-container {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .brand {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--primary);
+    }
+    .badge {
+      background: var(--primary-light);
+      color: var(--primary);
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+    .card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      margin-bottom: 30px;
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 800;
+      margin-top: 0;
+      color: var(--text-dark);
+    }
+    h2 {
+      font-size: 20px;
+      font-weight: 700;
+      border-bottom: 2px solid var(--primary-light);
+      padding-bottom: 8px;
+      margin-top: 30px;
+      color: var(--primary);
+    }
+    h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-top: 20px;
+    }
+    p {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      font-size: 13px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      text-align: left;
+    }
+    th {
+      background: var(--primary-light);
+      color: var(--primary);
+      font-weight: 700;
+    }
+    tr:nth-child(even) {
+      background: #fafafa;
+    }
+    .mermaid {
+      background: #fafafa;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      display: flex;
+      justify-content: center;
+    }
+    .footer {
+      text-align: center;
+      padding: 40px 0;
+      color: var(--text-muted);
+      font-size: 12px;
+      border-top: 1px solid var(--border);
+      margin-top: 60px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-container">
+      <div class="brand">SetuOne ERP</div>
+      <div class="badge">Official Technical Manual</div>
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <h1>SetuOne Integrated Facility ERP</h1>
+      <p style="font-size: 16px; font-weight: 500;">System Architecture, Databases Schemas, APIs, and Workflows Manual</p>
+      <p>Prepared for Client Review &amp; Stakeholder Presentation.</p>
+    </div>
+
+    <div class="card">
+      <h2>1. Core System Architecture</h2>
+      <p>SetuOne is engineered as a secure, multi-tenant corporate environment leveraging modern web engineering patterns:</p>
+      
+      <div class="mermaid">
+        graph TD
+            User[Client Browser / User] -->|1. Authenticate| Auth[Supabase GoTrue Auth]
+            Auth -->|2. Resolve Session & JWT| Context[React AppContext]
+            Context -->|3. Query via RLS Filters| DB[(PostgreSQL Database)]
+            DB -->|4. Filter by tenant_id & company_id| RLS[Row-Level Security Policies]
+            RLS -->|5. Return Secure Records| Context
+            Context -->|6. Render Dynamic UI Modules| User
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2. Core Business Workflows</h2>
+      
+      <h3>A. Asset Procurement &amp; Inventory Transaction Flow</h3>
+      <div class="mermaid">
+        graph TD
+            PR[Purchase Request] -->|Submit| Approval{Admin Approve?}
+            Approval -->|No| Reject[Rejected]
+            Approval -->|Yes| RFQ[Request for Quotation]
+            RFQ -->|Quotations Submitted| PRCompare[Quotation Comparison Matrix]
+            PRCompare -->|Generate PO| PO[Purchase Order Created]
+            PO -->|Deliver Goods| GRN[Goods Received Note Created]
+            GRN -->|Accept/Reject Items| InvUpdate[Update Inventory Items Stock]
+            InvUpdate -->|Real-time Audit Log| InvAudit[inventory_transactions Audit Record]
+            InvUpdate -->|Compare against Reorder Level| Alert{Stock <= Reorder?}
+            Alert -->|Yes| PushAlert[Trigger Low Stock Alert]
+      </div>
+
+      <h3>B. Asset Assignment &amp; Custodian Lifecycle</h3>
+      <div class="mermaid">
+        graph TD
+            A[New Asset Purchase] -->|Scan/Create Barcode| B(Asset Registered)
+            B -->|Assign Custodian| C{Allocation Event}
+            C -->|Assign to Person| D[Asset Assigned to Profile]
+            C -->|Move to Floor/Room| E[Internal Floor Transfer Logged]
+            D -->|Asset Maintenance| F[Log Maintenance Event]
+            E -->|Asset Maintenance| F
+            F -->|Retire/Scrap| G[Asset Retired]
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>3. Database Structure &amp; ERD</h2>
+      <p>SetuOne enforces strict relational constraints ensuring database integrity across branches and locations:</p>
+      
+      <div class="mermaid">
+        erDiagram
+            tenants ||--o{ companies : "owns"
+            companies ||--o{ branches : "contains"
+            branches ||--o{ buildings : "contains"
+            buildings ||--o{ locations : "defines"
+            companies ||--o{ departments : "employs"
+            companies ||--o{ designations : "has"
+            roles ||--o{ role_permissions : "configures"
+            companies ||--o{ profiles : "associates"
+            profiles ||--o{ asset_assignments : "holds"
+            asset_categories ||--o{ assets : "classifies"
+            brands ||--o{ models : "owns"
+            models ||--o{ assets : "defines"
+            assets ||--o{ asset_assignments : "assigned"
+            assets ||--o{ asset_maintenance_history : "tracks"
+      </div>
+
+      <h3>Table Responsibility Ledger</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Table Name</th>
+            <th>Primary Purpose</th>
+            <th>Relationships / Foreign Keys</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>public.tenants</strong></td>
+            <td>Subscriber scope and account validation.</td>
+            <td>Isolated domain mapping.</td>
+          </tr>
+          <tr>
+            <td><strong>public.companies</strong></td>
+            <td>Sub-brands (Orion Parks, Greenfield School).</td>
+            <td>Linked to <code>tenants(id)</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>public.branches</strong></td>
+            <td>Physical branch coordinates and regional settings.</td>
+            <td>Linked to <code>companies(id)</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>public.locations</strong></td>
+            <td>Self-referencing tree of Floors, Rooms, and Zones.</td>
+            <td>Linked to <code>buildings(id)</code> and <code>parent_id</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>public.assets</strong></td>
+            <td>Holds barcode, category, serial number, cost, and warranty dates.</td>
+            <td>Linked to <code>categories</code>, <code>brands</code>, and <code>models</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>public.inventory_transactions</strong></td>
+            <td>Real-time audit trails of item entries (IN) and consumption (OUT).</td>
+            <td>Linked to <code>inventory_items</code> and <code>branches</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>4. JavaScript APIs &amp; Repositories</h2>
+      <p>The application interacts with data layers via asynchronous transactional JavaScript wrappers:</p>
+      <ul>
+        <li><strong><code>assetRepository.js</code></strong>: Handles dynamic category matching, barcode validation, manual floor updates, and depreciation timelines.</li>
+        <li><strong><code>inventoryRepository.js</code></strong>: Runs real-time inventory adjustments and logs transactions on stock consumption events.</li>
+        <li><strong><code>attendanceRepository.js</code></strong>: Binds security logs and coordinates geo-fenced checks.</li>
+      </ul>
+    </div>
+
+    <div class="footer">
+      &copy; 2026 SetuOne Facility Systems Inc. All Rights Reserved. Confidential Document.
+    </div>
+  </div>
+</body>
+</html>

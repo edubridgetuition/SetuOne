@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SetuOne Integrated Facility ERP - Client Deck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'neutral',
+      securityLevel: 'loose',
+      flowchart: { useMaxWidth: true, htmlLabels: true }
+    });
+  </script>
+  <style>
+    :root {
+      --primary: #0038a8;
+      --primary-light: #eff6ff;
+      --text-dark: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --bg: #f1f5f9;
+    }
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: var(--text-dark);
+      background-color: var(--bg);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .slide-container {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 40px;
+    }
+    .slide {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      width: 100%;
+      max-width: 900px;
+      height: 520px;
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+    .slide.active {
+      display: flex;
+    }
+    .slide-header {
+      border-bottom: 2px solid var(--primary-light);
+      padding-bottom: 12px;
+    }
+    .slide-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--primary);
+      margin: 0;
+    }
+    .slide-subtitle {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .slide-content {
+      flex: 1;
+      padding: 20px 0;
+      font-size: 15px;
+      overflow-y: auto;
+    }
+    .slide-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+    }
+    .nav-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    .btn {
+      background: var(--primary);
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn:hover {
+      background: #002880;
+    }
+    .btn-secondary {
+      background: #e2e8f0;
+      color: var(--text-dark);
+    }
+    .btn-secondary:hover {
+      background: #cbd5e1;
+    }
+    ul {
+      padding-left: 20px;
+    }
+    li {
+      margin-bottom: 10px;
+      color: #334155;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 8px 10px;
+      text-align: left;
+      font-size: 13px;
+    }
+    th {
+      background: var(--primary-light);
+      color: var(--primary);
+    }
+    .mermaid {
+      display: flex;
+      justify-content: center;
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 10px;
+      border: 1px solid var(--border);
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="slide-container">
+    
+    <!-- Slide 1 -->
+    <div class="slide active" id="slide-1">
+      <div class="slide-header">
+        <h2 class="slide-title">Welcome to SetuOne Facility ERP</h2>
+        <div class="slide-subtitle">A Unified Corporate Ecosystem</div>
+      </div>
+      <div class="slide-content">
+        <p style="font-size: 18px; font-weight: 500; color: var(--text-dark);">Centralized operations, real-time analytics, and high-fidelity navigation hubs.</p>
+        <ul>
+          <li><strong>Consolidated Dashboard</strong>: Manage Assets, Procurement, PPM compliance, and Geofenced Presence registers.</li>
+          <li><strong>Role-Based Security</strong>: Automated database isolation protecting multi-tenant company branches.</li>
+          <li><strong>Clean Responsive Layout</strong>: Premium hover dropdown controls and dynamic alignment items.</li>
+        </ul>
+      </div>
+      <div class="slide-footer">
+        <span>Slide 1 of 6</span>
+        <div class="nav-buttons">
+          <button class="btn btn-secondary" disabled>Prev</button>
+          <button class="btn" onclick="nextSlide(1)">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 2 -->
+    <div class="slide" id="slide-2">
+      <div class="slide-header">
+        <h2 class="slide-title">The Challenge &amp; Solution</h2>
+        <div class="slide-subtitle">Transforming manual overhead to automated performance</div>
+      </div>
+      <div class="slide-content">
+        <table>
+          <thead>
+            <tr>
+              <th>Legacy Operations (Before)</th>
+              <th>SetuOne Integrated ERP (After)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Scattered excel sheets tracking Laptops/Furniture</td>
+              <td>Dynamic Registry with sequential barcode labeling</td>
+            </tr>
+            <tr>
+              <td>Consumable supply stockouts &amp; pantry delays</td>
+              <td>Dual transaction logger (IN/OUT) with reorder alerts</td>
+            </tr>
+            <tr>
+              <td>Manual paper logs for visitors &amp; shifts</td>
+              <td>Live geofenced attendance logs &amp; QR check-ins</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="slide-footer">
+        <span>Slide 2 of 6</span>
+        <div class="nav-buttons">
+          <button class="btn btn-secondary" onclick="prevSlide(2)">Prev</button>
+          <button class="btn" onclick="nextSlide(2)">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 3 -->
+    <div class="slide" id="slide-3">
+      <div class="slide-header">
+        <h2 class="slide-title">Unified Navigation Hierarchy</h2>
+        <div class="slide-subtitle">Premium Hover Menus &amp; Clean Spacing</div>
+      </div>
+      <div class="slide-content">
+        <ul>
+          <li><strong>Launcher Grid</strong>: Open apps panel with a clean 9-dot animated switcher.</li>
+          <li><strong>Horizontal Sub-Header Tabs</strong>:
+            <ul>
+              <li><strong>Asset Management</strong>: The master control sheet.</li>
+              <li><strong>Inventory</strong>: Isolated consumable balance and receipt ledger.</li>
+              <li><strong>IT Assets ▾</strong>: Hover menu (Mobile, SIM, Laptop, Desktop, Monitor, CCTV).</li>
+              <li><strong>Facility Assets ▾</strong>: Hover menu (HVAC, Electrical, Machinery, Furniture, Vehicles).</li>
+            </ul>
+          </li>
+          <li><strong>Micro-Animations</strong>: Scaling blue marker indicators expand from <code>8px</code> to <code>12px</code> on hover.</li>
+        </ul>
+      </div>
+      <div class="slide-footer">
+        <span>Slide 3 of 6</span>
+        <div class="nav-buttons">
+          <button class="btn btn-secondary" onclick="prevSlide(3)">Prev</button>
+          <button class="btn" onclick="nextSlide(3)">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 4 -->
+    <div class="slide" id="slide-4">
+      <div class="slide-header">
+        <h2 class="slide-title">Asset Assignment &amp; Logs</h2>
+        <div class="slide-subtitle">Interactive Barcode Allocation Flow</div>
+      </div>
+      <div class="slide-content">
+        <div class="mermaid">
+          graph LR
+              Asset[Purchase Asset] -->|Generate Barcode| Code[QR Barcode Registered]
+              Code -->|Allotment| User[Custodian Profile]
+              Code -->|Location Shift| Floor[Floor/Room Transfer Logged]
+              Code -->|Calculations| Depr[SLM Depreciation Sheet]
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Slide 4 of 6</span>
+        <div class="nav-buttons">
+          <button class="btn btn-secondary" onclick="prevSlide(4)">Prev</button>
+          <button class="btn" onclick="nextSlide(4)">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 5 -->
+    <div class="slide" id="slide-5">
+      <div class="slide-header">
+        <h2 class="slide-title">Real-Time Inventory Audits</h2>
+        <div class="slide-subtitle">Low Stock Reorder Automation</div>
+      </div>
+      <div class="slide-content">
+        <div class="mermaid">
+          graph LR
+              GRN[Receive GRN] -->|Stock IN| Stock[Inventory stock balance]
+              Stock -->|Consume item| Issue[Stock OUT logged]
+              Issue -->|Check Alert| Reorder{Stock <= Reorder Level?}
+              Reorder -->|Yes| PushAlert[Send Low Stock Notification]
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Slide 5 of 6</span>
+        <div class="nav-buttons">
+          <button class="btn btn-secondary" onclick="prevSlide(5)">Prev</button>
+          <button class="btn" onclick="nextSlide(5)">Next</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Slide 6 -->
+    <div class="slide" id="slide-6">
+      <div class="slide-header">
+        <h2 class="slide-title">Multi-Tenant Isolation</h2>
+        <div class="slide-subtitle">Security first architecture with Row-Level Security</div>
+      </div>
+      <div class="slide-content">
+        <ul>
+          <li><strong>SQL Policies</strong>: Automatic filters match user's session JWT payload to the database record.</li>
+          <li><strong>Branch Boundaries</strong>: Staff and managers cannot view profiles or locations from other entities.</li>
+          <li><strong>Secure Operations</strong>: Ready for enterprise multi-site operations.</li>
+        </ul>
+      </div>
+      <div class="slide-footer">
+        <span>Slide 6 of 6</span>
+        <div class="nav-buttons">
+          <button class="btn btn-secondary" onclick="prevSlide(6)">Prev</button>
+          <button class="btn" disabled>Next</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function nextSlide(currentNum) {
+      document.getElementById('slide-' + currentNum).classList.remove('active');
+      document.getElementById('slide-' + (currentNum + 1)).classList.add('active');
+    }
+    function prevSlide(currentNum) {
+      document.getElementById('slide-' + currentNum).classList.remove('active');
+      document.getElementById('slide-' + (currentNum - 1)).classList.add('active');
+    }
+  </script>
+</body>
+</html>

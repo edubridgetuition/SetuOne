@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useApp } from "../context/appContextCore";
+import { supabase } from "../lib/supabase";
 
 export default function AdminConsoleSettings() {
   const {
@@ -67,6 +68,9 @@ export default function AdminConsoleSettings() {
   
   // Dashboard Templates clone form
   const [cloneForm, setCloneForm] = useState({ targetRole: "Admin Manager" });
+  const [categories, setCategories] = useState([]);
+  const [newCategoryName, setNewCategoryName] = useState("");
+  const [newCategoryDivision, setNewCategoryDivision] = useState("IT Assets");
   const [keySelection, setKeySelection] = useState("CUSTOM");
   const [showWidgetDrawer, setShowWidgetDrawer] = useState(false);
   const [editingWidgetId, setEditingWidgetId] = useState(null);
@@ -89,6 +93,39 @@ export default function AdminConsoleSettings() {
     is_required: false,
     is_active: true
   });
+  async function loadAssetCategories() {
+    const { data, error } = await supabase
+      .from("asset_categories")
+      .select("*")
+      .order("name", { ascending: true });
+    if (!error && data) {
+      setCategories(data);
+    }
+  }
+
+  async function handleAddCategorySubmit(e) {
+    e.preventDefault();
+    if (!newCategoryName.trim()) return;
+
+    const { data, error } = await supabase
+      .from("asset_categories")
+      .insert({
+        name: newCategoryName.trim(),
+        division: newCategoryDivision,
+        schema_definition: {}
+      })
+      .select()
+      .single();
+
+    if (error) {
+      alert("Failed to create category: " + error.message);
+    } else {
+      alert(`Category "${newCategoryName.trim()}" registered under division "${newCategoryDivision}".`);
+      setNewCategoryName("");
+      loadAssetCategories();
+    }
+  }
+
   useEffect(() => {
     loadSystemSettings();
     loadBrandingSettings();
@@ -103,6 +140,7 @@ export default function AdminConsoleSettings() {
     loadNotificationTemplates();
     loadRecurringSchedulerJobs();
     loadDashboardWidgets();
+    loadAssetCategories();
   }, []);
 
   // Update form inputs when data loads
@@ -340,6 +378,7 @@ const resetWidgetForm = () => {
             {[
               { key: "Company", label: "General & Branding" },
               { key: "Masters", label: "Dynamic Masters" },
+              { key: "AssetCategories", label: "Asset Categories" },
               { key: "Series", label: "Number Series" },
               { key: "Approvals", label: "Workflows" },
               { key: "Custom Fields", label: "Metadata & Custom Fields" },
@@ -405,6 +444,64 @@ const resetWidgetForm = () => {
                 </div>
                 <button style={{ ...styles.primaryBtn, width: "150px", marginTop: "10px" }} type="submit">Save Branding</button>
               </form>
+            </div>
+          )}
+
+          {/* TAB: ASSET CATEGORIES */}
+          {activeTab === "AssetCategories" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+              <form onSubmit={handleAddCategorySubmit} style={styles.form}>
+                <div style={styles.muted}>Register New Asset Category</div>
+                <div style={styles.formGrid}>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Category Name</label>
+                    <input 
+                      style={styles.input} 
+                      required 
+                      value={newCategoryName} 
+                      onChange={e => setNewCategoryName(e.target.value)} 
+                      placeholder="e.g. Mobile, HVAC, Machinery" 
+                    />
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Asset Division</label>
+                    <select 
+                      style={styles.input} 
+                      value={newCategoryDivision} 
+                      onChange={e => setNewCategoryDivision(e.target.value)}
+                    >
+                      <option value="IT Assets">IT Assets</option>
+                      <option value="Facility Assets">Facility Assets</option>
+                    </select>
+                  </div>
+                </div>
+                <button style={{ ...styles.primaryBtn, width: "150px", marginTop: "10px" }} type="submit">
+                  Save Category
+                </button>
+              </form>
+
+              {/* Registered Categories List Table */}
+              <div style={styles.descBox}>
+                <div style={styles.panelTitle} style={{ fontSize: "0.85rem", marginBottom: "12px" }}>Registered Categories</div>
+                <div style={{ maxHeight: "300px", overflowY: "auto" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.8rem" }}>
+                    <thead>
+                      <tr style={{ background: "#f8fafc" }}>
+                        <th style={{ padding: "8px", borderBottom: "1px solid #cbd5e1", textAlign: "left" }}>Category Name</th>
+                        <th style={{ padding: "8px", borderBottom: "1px solid #cbd5e1", textAlign: "left" }}>Division</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {categories.map(c => (
+                        <tr key={c.id} style={{ borderBottom: "1px solid #f1f5f9" }}>
+                          <td style={{ padding: "8px", color: "#334155" }}>{c.name}</td>
+                          <td style={{ padding: "8px", color: "#475569" }}>{c.division || "Unassigned"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           )}
 
