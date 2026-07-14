@@ -978,6 +978,10 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
   const activeCategoryEditName = assetMetadata?.categories.find(c => c.id === editForm.categoryId)?.name || "";
   const activeAssetEditTypes = categoryAssetTypes[activeCategoryEditName] || [];
 
+  const isReadOnlyView = !!defaultCategory;
+  const showAddFormEffective = showAddForm && !isReadOnlyView;
+  const showAddCategoryFormEffective = showAddCategoryForm && !isReadOnlyView;
+
   return (
     <div style={styles.page}>
       <div style={styles.left}>
@@ -987,23 +991,25 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
               <div style={styles.panelTitle}>Corporate Asset Lifecycle Registry</div>
               <div style={styles.panelSub}>Track barcodes, internal floor transfers, tax inputs, and depreciation sheets.</div>
             </div>
-            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-              <button style={styles.secondaryBtn} onClick={downloadCsvTemplate}>Download CSV Template</button>
-              <label style={styles.secondaryBtn}>
-                Import CSV
-                <input type="file" accept=".csv" style={{ display: "none" }} onChange={handleCsvImport} />
-              </label>
-              <button style={styles.secondaryBtn} onClick={() => setShowAddCategoryForm(!showAddCategoryForm)}>
-                Admin Setup: Add Category
-              </button>
-              <button style={styles.primaryBtn} onClick={() => setShowAddForm(!showAddForm)}>
-                {showAddForm ? "Cancel" : "+ New Asset"}
-              </button>
-            </div>
+            {!isReadOnlyView && (
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <button style={styles.secondaryBtn} onClick={downloadCsvTemplate}>Download CSV Template</button>
+                <label style={styles.secondaryBtn}>
+                  Import CSV
+                  <input type="file" accept=".csv" style={{ display: "none" }} onChange={handleCsvImport} />
+                </label>
+                <button style={styles.secondaryBtn} onClick={() => setShowAddCategoryForm(!showAddCategoryForm)}>
+                  Admin Setup: Add Category
+                </button>
+                <button style={styles.primaryBtn} onClick={() => setShowAddForm(!showAddForm)}>
+                  {showAddForm ? "Cancel" : "+ New Asset"}
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Add Category Admin Form */}
-          {showAddCategoryForm && (
+          {showAddCategoryFormEffective && (
             <form onSubmit={handleAddCategorySubmit} style={styles.form}>
               <div style={{ ...styles.panelTitle, fontSize: "0.85rem", borderBottom: "1px dashed #e2e8f0", paddingBottom: "8px" }}>
                 Add New Asset Category (Admin Setup)
@@ -1029,7 +1035,7 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
           )}
 
           {/* Extended Asset Registration Form */}
-          {showAddForm && (
+          {showAddFormEffective && (
             <form onSubmit={handleAddSubmit} style={styles.form}>
               <div style={{ ...styles.panelTitle, fontSize: "0.85rem", borderBottom: "1px dashed #e2e8f0", paddingBottom: "8px" }}>
                 Basic Specifications

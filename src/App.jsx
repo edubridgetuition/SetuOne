@@ -32,7 +32,7 @@ function AppContent() {
       case "assets": return <AssetManagement />;
       
       // IT Assets Hierarchical Views
-      case "assets_it": return <AssetManagement defaultDivision="IT Assets" />;
+      case "it_assets": return <AssetManagement defaultDivision="IT Assets" />;
       case "mobile": return <AssetManagement defaultDivision="IT Assets" defaultCategory="Mobile" />;
       case "sim": return <AssetManagement defaultDivision="IT Assets" defaultCategory="SIM" />;
       case "laptop": return <AssetManagement defaultDivision="IT Assets" defaultCategory="Laptop" />;
@@ -43,7 +43,7 @@ function AppContent() {
       case "cctv": return <AssetManagement defaultDivision="IT Assets" defaultCategory="CCTV" />;
       
       // Facility Assets Hierarchical Views
-      case "assets_facility": return <AssetManagement defaultDivision="Facility Assets" />;
+      case "facility_assets": return <AssetManagement defaultDivision="Facility Assets" />;
       case "hvac": return <AssetManagement defaultDivision="Facility Assets" defaultCategory="HVAC" />;
       case "electrical": return <AssetManagement defaultDivision="Facility Assets" defaultCategory="Electrical" />;
       case "machinery": return <AssetManagement defaultDivision="Facility Assets" defaultCategory="Machinery" />;

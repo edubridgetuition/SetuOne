@@ -33,6 +33,7 @@ const appIconColors = {
 export default function Layout({ children }) {
   const { session, activeView, setActiveView, activeRole, activeTenant, canAccess, logout } = useApp();
   const [launcherOpen, setLauncherOpen] = useState(false);
+  const [hoveredTab, setHoveredTab] = useState(null);
   const closeTimer = useRef(null);
 
   const accessibleModules = useMemo(() => menuBar
@@ -45,19 +46,19 @@ export default function Layout({ children }) {
   const activeModule = accessibleModules.find((mod) => {
     if (mod.key === "asset") {
       const allAssetKeys = [
-        "assets_it", "mobile", "sim", "laptop", "desktop", "monitor", "printer", "networking", "cctv",
-        "assets_facility", "inventory", "hvac", "electrical", "machinery", "furniture", "vehicles", "safety", "others"
+        "assets", "it_assets", "facility_assets",
+        "mobile", "sim", "laptop", "desktop", "monitor", "printer", "networking", "cctv",
+        "inventory", "hvac", "electrical", "machinery", "furniture", "vehicles", "safety", "others"
       ];
       return allAssetKeys.includes(activeView);
     }
     return mod.subItems.some((sub) => sub.key === activeView);
   }) || accessibleModules[0];
 
-  const itViewKeys = ["assets_it", "mobile", "sim", "laptop", "desktop", "monitor", "printer", "networking", "cctv"];
-  const activeAssetDivision = itViewKeys.includes(activeView) ? "IT Assets" : "Facility Assets";
+  const itViewKeys = ["it_assets", "mobile", "sim", "laptop", "desktop", "monitor", "printer", "networking", "cctv"];
+  const facilityViewKeys = ["facility_assets", "inventory", "hvac", "electrical", "machinery", "furniture", "vehicles", "safety", "others"];
 
   const itCategories = [
-    { key: "assets_it", label: "Asset Management" },
     { key: "mobile", label: "Mobile" },
     { key: "sim", label: "SIM" },
     { key: "laptop", label: "Laptop" },
@@ -69,7 +70,6 @@ export default function Layout({ children }) {
   ];
 
   const facilityCategories = [
-    { key: "assets_facility", label: "Asset Management" },
     { key: "inventory", label: "Inventory" },
     { key: "hvac", label: "HVAC" },
     { key: "electrical", label: "Electrical" },
@@ -80,11 +80,18 @@ export default function Layout({ children }) {
     { key: "others", label: "Others" }
   ];
 
-  const currentSubCategories = activeAssetDivision === "IT Assets" ? itCategories : facilityCategories;
+  const activeAssetDivision = itViewKeys.includes(activeView) ? "IT Assets" : (facilityViewKeys.includes(activeView) ? "Facility Assets" : "");
 
-  const activeSubLabel = activeModule?.key === "asset"
-    ? (currentSubCategories.find((c) => c.key === activeView)?.label || activeAssetDivision)
-    : (activeModule?.subItems.find((sub) => sub.key === activeView)?.label || "Dashboard");
+  const activeSubLabel = (() => {
+    if (activeModule?.key === "asset") {
+      if (activeView === "assets") return "Asset Management";
+      if (activeView === "it_assets") return "IT Assets";
+      if (activeView === "facility_assets") return "Facility Assets";
+      const cat = [...itCategories, ...facilityCategories].find(c => c.key === activeView);
+      return cat ? cat.label : "Asset";
+    }
+    return activeModule?.subItems.find((sub) => sub.key === activeView)?.label || "Dashboard";
+  })();
 
   const tenantName = activeRole === "Super Admin" ? (activeTenant === "orion" ? "Orion Corporate Park" : "Greenfield School") : (session?.companyName || "Orion Corporate Park");
 
@@ -218,18 +225,44 @@ function getModuleIcon(key) {
           {activeModule && <span style={s.activeAppPill}>{activeModule.label}</span>}
           <nav style={s.subNav} aria-label="Module menu">
             {activeModule?.subItems.map((sub) => {
-              const isActive = activeModule.key === "asset"
-                ? (sub.label === activeAssetDivision)
-                : (activeView === sub.key);
+              const isActive = activeView === sub.key || 
+                (sub.key === "it_assets" && itViewKeys.includes(activeView)) ||
+                (sub.key === "facility_assets" && facilityViewKeys.includes(activeView));
               return (
-                <button
-                  type="button"
-                  key={sub.key}
-                  style={{ ...s.subNavButton, ...(isActive ? s.subNavButtonActive : {}) }}
-                  onClick={() => selectSubItem(sub)}
+                <div 
+                  key={sub.key} 
+                  style={{ position: "relative", display: "flex", alignItems: "center", height: "100%" }}
+                  onMouseEnter={() => (sub.key === "it_assets" || sub.key === "facility_assets") && setHoveredTab(sub.key)}
+                  onMouseLeave={() => setHoveredTab(null)}
                 >
-                  {sub.label}
-                </button>
+                  <button
+                    type="button"
+                    style={{ ...s.subNavButton, ...(isActive ? s.subNavButtonActive : {}) }}
+                    onClick={() => selectSubItem(sub)}
+                  >
+                    {sub.label}
+                    {(sub.key === "it_assets" || sub.key === "facility_assets") && <span style={{ fontSize: "10px", marginLeft: "4px" }}>▾</span>}
+                  </button>
+
+                  {/* Dropdown Menu on Hover */}
+                  {hoveredTab === sub.key && (
+                    <div style={s.hoverDropdown}>
+                      {(sub.key === "it_assets" ? itCategories : facilityCategories).map((cat) => (
+                        <button
+                          key={cat.key}
+                          type="button"
+                          style={{ ...s.dropdownItem, ...(activeView === cat.key ? s.dropdownItemActive : {}) }}
+                          onClick={() => {
+                            setActiveView(cat.key);
+                            setHoveredTab(null);
+                          }}
+                        >
+                          {cat.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               );
             })}
           </nav>
@@ -250,23 +283,6 @@ function getModuleIcon(key) {
           <button style={s.logoutBtn} onClick={logout}>Sign out</button>
         </div>
       </header>
-
-      {activeModule?.key === "asset" && (
-        <div style={s.secBar}>
-          <nav style={s.secSubNav} aria-label="Sub-category menu">
-            {currentSubCategories.map((sub) => (
-              <button
-                type="button"
-                key={sub.key}
-                style={{ ...s.secNavButton, ...(activeView === sub.key ? s.secNavButtonActive : {}) }}
-                onClick={() => setActiveView(sub.key)}
-              >
-                {sub.label}
-              </button>
-            ))}
-          </nav>
-        </div>
-      )}
 
       <main style={s.mainWrap}>
         <section style={s.pageHeader}>
@@ -350,9 +366,8 @@ const s = {
   pageTitle: { fontSize: "18px", fontWeight: 900, color: "#0f172a" },
   pageSub: { fontSize: "12px", color: "#94a3b8", marginTop: "2px" },
   content: { flex: 1, overflow: "auto", padding: "15px" },
-  secBar: { height: "36px", background: "#ffffff", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", padding: "0 14px", flexShrink: 0 },
-  secSubNav: { display: "flex", alignItems: "center", gap: "4px", minWidth: 0, overflowX: "auto", height: "100%" },
-  secNavButton: { height: "26px", border: "none", background: "transparent", color: "#64748b", padding: "0 10px", borderRadius: "6px", fontSize: "12px", fontWeight: 650, cursor: "pointer", whiteSpace: "nowrap", transition: "all 0.15s ease" },
-  secNavButtonActive: { color: "#0038a8", background: "#eff6ff", fontWeight: 700 }
+  hoverDropdown: { position: "absolute", top: "32px", left: "0", minWidth: "160px", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)", padding: "6px", zIndex: 1000 },
+  dropdownItem: { width: "100%", border: "none", background: "transparent", borderRadius: "5px", padding: "6px 12px", fontSize: "12px", color: "#334155", textAlign: "left", cursor: "pointer", display: "block", transition: "background 0.15s" },
+  dropdownItemActive: { background: "#eff6ff", color: "#0038a8", fontWeight: 700 }
 };
 
