@@ -367,7 +367,7 @@ export function AppProvider({ children }) {
           const { data: rData } = await supabase.from('roles').select('id').eq('name', fallbackRoleName).maybeSingle();
           const roleId = rData?.id || "d41d8ba7-4d70-4651-9a76-429319eed00a"; // Super Admin default
           
-          await supabase.from('profiles').insert({
+          const { error: insErr } = await supabase.from('profiles').insert({
             id: authSession.user.id,
             email: authSession.user.email,
             full_name: authSession.user.user_metadata?.full_name || authSession.user.email.split('@')[0],
@@ -375,8 +375,13 @@ export function AppProvider({ children }) {
             company_id: resolvedCompanyId,
             branch_id: resolvedBranchId
           });
+          if (insErr) {
+            console.error("Profile insert failed:", insErr);
+            alert("Self-healing profile setup error: " + insErr.message);
+          }
         } catch (err) {
-          console.warn("Profile already exists or insert skipped:", err);
+          console.warn("Profile setup exception:", err);
+          alert("Self-healing profile exception: " + err.message);
         }
 
         setSession({
