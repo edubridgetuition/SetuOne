@@ -60,7 +60,33 @@ CROSS JOIN (
 ) AS cat(name, division)
 ON CONFLICT (tenant_id, name) DO UPDATE SET division = EXCLUDED.division;
 
--- 5. CREATE ASSET TRANSFERS LOG TABLE
+-- 5. MIGRATE EXISTING ASSETS POINTING TO OLD 'IT Asset' CATEGORY TO NEW 'Laptop' CATEGORY
+DO $$
+DECLARE
+    t_record RECORD;
+    old_cat_id UUID;
+    new_cat_id UUID;
+BEGIN
+    FOR t_record IN SELECT id FROM public.tenants LOOP
+        -- Find old "IT Asset" category
+        SELECT id INTO old_cat_id FROM public.asset_categories WHERE tenant_id = t_record.id AND name = 'IT Asset';
+        
+        IF old_cat_id IS NOT NULL THEN
+            -- Find new "Laptop" category
+            SELECT id INTO new_cat_id FROM public.asset_categories WHERE tenant_id = t_record.id AND name = 'Laptop';
+            
+            IF new_cat_id IS NOT NULL THEN
+                -- Move assets from "IT Asset" to "Laptop"
+                UPDATE public.assets SET category_id = new_cat_id WHERE tenant_id = t_record.id AND category_id = old_cat_id;
+            END IF;
+            
+            -- Delete old "IT Asset" category row
+            DELETE FROM public.asset_categories WHERE id = old_cat_id;
+        END IF;
+    END LOOP;
+END $$;
+
+-- 6. CREATE ASSET TRANSFERS LOG TABLE
 CREATE TABLE IF NOT EXISTS public.asset_transfers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     asset_id UUID NOT NULL REFERENCES public.assets(id) ON DELETE CASCADE,
@@ -74,7 +100,7 @@ CREATE TABLE IF NOT EXISTS public.asset_transfers (
     transfer_date TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- 6. ENABLE RLS FOR public.asset_transfers
+-- 7. ENABLE RLS FOR public.asset_transfers
 ALTER TABLE public.asset_transfers ENABLE ROW LEVEL SECURITY;
 
 -- DROP AND RECREATE RLS POLICIES TO PREVENT "ALREADY EXISTS" ERRORS
