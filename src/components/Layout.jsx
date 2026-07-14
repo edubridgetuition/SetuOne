@@ -271,11 +271,11 @@ function getModuleIcon(key) {
                             <span style={{
                               display: "inline-block",
                               width: "3px",
-                              height: "10px",
+                              height: isItemHovered || isItemActive ? "12px" : "8px",
                               borderRadius: "2px",
-                              background: "#10b981",
+                              background: isItemHovered || isItemActive ? "#0038a8" : "#93c5fd",
                               marginRight: "8px",
-                              transition: "background 0.2s"
+                              transition: "all 0.2s ease"
                             }} />
                             {cat.label}
                           </button>
@@ -387,8 +387,8 @@ const s = {
   pageTitle: { fontSize: "18px", fontWeight: 900, color: "#0f172a" },
   pageSub: { fontSize: "12px", color: "#94a3b8", marginTop: "2px" },
   content: { flex: 1, overflow: "auto", padding: "15px" },
-  hoverDropdown: { position: "absolute", top: "36px", left: "0", minWidth: "170px", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)", padding: "6px", zIndex: 9999 },
-  dropdownItem: { width: "100%", border: "none", background: "transparent", borderRadius: "5px", padding: "6px 12px", fontSize: "12px", color: "#334155", textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", transition: "background 0.15s" },
+  hoverDropdown: { position: "absolute", top: "36px", left: "0", minWidth: "170px", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)", padding: "6px", display: "flex", flexDirection: "column", gap: "4px", zIndex: 9999 },
+  dropdownItem: { width: "100%", border: "none", background: "transparent", borderRadius: "5px", padding: "8px 12px", fontSize: "12px", color: "#334155", textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", transition: "background 0.15s" },
   dropdownItemActive: { background: "#eff6ff", color: "#0038a8", fontWeight: 700 },
   dropdownItemHover: { background: "#eff6ff", color: "#0038a8" }
 };
