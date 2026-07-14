@@ -47,7 +47,7 @@ export default function VendorManagement() {
       return;
     }
 
-    const companyId = session?.user?.user_metadata?.company_id || "77f72677-a422-44f5-a1c7-62716923cb45";
+    const companyId = session?.companyId || "7e85d57c-2dcd-4943-9066-6467c5bb10e4";
 
     // Build serialized service type to hold address & gst if columns are missing
     const serializedService = `${serviceType} | GST: ${gst || "N/A"} | Address: ${address || "N/A"}`;

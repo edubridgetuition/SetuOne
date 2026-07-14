@@ -343,6 +343,11 @@ export function AppProvider({ children }) {
           console.warn("Error resolving fallback company:", e);
         }
 
+        if (!resolvedCompanyId) {
+          resolvedCompanyId = "7e85d57c-2dcd-4943-9066-6467c5bb10e4";
+          resolvedCompanyName = "On2Cook Pvt Ltd";
+        }
+
         const fallbackRoleName = authSession.user.user_metadata?.role || "Admin Manager";
         
         // Try creating/insuring the profile in public.profiles to satisfy foreign keys
