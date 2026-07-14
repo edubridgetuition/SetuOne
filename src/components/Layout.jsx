@@ -338,7 +338,7 @@ const s = {
   gridDot: { width: "3px", height: "3px", borderRadius: "50%", background: "#2563eb" },
   brandTile: { width: "34px", height: "34px", borderRadius: "9px", background: "#ffffff", color: "#0038a8", border: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 900, flexShrink: 0 },
   activeAppPill: { background: "#e6fffb", color: "#0f766e", border: "1px solid #99f6e4", borderRadius: "5px", padding: "5px 5px", fontSize: "10px", fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 },
-  subNav: { display: "flex", alignItems: "center", gap: "0px", minWidth: 0, overflowX: "auto", height: "100%" },
+  subNav: { display: "flex", alignItems: "center", gap: "0px", minWidth: 0, overflow: "visible", height: "100%" },
   subNavButton: { height: "28px", border: "none", background: "transparent", color: "#475569", padding: "0 12px", borderRadius: "8px", fontSize: "13px", fontWeight: 650, cursor: "pointer", whiteSpace: "nowrap" },
   subNavButtonActive: { color: "#0038a8", background: "#eff6ff" },
   launcherPanel: { position: "absolute", top: "44px", left: "0", width: "220px", maxHeight: "calc(100vh - 82px)", overflowY: "auto", background: "#fff", border: "1px solid #e2e8f0", borderRadius: "10px", boxShadow: "0 16px 40px rgba(15, 23, 42, 0.14)", padding: "10px", zIndex: 1000 },
@@ -366,7 +366,7 @@ const s = {
   pageTitle: { fontSize: "18px", fontWeight: 900, color: "#0f172a" },
   pageSub: { fontSize: "12px", color: "#94a3b8", marginTop: "2px" },
   content: { flex: 1, overflow: "auto", padding: "15px" },
-  hoverDropdown: { position: "absolute", top: "32px", left: "0", minWidth: "160px", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)", padding: "6px", zIndex: 1000 },
+  hoverDropdown: { position: "absolute", top: "36px", left: "0", minWidth: "170px", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)", padding: "6px", zIndex: 9999 },
   dropdownItem: { width: "100%", border: "none", background: "transparent", borderRadius: "5px", padding: "6px 12px", fontSize: "12px", color: "#334155", textAlign: "left", cursor: "pointer", display: "block", transition: "background 0.15s" },
   dropdownItemActive: { background: "#eff6ff", color: "#0038a8", fontWeight: 700 }
 };
