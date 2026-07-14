@@ -62,7 +62,14 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
     loadPurchaseRequests();
     loadPurchaseOrders();
   }, []);
-
+  // Auto-select first PR/PO when lists load
+  useEffect(() => {
+    if (viewMode === "pr" && purchaseRequests.length > 0 && !selectedId) {
+      setSelectedId(purchaseRequests[0].id);
+    } else if (viewMode === "po" && purchaseOrders.length > 0 && !selectedPOId) {
+      setSelectedPOId(purchaseOrders[0].id);
+    }
+  }, [purchaseRequests, purchaseOrders, viewMode]);
   // Update selected PR details and load quotations if selected
   useEffect(() => {
     if (!selectedId) {
@@ -733,7 +740,7 @@ const styles = {
   table: { width: "100%", borderCollapse: "collapse" },
   th: { textTransform: "uppercase", fontSize: "0.65rem", fontWeight: 700, color: "#64748b", padding: "12px 16px", borderBottom: "1px solid #e2e8f0", textAlign: "left", letterSpacing: "1px" },
   tr: { borderBottom: "1px solid #f1f5f9", cursor: "pointer", transition: "background 0.2s" },
-  trActive: { background: "#f1f5f9" },
+  trActive: { background: "#eff6ff", borderLeft: "4px solid #0038a8" },
   td: { padding: "12px 16px", fontSize: "0.8rem", color: "#111625" },
   badge: { fontSize: "0.68rem", fontWeight: 600, padding: "3px 8px", borderRadius: "20px", display: "inline-block" },
   empty: { color: "#94a3b8", fontSize: "0.82rem", textAlign: "center", padding: "30px" },
