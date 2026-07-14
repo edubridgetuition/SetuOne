@@ -97,11 +97,7 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
   const [showTransferForm, setShowTransferForm] = useState(false);
   const [showDisposeForm, setShowDisposeForm] = useState(false);
   const [showUploadForm, setShowUploadForm] = useState(false);
-  const [showAddCategoryForm, setShowAddCategoryForm] = useState(false);
 
-  // Setup Admin dynamic category fields
-  const [newCategoryName, setNewCategoryName] = useState("");
-  const [newCategoryDivision, setNewCategoryDivision] = useState("Facility Assets");
 
   // Hierarchical category lists and sub-type mappings
   const categoryAssetTypes = {
@@ -499,30 +495,7 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
     }
   }, [editForm.manualTaxMode, editForm.purchaseCost, editForm.purchaseQty, editForm.gstRate, editForm.branchState, editForm.vendorState, isEditing]);
 
-  // Admin dynamic category addition with division setup
-  async function handleAddCategorySubmit(e) {
-    e.preventDefault();
-    if (!newCategoryName.trim()) return;
 
-    const { data, error } = await supabase
-      .from("asset_categories")
-      .insert({
-        name: newCategoryName.trim(),
-        division: newCategoryDivision,
-        schema_definition: {}
-      })
-      .select()
-      .single();
-
-    if (error) {
-      alert("Failed to create category: " + error.message);
-    } else {
-      alert(`Category "${newCategoryName.trim()}" registered under division "${newCategoryDivision}".`);
-      setNewCategoryName("");
-      setShowAddCategoryForm(false);
-      loadAssetMetadata();
-    }
-  }
 
   // Edit details triggers
   function startEditing() {
@@ -980,7 +953,6 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
 
   const isReadOnlyView = !!defaultCategory;
   const showAddFormEffective = showAddForm && !isReadOnlyView;
-  const showAddCategoryFormEffective = showAddCategoryForm && !isReadOnlyView;
 
   return (
     <div style={styles.page}>
@@ -998,41 +970,12 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
                   Import CSV
                   <input type="file" accept=".csv" style={{ display: "none" }} onChange={handleCsvImport} />
                 </label>
-                <button style={styles.secondaryBtn} onClick={() => setShowAddCategoryForm(!showAddCategoryForm)}>
-                  Admin Setup: Add Category
-                </button>
                 <button style={styles.primaryBtn} onClick={() => setShowAddForm(!showAddForm)}>
                   {showAddForm ? "Cancel" : "+ New Asset"}
                 </button>
               </div>
             )}
           </div>
-
-          {/* Add Category Admin Form */}
-          {showAddCategoryFormEffective && (
-            <form onSubmit={handleAddCategorySubmit} style={styles.form}>
-              <div style={{ ...styles.panelTitle, fontSize: "0.85rem", borderBottom: "1px dashed #e2e8f0", paddingBottom: "8px" }}>
-                Add New Asset Category (Admin Setup)
-              </div>
-              <div style={styles.formGrid}>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>New Category Name</label>
-                  <input style={styles.input} required value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="e.g. Vehicles, Safety Equipment" />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Asset Division</label>
-                  <select style={styles.input} value={newCategoryDivision} onChange={e => setNewCategoryDivision(e.target.value)}>
-                    <option value="IT Assets">IT Assets</option>
-                    <option value="Facility Assets">Facility Assets</option>
-                  </select>
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-                <button style={styles.primaryBtn} type="submit">Save Category</button>
-                <button style={styles.secondaryBtn} type="button" onClick={() => setShowAddCategoryForm(false)}>Cancel</button>
-              </div>
-            </form>
-          )}
 
           {/* Extended Asset Registration Form */}
           {showAddFormEffective && (
