@@ -348,6 +348,18 @@ export function AppProvider({ children }) {
           resolvedCompanyName = "On2Cook Pvt Ltd";
         }
 
+        let resolvedBranchId = null;
+        try {
+          const { data: brs } = await supabase.from('branches').select('id').eq('company_id', resolvedCompanyId).limit(1);
+          if (brs && brs.length > 0) {
+            resolvedBranchId = brs[0].id;
+          } else {
+            resolvedBranchId = "fea717ef-95da-443f-a0ac-cab8be2995f5";
+          }
+        } catch (e) {
+          resolvedBranchId = "fea717ef-95da-443f-a0ac-cab8be2995f5";
+        }
+
         const fallbackRoleName = authSession.user.user_metadata?.role || "Admin Manager";
         
         // Try creating/insuring the profile in public.profiles to satisfy foreign keys
@@ -360,7 +372,8 @@ export function AppProvider({ children }) {
             email: authSession.user.email,
             full_name: authSession.user.user_metadata?.full_name || authSession.user.email.split('@')[0],
             role_id: roleId,
-            company_id: resolvedCompanyId
+            company_id: resolvedCompanyId,
+            branch_id: resolvedBranchId
           });
         } catch (err) {
           console.warn("Profile already exists or insert skipped:", err);
