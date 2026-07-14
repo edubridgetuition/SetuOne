@@ -118,15 +118,7 @@ export default function Layout({ children }) {
   }
 
   function selectSubItem(sub) {
-    if (activeModule?.key === "asset") {
-      if (sub.key === "assets_it") {
-        setActiveView("assets_it");
-      } else if (sub.key === "assets_facility") {
-        setActiveView("assets_facility");
-      }
-    } else {
-      setActiveView(sub.key);
-    }
+    setActiveView(sub.key);
   }
 
   function getIcon(mod) {
