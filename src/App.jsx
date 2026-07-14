@@ -54,6 +54,7 @@ function AppContent() {
 
       case "purchase": return <PurchaseRequisition viewMode="pr" />;
       case "workorders": return <PurchaseRequisition viewMode="po" />;
+      case "grn": return <PurchaseRequisition viewMode="grn" />;
       case "inventory": return <InventoryManagement />;
       case "ppm": return <PPMScheduler />;
       case "visitors": return <VisitorManagement />;

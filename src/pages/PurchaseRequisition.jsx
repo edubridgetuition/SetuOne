@@ -66,7 +66,7 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
   useEffect(() => {
     if (viewMode === "pr" && purchaseRequests.length > 0 && !selectedId) {
       setSelectedId(purchaseRequests[0].id);
-    } else if (viewMode === "po" && purchaseOrders.length > 0 && !selectedPOId) {
+    } else if ((viewMode === "po" || viewMode === "grn") && purchaseOrders.length > 0 && !selectedPOId) {
       setSelectedPOId(purchaseOrders[0].id);
     }
   }, [purchaseRequests, purchaseOrders, viewMode]);
@@ -447,8 +447,14 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
           <div style={styles.panel}>
             <div style={styles.panelHeader}>
               <div>
-                <div style={styles.panelTitle}>Work Orders &amp; Purchase Orders (PO) Ledger</div>
-                <div style={styles.panelSub}>Historical listing of procurement orders issued to suppliers.</div>
+                <div style={styles.panelTitle}>
+                  {viewMode === "grn" ? "Goods Received (GRN) Registry" : "Work Orders & Purchase Orders (PO) Ledger"}
+                </div>
+                <div style={styles.panelSub}>
+                  {viewMode === "grn" 
+                    ? "Receive store materials, verify quantities, and generate Goods Received Notes (GRN)." 
+                    : "Historical listing of procurement orders issued to suppliers."}
+                </div>
               </div>
             </div>
             <div style={styles.tableWrap}>
@@ -660,7 +666,7 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
                 </button>
 
                 {/* GRN entry action */}
-                {selectedPO.status === "Issued" && (
+                {selectedPO.status === "Issued" && viewMode === "grn" && (
                   <div style={{ marginTop: "15px", paddingTop: "15px", borderTop: "1px dashed #cbd5e1" }}>
                     <button 
                       style={{ ...styles.primaryBtn, width: "100%", background: "#22c55e" }}

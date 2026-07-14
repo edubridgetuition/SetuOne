@@ -31,6 +31,7 @@ export const menuBar = [
     subItems: [
       { key: "purchase", label: "Purchase Request" },
       { key: "workorders", label: "Work Order / PO" },
+      { key: "grn", label: "Goods Received (GRN)" },
     ],
   },
   {
