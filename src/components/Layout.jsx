@@ -118,6 +118,9 @@ export default function Layout({ children }) {
   }
 
   function selectSubItem(sub) {
+    if (sub.key === "it_assets" || sub.key === "facility_assets") {
+      return;
+    }
     setActiveView(sub.key);
   }
 
