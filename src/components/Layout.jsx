@@ -34,6 +34,7 @@ export default function Layout({ children }) {
   const { session, activeView, setActiveView, activeRole, activeTenant, canAccess, logout } = useApp();
   const [launcherOpen, setLauncherOpen] = useState(false);
   const [hoveredTab, setHoveredTab] = useState(null);
+  const [hoveredItemKey, setHoveredItemKey] = useState(null);
   const closeTimer = useRef(null);
 
   const accessibleModules = useMemo(() => menuBar
@@ -46,9 +47,9 @@ export default function Layout({ children }) {
   const activeModule = accessibleModules.find((mod) => {
     if (mod.key === "asset") {
       const allAssetKeys = [
-        "assets", "it_assets", "facility_assets",
+        "assets", "inventory", "it_assets", "facility_assets",
         "mobile", "sim", "laptop", "desktop", "monitor", "printer", "networking", "cctv",
-        "inventory", "hvac", "electrical", "machinery", "furniture", "vehicles", "safety", "others"
+        "hvac", "electrical", "machinery", "furniture", "vehicles", "safety", "others"
       ];
       return allAssetKeys.includes(activeView);
     }
@@ -56,7 +57,7 @@ export default function Layout({ children }) {
   }) || accessibleModules[0];
 
   const itViewKeys = ["it_assets", "mobile", "sim", "laptop", "desktop", "monitor", "printer", "networking", "cctv"];
-  const facilityViewKeys = ["facility_assets", "inventory", "hvac", "electrical", "machinery", "furniture", "vehicles", "safety", "others"];
+  const facilityViewKeys = ["facility_assets", "hvac", "electrical", "machinery", "furniture", "vehicles", "safety", "others"];
 
   const itCategories = [
     { key: "mobile", label: "Mobile" },
@@ -70,7 +71,6 @@ export default function Layout({ children }) {
   ];
 
   const facilityCategories = [
-    { key: "inventory", label: "Inventory" },
     { key: "hvac", label: "HVAC" },
     { key: "electrical", label: "Electrical" },
     { key: "machinery", label: "Machinery" },
@@ -85,6 +85,7 @@ export default function Layout({ children }) {
   const activeSubLabel = (() => {
     if (activeModule?.key === "asset") {
       if (activeView === "assets") return "Asset Management";
+      if (activeView === "inventory") return "Inventory";
       if (activeView === "it_assets") return "IT Assets";
       if (activeView === "facility_assets") return "Facility Assets";
       const cat = [...itCategories, ...facilityCategories].find(c => c.key === activeView);
@@ -247,19 +248,39 @@ function getModuleIcon(key) {
                   {/* Dropdown Menu on Hover */}
                   {hoveredTab === sub.key && (
                     <div style={s.hoverDropdown}>
-                      {(sub.key === "it_assets" ? itCategories : facilityCategories).map((cat) => (
-                        <button
-                          key={cat.key}
-                          type="button"
-                          style={{ ...s.dropdownItem, ...(activeView === cat.key ? s.dropdownItemActive : {}) }}
-                          onClick={() => {
-                            setActiveView(cat.key);
-                            setHoveredTab(null);
-                          }}
-                        >
-                          {cat.label}
-                        </button>
-                      ))}
+                      {(sub.key === "it_assets" ? itCategories : facilityCategories).map((cat) => {
+                        const isItemActive = activeView === cat.key;
+                        const isItemHovered = hoveredItemKey === cat.key;
+                        return (
+                          <button
+                            key={cat.key}
+                            type="button"
+                            style={{ 
+                              ...s.dropdownItem, 
+                              ...(isItemActive ? s.dropdownItemActive : {}),
+                              ...(isItemHovered ? s.dropdownItemHover : {})
+                            }}
+                            onMouseEnter={() => setHoveredItemKey(cat.key)}
+                            onMouseLeave={() => setHoveredItemKey(null)}
+                            onClick={() => {
+                              setActiveView(cat.key);
+                              setHoveredTab(null);
+                              setHoveredItemKey(null);
+                            }}
+                          >
+                            <span style={{
+                              display: "inline-block",
+                              width: "3px",
+                              height: "10px",
+                              borderRadius: "2px",
+                              background: "#10b981",
+                              marginRight: "8px",
+                              transition: "background 0.2s"
+                            }} />
+                            {cat.label}
+                          </button>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -367,7 +388,8 @@ const s = {
   pageSub: { fontSize: "12px", color: "#94a3b8", marginTop: "2px" },
   content: { flex: 1, overflow: "auto", padding: "15px" },
   hoverDropdown: { position: "absolute", top: "36px", left: "0", minWidth: "170px", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "8px", boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)", padding: "6px", zIndex: 9999 },
-  dropdownItem: { width: "100%", border: "none", background: "transparent", borderRadius: "5px", padding: "6px 12px", fontSize: "12px", color: "#334155", textAlign: "left", cursor: "pointer", display: "block", transition: "background 0.15s" },
-  dropdownItemActive: { background: "#eff6ff", color: "#0038a8", fontWeight: 700 }
+  dropdownItem: { width: "100%", border: "none", background: "transparent", borderRadius: "5px", padding: "6px 12px", fontSize: "12px", color: "#334155", textAlign: "left", cursor: "pointer", display: "flex", alignItems: "center", transition: "background 0.15s" },
+  dropdownItemActive: { background: "#eff6ff", color: "#0038a8", fontWeight: 700 },
+  dropdownItemHover: { background: "#eff6ff", color: "#0038a8" }
 };
 
