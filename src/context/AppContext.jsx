@@ -168,6 +168,8 @@ updateEnergyMeter as apiUpdateEnergyMeter,
 checkDuplicateHash as apiCheckDuplicateHash
 } from "../lib";
 
+import { supabase } from "../lib/supabase";
+
 export function AppProvider({ children }) {
   const [session, setSession] = useState(null);
   const [activeTenant, setActiveTenant] = useState("orion");
