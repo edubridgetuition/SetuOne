@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SetuOne Sign Up Onboarding Flow Chart</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Space+Grotesk:wght@500;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0c1220;
+      --panel: #111827;
+      --border: #1f2937;
+      --text: #f3f4f6;
+      --text-muted: #9ca3af;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --accent-admin: #0038a8;
+      --accent-emp: #10b981;
+      --arrow-color: #4b5563;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+      max-width: 600px;
+    }
+
+    h1 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 2.2rem;
+      font-weight: 700;
+      letter-spacing: -1px;
+      margin-bottom: 12px;
+      background: linear-gradient(90deg, #3b82f6 0%, #10b981 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    p.subtitle {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .flowchart-container {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 900px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 50px 30px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Steps */
+    .step {
+      background: #1f2937;
+      border: 1px solid #374151;
+      border-radius: 8px;
+      padding: 16px 24px;
+      min-width: 220px;
+      text-align: center;
+      position: relative;
+      z-index: 10;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .step:hover {
+      transform: translateY(-2px);
+      border-color: var(--primary);
+    }
+
+    .step-title {
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    .step-desc {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Decision Node */
+    .decision {
+      background: #111827;
+      border: 2px solid var(--primary);
+      border-radius: 12px;
+      padding: 20px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.25);
+    }
+
+    /* Connectors */
+    .arrow-down {
+      width: 2px;
+      height: 40px;
+      background: var(--arrow-color);
+      position: relative;
+      margin: 10px 0;
+    }
+
+    .arrow-down::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 8px solid var(--arrow-color);
+    }
+
+    /* Branches */
+    .branch-container {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      margin: 20px 0;
+      position: relative;
+    }
+
+    /* Lateral Connector Lines */
+    .branch-container::before {
+      content: '';
+      position: absolute;
+      top: -20px;
+      left: 25%;
+      right: 25%;
+      height: 2px;
+      background: var(--arrow-color);
+      z-index: 1;
+    }
+
+    .branch-container::after {
+      content: '';
+      position: absolute;
+      top: -20px;
+      left: 50%;
+      width: 2px;
+      height: 20px;
+      background: var(--arrow-color);
+      z-index: 1;
+      transform: translateX(-50%);
+    }
+
+    .branch {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 45%;
+      position: relative;
+    }
+
+    .branch-line {
+      width: 2px;
+      height: 20px;
+      background: var(--arrow-color);
+      margin-bottom: 10px;
+    }
+
+    .branch-line::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 8px solid var(--arrow-color);
+    }
+
+    .admin-node {
+      border-color: var(--accent-admin);
+      box-shadow: 0 4px 12px rgba(0, 56, 168, 0.15);
+    }
+
+    .admin-node:hover {
+      border-color: #3b82f6;
+    }
+
+    .employee-node {
+      border-color: var(--accent-emp);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+    }
+
+    .employee-node:hover {
+      border-color: #10b981;
+    }
+
+    /* Merge Flow Line */
+    .merge-line {
+      width: 2px;
+      height: 50px;
+      background: var(--arrow-color);
+      margin: 15px 0;
+    }
+
+    .merge-line::after {
+      content: '';
+      position: absolute;
+      bottom: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 8px solid var(--arrow-color);
+    }
+
+    .merge-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      position: relative;
+    }
+
+    .merge-horizontal {
+      position: absolute;
+      top: -20px;
+      left: 25%;
+      right: 25%;
+      height: 2px;
+      background: var(--arrow-color);
+    }
+
+    .merge-vertical-left {
+      position: absolute;
+      top: -20px;
+      left: 25%;
+      height: 20px;
+      width: 2px;
+      background: var(--arrow-color);
+    }
+
+    .merge-vertical-right {
+      position: absolute;
+      top: -20px;
+      right: 25%;
+      height: 20px;
+      width: 2px;
+      background: var(--arrow-color);
+    }
+
+    footer.credits {
+      margin-top: 40px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      opacity: 0.6;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Onboarding Flow Chart</h1>
+    <p class="subtitle">SetuOne ERP System - Role-based User Registration & Database Integration Flow</p>
+  </header>
+
+  <div class="flowchart-container">
+    
+    <!-- Step 1 -->
+    <div class="step">
+      <div class="step-title">START</div>
+      <div class="step-desc">Visitor navigates to registration page</div>
+    </div>
+
+    <div class="arrow-down"></div>
+
+    <!-- Step 2: Decision Node -->
+    <div class="step decision">
+      Select Registration Role
+    </div>
+
+    <!-- Branches Container -->
+    <div class="branch-container">
+      
+      <!-- Admin Branch -->
+      <div class="branch">
+        <div class="branch-line"></div>
+        <div class="step admin-node" style="border-width: 2px;">
+          <div class="step-title" style="color: #60a5fa;">Admin Signup Tab</div>
+          <div class="step-desc">Enter Name, Company Name (Text Input with sign-in note), Email, Password</div>
+        </div>
+
+        <div class="arrow-down"></div>
+
+        <div class="step admin-node">
+          <div class="step-title">Supabase signUp() Call</div>
+          <div class="step-desc">Triggers authentication save with metadata:<br><b>{ role: 'Admin Manager', company_name: [Input] }</b></div>
+        </div>
+
+        <div class="arrow-down"></div>
+
+        <div class="step admin-node">
+          <div class="step-title">Database Trigger check</div>
+          <div class="step-desc">Creates new row in <b>public.companies</b> and <b>public.branches</b> dynamically</div>
+        </div>
+      </div>
+
+      <!-- Employee Branch -->
+      <div class="branch">
+        <div class="branch-line"></div>
+        <div class="step employee-node" style="border-width: 2px;">
+          <div class="step-title" style="color: #34d399;">Employee Signup Tab</div>
+          <div class="step-desc">Dropdown loaded via secure definer RPC function: <b>get_public_companies()</b></div>
+        </div>
+
+        <div class="arrow-down"></div>
+
+        <div class="step employee-node">
+          <div class="step-title">Supabase signUp() Call</div>
+          <div class="step-desc">Triggers authentication save with metadata:<br><b>{ role: 'Employee', company_name: [Selected] }</b></div>
+        </div>
+
+        <div class="arrow-down"></div>
+
+        <div class="step employee-node">
+          <div class="step-title">Database Trigger check</div>
+          <div class="step-desc">Resolves existing company ID and branch ID. Skips duplicate creation</div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Merge Paths -->
+    <div class="merge-container">
+      <div class="merge-horizontal"></div>
+      <div class="merge-vertical-left"></div>
+      <div class="merge-vertical-right"></div>
+      <div class="merge-line" style="position: relative; top: -20px;"></div>
+    </div>
+
+    <!-- Step 3: Insert Profile (Merged) -->
+    <div class="step" style="margin-top: -20px; border-color: var(--primary);">
+      <div class="step-title">Profile Row Generation</div>
+      <div class="step-desc">Inserts mapped record into <b>public.profiles</b> linked to correct company, branch and role</div>
+    </div>
+
+    <div class="arrow-down"></div>
+
+    <!-- Step 4: Login Redirect -->
+    <div class="step">
+      <div class="step-title">SUCCESS</div>
+      <div class="step-desc">User redirects to sign-in page to enter credentials</div>
+    </div>
+
+  </div>
+
+  <footer class="credits">
+    V2 // MULTI-TENANT DYNAMIC ONBOARDING FLOW
+  </footer>
+
+</body>
+</html>
