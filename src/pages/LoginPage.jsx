@@ -13,6 +13,9 @@ export default function LoginPage() {
   const [companyName, setCompanyName] = useState("");
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [signupType, setSignupType] = useState("admin"); // "admin" or "employee"
+  const [companySelection, setCompanySelection] = useState("On2Cook Pvt Ltd");
+  const [customCompanyName, setCustomCompanyName] = useState("");
 
   // Set default values on mode toggle
   function toggleMode() {
@@ -23,6 +26,9 @@ export default function LoginPage() {
     setPassword("");
     setFullName("");
     setCompanyName("");
+    setSignupType("admin");
+    setCompanySelection("On2Cook Pvt Ltd");
+    setCustomCompanyName("");
   }
 
   async function handleSubmit(e) {
@@ -31,7 +37,17 @@ export default function LoginPage() {
     setSuccessMsg("");
 
     if (isSignUp) {
-      const res = await signup(email, password, fullName, companyName);
+      const role = signupType === "admin" ? "Admin Manager" : "Employee";
+      const resolvedCompany = signupType === "admin" 
+        ? companyName 
+        : (companySelection === "other" ? customCompanyName : companySelection);
+
+      if (!resolvedCompany || !resolvedCompany.trim()) {
+        setError("Please enter or select a company name.");
+        return;
+      }
+
+      const res = await signup(email, password, fullName, resolvedCompany.trim(), role);
       if (res.success) {
         setSuccessMsg("Registration successful! You can now sign in using your credentials.");
         setIsSignUp(false);
@@ -105,14 +121,58 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} style={styles.form}>
             {isSignUp && (
               <>
+                {/* Signup Tabs */}
+                <div style={styles.signupTabs}>
+                  <button 
+                    type="button" 
+                    onClick={() => setSignupType("admin")} 
+                    style={signupType === "admin" ? styles.activeTab : styles.tab}
+                  >
+                    Admin Signup
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => setSignupType("employee")} 
+                    style={signupType === "employee" ? styles.activeTab : styles.tab}
+                  >
+                    Employee Signup
+                  </button>
+                </div>
+
                 <div style={styles.formGroup}>
                   <label style={styles.label}>FULL NAME</label>
                   <input style={styles.input} type="text" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="John Doe" required />
                 </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>COMPANY NAME</label>
-                  <input style={styles.input} type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="ABC Ltd." required />
-                </div>
+
+                {signupType === "admin" ? (
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>COMPANY NAME</label>
+                    <input style={styles.input} type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="ABC Ltd." required />
+                    <span style={styles.fieldNote}>(this name will use while doing sign in)</span>
+                  </div>
+                ) : (
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>COMPANY</label>
+                    <select 
+                      style={styles.select} 
+                      value={companySelection} 
+                      onChange={e => setCompanySelection(e.target.value)}
+                    >
+                      <option value="On2Cook Pvt Ltd">On2Cook Pvt Ltd</option>
+                      <option value="other">Other / Enter manually...</option>
+                    </select>
+                    {companySelection === "other" && (
+                      <input 
+                        style={{ ...styles.input, marginTop: "8px" }} 
+                        type="text" 
+                        value={customCompanyName} 
+                        onChange={e => setCustomCompanyName(e.target.value)} 
+                        placeholder="Enter your company name" 
+                        required 
+                      />
+                    )}
+                  </div>
+                )}
               </>
             )}
             <div style={styles.formGroup}>
@@ -226,4 +286,10 @@ const styles = {
   demoBtn: { background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "4px", padding: "9px 10px", cursor: "pointer", textAlign: "left", display: "flex", flexDirection: "column", gap: "2px" },
   demoRole: { color: "#0038a8", fontSize: "0.68rem", fontWeight: 700 },
   demoName: { color: "#64748b", fontSize: "0.72rem" },
+
+  signupTabs: { display: "flex", gap: "8px", borderBottom: "1px solid #e2e8f0", paddingBottom: "10px", marginBottom: "10px" },
+  tab: { flex: 1, padding: "8px 12px", border: "none", background: "none", borderBottom: "2px solid transparent", cursor: "pointer", fontSize: "0.8rem", color: "#64748b", fontWeight: 600, transition: "all 0.15s ease", textAlign: "center" },
+  activeTab: { flex: 1, padding: "8px 12px", border: "none", background: "none", borderBottom: "2px solid #0038a8", cursor: "pointer", fontSize: "0.8rem", color: "#0038a8", fontWeight: 700, transition: "all 0.15s ease", textAlign: "center" },
+  fieldNote: { fontSize: "0.72rem", color: "#64748b", fontStyle: "italic", marginTop: "2px" },
+  select: { width: "100%", padding: "10px 14px", fontSize: "0.85rem", color: "#111625", border: "1px solid #e2e8f0", borderRadius: "4px", background: "#fff", outline: "none", cursor: "pointer" },
 };

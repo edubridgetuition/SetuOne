@@ -411,8 +411,8 @@ export function AppProvider({ children }) {
     return false;
   }
 
-  async function signup(email, password, fullName, companyName) {
-    return await authRegister(email, password, fullName, companyName);
+  async function signup(email, password, fullName, companyName, role) {
+    return await authRegister(email, password, fullName, companyName, role);
   }
 
   async function logout() {

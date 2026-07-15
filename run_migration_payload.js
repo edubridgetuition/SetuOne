@@ -16,10 +16,26 @@ const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 async function run() {
+  console.log('Logging in as super@facilityops.test...');
+  const { data: auth, error: authError } = await supabase.auth.signInWithPassword({
+    email: 'super@facilityops.test',
+    password: 'demo123'
+  });
+
+  if (authError) {
+    console.error('Login Failed:', authError);
+    return;
+  }
+
   const sql = `
-    ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS address TEXT;
-    ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS gst TEXT;
-    ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS owner_name TEXT;
+    CREATE OR REPLACE FUNCTION public.get_public_companies()
+    RETURNS TABLE (id UUID, name TEXT) AS $$
+    BEGIN
+        RETURN QUERY SELECT c.id, c.name FROM public.companies c ORDER BY c.name ASC;
+    END;
+    $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+    GRANT EXECUTE ON FUNCTION public.get_public_companies() TO anon, authenticated;
   `;
   console.log('Executing SQL migration on Supabase via RPC...');
   const { data, error } = await supabase.rpc('exec_sql', { sql });

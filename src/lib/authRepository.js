@@ -10,7 +10,7 @@ export async function login(email, password) {
   }
 }
 
-export async function register(email, password, fullName, companyName) {
+export async function register(email, password, fullName, companyName, role = 'Admin Manager') {
   try {
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -18,7 +18,7 @@ export async function register(email, password, fullName, companyName) {
       options: {
         data: {
           full_name: fullName,
-          role: 'Admin Manager',
+          role: role,
           company_name: companyName
         }
       }
