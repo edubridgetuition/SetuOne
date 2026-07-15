@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useApp } from "../context/appContextCore";
 import { supabase } from "../lib/supabase";
+import { createClient } from "@supabase/supabase-js";
 
 export default function AdminConsoleSettings() {
   const {
@@ -93,6 +94,81 @@ export default function AdminConsoleSettings() {
     is_required: false,
     is_active: true
   });
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [teamLoading, setTeamLoading] = useState(false);
+  const [employeeForm, setEmployeeForm] = useState({ fullName: "", email: "", password: "", role: "Employee" });
+
+  async function loadTeamMembers() {
+    if (!session || !session.companyId) return;
+    setTeamLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select(`
+          id,
+          full_name,
+          email,
+          created_at,
+          roles (name)
+        `)
+        .eq("company_id", session.companyId)
+        .order("created_at", { ascending: false });
+
+      if (!error && data) {
+        setTeamMembers(data);
+      }
+    } catch (err) {
+      console.error("Failed to load team profiles:", err);
+    } finally {
+      setTeamLoading(false);
+    }
+  }
+
+  async function handleAddEmployee(e) {
+    e.preventDefault();
+    if (!employeeForm.fullName.trim() || !employeeForm.email.trim() || !employeeForm.password) {
+      alert("Please fill in all employee registration fields.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      const tempClient = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false
+        }
+      });
+
+      const { data, error } = await tempClient.auth.signUp({
+        email: employeeForm.email.trim(),
+        password: employeeForm.password,
+        options: {
+          data: {
+            full_name: employeeForm.fullName.trim(),
+            role: employeeForm.role,
+            company_id: session.companyId,
+            branch_id: session.branchId || "fea717ef-95da-443f-a0ac-cab8be2995f5"
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      alert(`Employee "${employeeForm.fullName.trim()}" successfully registered under "${session.companyName || 'your company'}".`);
+      setEmployeeForm({ fullName: "", email: "", password: "", role: "Employee" });
+      await loadTeamMembers();
+    } catch (err) {
+      console.error("Employee registration failed:", err);
+      alert("Failed to register employee: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function loadAssetCategories() {
     const { data, error } = await supabase
       .from("asset_categories")
@@ -141,7 +217,8 @@ export default function AdminConsoleSettings() {
     loadRecurringSchedulerJobs();
     loadDashboardWidgets();
     loadAssetCategories();
-  }, []);
+    loadTeamMembers();
+  }, [session]);
 
   // Update form inputs when data loads
   useEffect(() => {
@@ -377,6 +454,7 @@ const resetWidgetForm = () => {
           <div style={styles.tabHeader}>
             {[
               { key: "Company", label: "General & Branding" },
+              { key: "Team", label: "Team Management" },
               { key: "Masters", label: "Dynamic Masters" },
               { key: "AssetCategories", label: "Asset Categories" },
               { key: "Series", label: "Number Series" },
@@ -444,6 +522,115 @@ const resetWidgetForm = () => {
                 </div>
                 <button style={{ ...styles.primaryBtn, width: "150px", marginTop: "10px" }} type="submit">Save Branding</button>
               </form>
+            </div>
+          )}
+
+          {/* TAB: TEAM MANAGEMENT */}
+          {activeTab === "Team" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+              <div style={styles.grid2}>
+                {/* Form to register new employee */}
+                <form onSubmit={handleAddEmployee} style={styles.form}>
+                  <div style={styles.muted}>Register New Team Member</div>
+                  
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Full Name</label>
+                    <input 
+                      type="text" 
+                      style={styles.input} 
+                      required 
+                      value={employeeForm.fullName} 
+                      onChange={e => setEmployeeForm({ ...employeeForm, fullName: e.target.value })} 
+                      placeholder="e.g. Rahul Sharma" 
+                    />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Email Address</label>
+                    <input 
+                      type="email" 
+                      style={styles.input} 
+                      required 
+                      value={employeeForm.email} 
+                      onChange={e => setEmployeeForm({ ...employeeForm, email: e.target.value })} 
+                      placeholder="e.g. rahul@company.com" 
+                    />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Temporary Password</label>
+                    <input 
+                      type="password" 
+                      style={styles.input} 
+                      required 
+                      value={employeeForm.password} 
+                      onChange={e => setEmployeeForm({ ...employeeForm, password: e.target.value })} 
+                      placeholder="••••••••" 
+                    />
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>System Role</label>
+                    <select 
+                      style={styles.input} 
+                      value={employeeForm.role} 
+                      onChange={e => setEmployeeForm({ ...employeeForm, role: e.target.value })}
+                    >
+                      <option value="Employee">Employee (Standard Access)</option>
+                      <option value="Security Supervisor">Security Supervisor</option>
+                      <option value="Housekeeping Supervisor">Housekeeping Supervisor</option>
+                      <option value="Admin Manager">Admin Manager (Co-Admin)</option>
+                    </select>
+                  </div>
+
+                  <button 
+                    style={{ ...styles.primaryBtn, marginTop: "10px" }} 
+                    type="submit"
+                    disabled={loading}
+                  >
+                    {loading ? "Registering..." : "Onboard Employee"}
+                  </button>
+                </form>
+
+                {/* Team Directory List */}
+                <div style={styles.form}>
+                  <div style={styles.muted}>Active Team Directory</div>
+                  {teamLoading ? (
+                    <div style={{ fontSize: "0.8rem", color: "#64748b" }}>Loading profiles...</div>
+                  ) : teamMembers.length === 0 ? (
+                    <div style={{ fontSize: "0.8rem", color: "#64748b" }}>No team profiles registered yet.</div>
+                  ) : (
+                    <div style={styles.tableWrap}>
+                      <table style={styles.table}>
+                        <thead>
+                          <tr>
+                            <th style={styles.th}>Name</th>
+                            <th style={styles.th}>Email</th>
+                            <th style={styles.th}>Role</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {teamMembers.map(member => (
+                            <tr key={member.id} style={styles.tr}>
+                              <td style={styles.td}><strong>{member.full_name}</strong></td>
+                              <td style={styles.td}>{member.email}</td>
+                              <td style={styles.td}>
+                                <span style={{ 
+                                  ...styles.badge, 
+                                  background: member.roles?.name === 'Admin Manager' ? '#eff6ff' : '#f0fdf4',
+                                  color: member.roles?.name === 'Admin Manager' ? '#2563eb' : '#16a34a'
+                                }}>
+                                  {member.roles?.name || "Employee"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 

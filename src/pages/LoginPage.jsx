@@ -46,14 +46,19 @@ export default function LoginPage() {
         setError(res.message || "Registration failed. Please try again.");
       }
     } else {
-      const success = await login(email, password);
-      if (!success) setError("Invalid email or password. Please try again.");
+      if (!companyName || !companyName.trim()) {
+        setError("Please enter your company name.");
+        return;
+      }
+      const res = await login(email, password, companyName.trim());
+      if (!res.success) setError(res.message);
     }
   }
 
   async function demoLogin(demoEmail) {
-    const success = await login(demoEmail, "demo123");
-    if (!success) setError("Demo login failed.");
+    const demoCompany = "On2Cook Pvt Ltd";
+    const res = await login(demoEmail, "demo123", demoCompany);
+    if (!res.success) setError(res.message || "Demo login failed.");
   }
 
   return (
@@ -109,18 +114,16 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} style={styles.form}>
             {isSignUp && (
-              <>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>FULL NAME</label>
-                  <input style={styles.input} type="text" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="John Doe" required />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>COMPANY NAME</label>
-                  <input style={styles.input} type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="ABC Ltd." required />
-                  <span style={styles.fieldNote}>(this name will use while doing sign in)</span>
-                </div>
-              </>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>FULL NAME</label>
+                <input style={styles.input} type="text" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="John Doe" required />
+              </div>
             )}
+            <div style={styles.formGroup}>
+              <label style={styles.label}>COMPANY NAME</label>
+              <input style={styles.input} type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="ABC Ltd." required />
+              {isSignUp && <span style={styles.fieldNote}>(this name will use while doing sign in)</span>}
+            </div>
             <div style={styles.formGroup}>
               <label style={styles.label}>EMAIL</label>
               <input style={styles.input} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@company.com" required />

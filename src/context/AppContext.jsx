@@ -402,13 +402,24 @@ export function AppProvider({ children }) {
     }
   }
 
-  async function login(email, password) {
+  async function login(email, password, enteredCompanyName) {
     const loginRes = await authLogin(email, password);
     if (loginRes.success) {
+      // Validate company if provided
+      if (enteredCompanyName) {
+        const profileRes = await fetchUserProfile(loginRes.data.session.user.id);
+        if (profileRes.success && profileRes.data) {
+          const userCompany = profileRes.data.companies?.name || "";
+          if (userCompany.toLowerCase().trim() !== enteredCompanyName.toLowerCase().trim()) {
+            await authLogout();
+            return { success: false, message: `Access Denied: Your account is not registered under '${enteredCompanyName}'.` };
+          }
+        }
+      }
       await applyUserSession(loginRes.data.session);
-      return true;
+      return { success: true };
     }
-    return false;
+    return { success: false, message: loginRes.message || "Invalid email or password. Please try again." };
   }
 
   async function signup(email, password, fullName, companyName, role) {

@@ -283,7 +283,7 @@
 <body>
 
   <header>
-    <h1>Onboarding Flow Chart (Method A)</h1>
+    <h1>Sign In & Onboarding Flow Chart</h1>
     <p class="subtitle">SetuOne ERP System - Role-based User Registration & Database Integration Flow</p>
   </header>
 
@@ -292,7 +292,7 @@
     <!-- Step 1 -->
     <div class="step">
       <div class="step-title">START</div>
-      <div class="step-desc">User attempts to join the platform</div>
+      <div class="step-desc">User navigates to login/signup page</div>
     </div>
 
     <div class="arrow-down"></div>
@@ -302,29 +302,15 @@
       User Classification
     </div>
 
-    <!-- Branches Container -->
+    <!-- Branches -->
     <div class="branch-container">
       
       <!-- Admin Branch -->
       <div class="branch">
         <div class="branch-line"></div>
         <div class="step admin-node" style="border-width: 2px;">
-          <div class="step-title" style="color: #60a5fa;">Admin Signup (Public)</div>
-          <div class="step-desc">Enters Full Name, Company Name (with sign-in note), Email, Password</div>
-        </div>
-
-        <div class="arrow-down"></div>
-
-        <div class="step admin-node">
-          <div class="step-title">Supabase signUp() Call</div>
-          <div class="step-desc">Metadata: <b>{ role: 'Admin Manager', company_name: [Input] }</b></div>
-        </div>
-
-        <div class="arrow-down"></div>
-
-        <div class="step admin-node">
-          <div class="step-title">Trigger creates Company</div>
-          <div class="step-desc">Database automatically initializes a new <b>public.companies</b> & branch</div>
+          <div class="step-title" style="color: #60a5fa;">Admin Signup Form</div>
+          <div class="step-desc">Name, Company Name (note), Email, Password -> Trigger creates Company + Profile as Admin Manager</div>
         </div>
       </div>
 
@@ -332,22 +318,8 @@
       <div class="branch">
         <div class="branch-line"></div>
         <div class="step employee-node" style="border-width: 2px;">
-          <div class="step-title" style="color: #34d399;">Employee Onboarding (Private)</div>
-          <div class="step-desc">Admin creates employee profile in the internal User/Employee Settings panel</div>
-        </div>
-
-        <div class="arrow-down"></div>
-
-        <div class="step employee-node">
-          <div class="step-title">Profile Row Generated</div>
-          <div class="step-desc">Admin assigns Name, Email, and links to existing <b>company_id</b> & <b>branch_id</b></div>
-        </div>
-
-        <div class="arrow-down"></div>
-
-        <div class="step employee-node">
-          <div class="step-title">Invited / Auth Email</div>
-          <div class="step-desc">Employee receives secure login credentials (no public signup access)</div>
+          <div class="step-title" style="color: #34d399;">Admin Onboards Employee</div>
+          <div class="step-desc">Admin enters Employee details inside internal settings -> Profiles mapped as Employee</div>
         </div>
 
       </div>
@@ -362,18 +334,43 @@
       <div class="merge-line" style="position: relative; top: -20px;"></div>
     </div>
 
-    <!-- Step 3: Insert Profile (Merged) -->
-    <div class="step" style="margin-top: -20px; border-color: var(--primary);">
-      <div class="step-title">Platform Access Granted</div>
-      <div class="step-desc">Both Admin and Employees have their <b>public.profiles</b> completely initialized</div>
+    <!-- Step 3: Login (Merged) -->
+    <div class="step" style="margin-top: -20px; border-color: var(--primary); border-width: 2px;">
+      <div class="step-title" style="color: #60a5fa;">Sign In Page (Admin/Employee)</div>
+      <div class="step-desc">Enter Email, Password, and <b>COMPANY NAME</b></div>
     </div>
 
     <div class="arrow-down"></div>
 
-    <!-- Step 4: Login Redirect -->
+    <!-- Step 4: Auth Check -->
     <div class="step">
-      <div class="step-title">SUCCESS</div>
-      <div class="step-desc">User enters credentials on login screen & accesses dashboard</div>
+      <div class="step-title">Supabase Authentication</div>
+      <div class="step-desc">Validate credentials (Email/Password) -> Fetch mapped Profile details</div>
+    </div>
+
+    <div class="arrow-down"></div>
+
+    <!-- Step 5: Verification Node -->
+    <div class="step decision" style="border-color: #f59e0b; box-shadow: 0 0 15px rgba(245, 158, 11, 0.25);">
+      Company Match?
+    </div>
+
+    <!-- Decision Paths -->
+    <div class="branch-container">
+      <div class="branch">
+        <div class="branch-line"></div>
+        <div class="step employee-node" style="border-color: var(--accent-emp);">
+          <div class="step-title">YES (Match)</div>
+          <div class="step-desc">Let user enter application dashboard. RLS isolates data per company.</div>
+        </div>
+      </div>
+      <div class="branch">
+        <div class="branch-line"></div>
+        <div class="step admin-node" style="border-color: #ef4444; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);">
+          <div class="step-title" style="color: #f87171;">NO (Mismatch)</div>
+          <div class="step-desc">Call auth.signOut() immediately. Show error: <i>"Access Denied: You do not belong to [Company]"</i></div>
+        </div>
+      </div>
     </div>
 
   </div>
