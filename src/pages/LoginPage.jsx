@@ -13,9 +13,6 @@ export default function LoginPage() {
   const [companyName, setCompanyName] = useState("");
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
-  const [signupType, setSignupType] = useState("admin"); // "admin" or "employee"
-  const [companySelection, setCompanySelection] = useState("On2Cook Pvt Ltd");
-  const [customCompanyName, setCustomCompanyName] = useState("");
 
   // Set default values on mode toggle
   function toggleMode() {
@@ -26,9 +23,6 @@ export default function LoginPage() {
     setPassword("");
     setFullName("");
     setCompanyName("");
-    setSignupType("admin");
-    setCompanySelection("On2Cook Pvt Ltd");
-    setCustomCompanyName("");
   }
 
   async function handleSubmit(e) {
@@ -37,17 +31,12 @@ export default function LoginPage() {
     setSuccessMsg("");
 
     if (isSignUp) {
-      const role = signupType === "admin" ? "Admin Manager" : "Employee";
-      const resolvedCompany = signupType === "admin" 
-        ? companyName 
-        : (companySelection === "other" ? customCompanyName : companySelection);
-
-      if (!resolvedCompany || !resolvedCompany.trim()) {
-        setError("Please enter or select a company name.");
+      if (!companyName || !companyName.trim()) {
+        setError("Please enter a company name.");
         return;
       }
 
-      const res = await signup(email, password, fullName, resolvedCompany.trim(), role);
+      const res = await signup(email, password, fullName, companyName.trim(), "Admin Manager");
       if (res.success) {
         setSuccessMsg("Registration successful! You can now sign in using your credentials.");
         setIsSignUp(false);
@@ -121,58 +110,15 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} style={styles.form}>
             {isSignUp && (
               <>
-                {/* Signup Tabs */}
-                <div style={styles.signupTabs}>
-                  <button 
-                    type="button" 
-                    onClick={() => setSignupType("admin")} 
-                    style={signupType === "admin" ? styles.activeTab : styles.tab}
-                  >
-                    Admin Signup
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={() => setSignupType("employee")} 
-                    style={signupType === "employee" ? styles.activeTab : styles.tab}
-                  >
-                    Employee Signup
-                  </button>
-                </div>
-
                 <div style={styles.formGroup}>
                   <label style={styles.label}>FULL NAME</label>
                   <input style={styles.input} type="text" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="John Doe" required />
                 </div>
-
-                {signupType === "admin" ? (
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>COMPANY NAME</label>
-                    <input style={styles.input} type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="ABC Ltd." required />
-                    <span style={styles.fieldNote}>(this name will use while doing sign in)</span>
-                  </div>
-                ) : (
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>COMPANY</label>
-                    <select 
-                      style={styles.select} 
-                      value={companySelection} 
-                      onChange={e => setCompanySelection(e.target.value)}
-                    >
-                      <option value="On2Cook Pvt Ltd">On2Cook Pvt Ltd</option>
-                      <option value="other">Other / Enter manually...</option>
-                    </select>
-                    {companySelection === "other" && (
-                      <input 
-                        style={{ ...styles.input, marginTop: "8px" }} 
-                        type="text" 
-                        value={customCompanyName} 
-                        onChange={e => setCustomCompanyName(e.target.value)} 
-                        placeholder="Enter your company name" 
-                        required 
-                      />
-                    )}
-                  </div>
-                )}
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>COMPANY NAME</label>
+                  <input style={styles.input} type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="ABC Ltd." required />
+                  <span style={styles.fieldNote}>(this name will use while doing sign in)</span>
+                </div>
               </>
             )}
             <div style={styles.formGroup}>
