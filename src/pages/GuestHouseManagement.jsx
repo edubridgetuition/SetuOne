@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useApp } from "../context/appContextCore";
 import { supabase } from "../lib/supabase";
-import { MdEdit, MdArchive, MdVisibility } from "react-icons/md";
+import { MdEdit, MdArchive, MdVisibility, MdSearch, MdFilterList } from "react-icons/md";
 
 export default function GuestHouseManagement({ defaultFilter = "All" }) {
   const { session } = useApp();
@@ -12,8 +12,9 @@ export default function GuestHouseManagement({ defaultFilter = "All" }) {
   
   // UI states
   const [loading, setLoading] = useState(false);
-  const [showForm, setShowForm] = useState(false);
+  const [formType, setFormType] = useState(null); // 'tenant', 'property', or null
   const [activeTab, setActiveTab] = useState(defaultFilter);
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedTenantId, setSelectedTenantId] = useState(null);
   const [selectedPropertyId, setSelectedPropertyId] = useState(null);
   const [editingTenant, setEditingTenant] = useState(null);
@@ -97,7 +98,7 @@ export default function GuestHouseManagement({ defaultFilter = "All" }) {
     e.preventDefault();
     const companyId = session?.companyId || "7e85d57c-2dcd-4943-9066-6467c5bb10e4";
 
-    if (activeTab === "Agreements") {
+    if (formType === "property") {
       // Register Property
       if (!name.trim() || !address.trim()) {
         alert("Please enter property name and address.");
@@ -123,10 +124,10 @@ export default function GuestHouseManagement({ defaultFilter = "All" }) {
         alert("Property and rent agreement registered successfully!");
         setName(""); setAddress(""); setOwnerName(""); setOwnerContact("");
         setMonthlyRent(""); setSecurityDeposit(""); setStartDate(""); setEndDate("");
-        setShowForm(false);
+        setFormType(null);
         loadData();
       }
-    } else {
+    } else if (formType === "tenant") {
       // Register Tenant / Occupant
       if (!fullName.trim() || !phone.trim()) {
         alert("Please enter tenant name and phone number.");
@@ -149,7 +150,7 @@ export default function GuestHouseManagement({ defaultFilter = "All" }) {
         alert("Tenant onboarded successfully!");
         setFullName(""); setRoomNo(""); setPhone(""); setJoiningDate("");
         setPropertyId(""); setRentStatus("Paid"); setTenantStatus("Active");
-        setShowForm(false);
+        setFormType(null);
         loadData();
       }
     }
@@ -202,11 +203,34 @@ export default function GuestHouseManagement({ defaultFilter = "All" }) {
     }
   }
 
+  // Search filtering
+  const query = searchQuery.toLowerCase().trim();
+
   // Filter occupants
-  const filteredTenants = tenants.filter(t => {
-    if (activeTab === "Active") return t.status === "Active";
-    if (activeTab === "Inactive") return t.status === "Inactive";
-    return true; // "All" tab show everything
+  const filteredTenants = tenants
+    .filter(t => {
+      if (activeTab === "Active") return t.status === "Active";
+      if (activeTab === "Inactive") return t.status === "Inactive";
+      return true; // "All" tab show everything
+    })
+    .filter(t => {
+      if (!query) return true;
+      return (
+        t.full_name?.toLowerCase().includes(query) ||
+        t.room_no?.toLowerCase().includes(query) ||
+        t.phone?.toLowerCase().includes(query) ||
+        t.hired_properties?.name?.toLowerCase().includes(query)
+      );
+    });
+
+  // Filter properties
+  const filteredProperties = properties.filter(p => {
+    if (!query) return true;
+    return (
+      p.name?.toLowerCase().includes(query) ||
+      p.address?.toLowerCase().includes(query) ||
+      p.owner_name?.toLowerCase().includes(query)
+    );
   });
 
   const selectedTenant = tenants.find(t => t.id === selectedTenantId);
@@ -218,25 +242,56 @@ export default function GuestHouseManagement({ defaultFilter = "All" }) {
   const inactiveTenantsCount = tenants.filter(t => t.status === "Inactive").length;
   const totalPropertiesCount = properties.length;
 
+  // Header Title mapping
+  let tableHeaderTitle = "All Tenants";
+  if (activeTab === "Active") tableHeaderTitle = "Active Tenants";
+  else if (activeTab === "Inactive") tableHeaderTitle = "Inactive Tenants";
+  else if (activeTab === "Agreements") tableHeaderTitle = "Flats & Landlord Agreements";
+
   return (
     <div style={styles.page}>
       <div style={styles.left}>
         <div style={styles.panel}>
           
-          <div style={styles.panelHeader}>
-            <div>
-              <h2 style={styles.panelTitle}>Property & Landlord Agreement Console</h2>
-              <p style={styles.panelSub}>
-                Manage company-leased guest houses, employee hired flats, rental payouts, and landlord agreements.
-              </p>
+          {/* Top Control Bar with Search and Actions */}
+          <div style={styles.topControlBar}>
+            <div style={styles.searchWrapper}>
+              <MdSearch size={20} color="#94a3b8" style={styles.searchIcon} />
+              <input
+                style={styles.searchInput}
+                type="text"
+                placeholder={activeTab === "Agreements" ? "Search properties..." : "Search tenant..."}
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+              />
             </div>
-            <button style={styles.primaryBtn} onClick={() => setShowForm(!showForm)}>
-              {showForm ? "View Directory" : activeTab === "Agreements" ? "Onboard Property" : "Onboard Tenant"}
-            </button>
+            
+            <div style={styles.actionButtonGroup}>
+              <button type="button" style={styles.filterBtn}>
+                <MdFilterList size={18} color="#475569" style={{ marginRight: "6px" }} />
+                Filter
+              </button>
+              
+              <button 
+                type="button" 
+                style={styles.addTenantBtn} 
+                onClick={() => { setFormType("tenant"); setSelectedTenantId(null); }}
+              >
+                + Add Tenant
+              </button>
+              
+              <button 
+                type="button" 
+                style={styles.addPropertyBtn} 
+                onClick={() => { setFormType("property"); setSelectedPropertyId(null); }}
+              >
+                + Add Hired Flat / Agreement
+              </button>
+            </div>
           </div>
 
           {/* Tab Headers */}
-          {!showForm && (
+          {formType === null && (
             <div style={styles.tabHeader}>
               {[
                 { key: "All", label: `All Tenants (${totalTenantsCount})` },
@@ -250,6 +305,7 @@ export default function GuestHouseManagement({ defaultFilter = "All" }) {
                   onClick={() => {
                     setActiveTab(tab.key);
                     setSelectedTenantId(null);
+                    setSearchQuery("");
                   }}
                 >
                   {tab.label}
@@ -258,10 +314,10 @@ export default function GuestHouseManagement({ defaultFilter = "All" }) {
             </div>
           )}
 
-          {showForm ? (
+          {formType !== null ? (
             /* Onboarding Form Container */
             <form onSubmit={handleOnboardSubmit} style={styles.form}>
-              {activeTab === "Agreements" ? (
+              {formType === "property" ? (
                 /* Onboard Property Form */
                 <>
                   <div style={styles.muted}>Register New Leased Property</div>
@@ -388,239 +444,246 @@ export default function GuestHouseManagement({ defaultFilter = "All" }) {
 
               <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
                 <button style={styles.primaryBtn} type="submit">Submit Registration</button>
-                <button style={styles.secondaryBtn} type="button" onClick={() => setShowForm(false)}>Cancel</button>
+                <button style={styles.secondaryBtn} type="button" onClick={() => setFormType(null)}>Cancel</button>
               </div>
             </form>
           ) : (
             /* Lists Directories Tables rendering */
-            <div style={styles.tableWrap}>
-              {activeTab === "Agreements" ? (
-                /* Landlord Agreements Table View */
-                <table style={styles.table}>
-                  <thead>
-                    <tr>
-                      <th style={styles.th}>Property</th>
-                      <th style={styles.th}>Landlord</th>
-                      <th style={styles.th}>Monthly Rent</th>
-                      <th style={styles.th}>Deposit</th>
-                      <th style={styles.th}>Start / End Date</th>
-                      <th style={styles.th}>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {properties.map(p => {
-                      const isSelected = p.id === selectedPropertyId;
-                      return (
-                        <tr
-                          key={p.id}
-                          style={{ ...styles.tr, ...(isSelected ? styles.trActive : {}) }}
-                          onClick={() => setSelectedPropertyId(p.id)}
-                        >
-                          <td style={styles.td}><strong>{p.name}</strong></td>
-                          <td style={styles.td}>{p.owner_name || "N/A"}</td>
-                          <td style={styles.td}>₹{(p.monthly_rent || 0).toLocaleString("en-IN")}</td>
-                          <td style={styles.td}>₹{(p.security_deposit || 0).toLocaleString("en-IN")}</td>
-                          <td style={styles.td}>
-                            <span style={{ fontSize: "0.76rem", color: "#64748b" }}>
-                              {p.agreement_start_date || "N/A"} to {p.agreement_end_date || "N/A"}
-                            </span>
-                          </td>
-                          <td style={styles.td}>
-                            <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
-                              <button 
-                                type="button" 
-                                style={styles.actionIconBtn} 
-                                onClick={(e) => { e.stopPropagation(); setSelectedPropertyId(p.id); }}
-                                title="View Details"
-                              >
-                                <MdVisibility size={16} color="#2563eb" />
-                              </button>
-                              {p.status !== "Inactive" && (
+            <div>
+              {/* Dynamic Header Above Table */}
+              <div style={styles.tableHeaderSection}>
+                <h3 style={styles.tableTitle}>{tableHeaderTitle}</h3>
+              </div>
+
+              <div style={styles.tableWrap}>
+                {activeTab === "Agreements" ? (
+                  /* Landlord Agreements Table View */
+                  <table style={styles.table}>
+                    <thead>
+                      <tr>
+                        <th style={styles.th}>Property</th>
+                        <th style={styles.th}>Landlord</th>
+                        <th style={styles.th}>Monthly Rent</th>
+                        <th style={styles.th}>Deposit</th>
+                        <th style={styles.th}>Start / End Date</th>
+                        <th style={styles.th}>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredProperties.map(p => {
+                        const isSelected = p.id === selectedPropertyId;
+                        return (
+                          <tr
+                            key={p.id}
+                            style={{ ...styles.tr, ...(isSelected ? styles.trActive : {}) }}
+                            onClick={() => setSelectedPropertyId(p.id)}
+                          >
+                            <td style={styles.td}><strong>{p.name}</strong></td>
+                            <td style={styles.td}>{p.owner_name || "N/A"}</td>
+                            <td style={styles.td}>₹{(p.monthly_rent || 0).toLocaleString("en-IN")}</td>
+                            <td style={styles.td}>₹{(p.security_deposit || 0).toLocaleString("en-IN")}</td>
+                            <td style={styles.td}>
+                              <span style={{ fontSize: "0.76rem", color: "#64748b" }}>
+                                {p.agreement_start_date || "N/A"} to {p.agreement_end_date || "N/A"}
+                              </span>
+                            </td>
+                            <td style={styles.td}>
+                              <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
                                 <button 
                                   type="button" 
                                   style={styles.actionIconBtn} 
-                                  onClick={(e) => { e.stopPropagation(); handleArchive(p.id, "property"); }}
-                                  title="Archive Lease"
+                                  onClick={(e) => { e.stopPropagation(); setSelectedPropertyId(p.id); }}
+                                  title="View Details"
                                 >
-                                  <MdArchive size={16} color="#ef4444" />
+                                  <MdVisibility size={16} color="#2563eb" />
                                 </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              ) : (
-                /* Tenants Directory Table View */
-                <table style={styles.table}>
-                  <thead>
-                    <tr>
-                      <th style={styles.th}>Tenant</th>
-                      <th style={styles.th}>Room No</th>
-                      <th style={styles.th}>Phone</th>
-                      <th style={styles.th}>Join Date</th>
-                      <th style={styles.th}>Rent Status</th>
-                      <th style={styles.th}>Status</th>
-                      <th style={styles.th}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredTenants.map(t => {
-                      const isSelected = t.id === selectedTenantId;
-                      const isEditing = editingTenant && editingTenant.id === t.id;
-                      
-                      // Get initials for Avatar Badge
-                      const initials = t.full_name
-                        .split(" ")
-                        .map(n => n[0])
-                        .join("")
-                        .toUpperCase()
-                        .slice(0, 2);
-
-                      if (isEditing) {
-                        return (
-                          <tr key={t.id} style={{ ...styles.tr, ...styles.trActive }}>
-                            <td style={styles.td}>
-                              <input 
-                                style={styles.inputMini} 
-                                value={editingTenant.full_name} 
-                                onChange={e => setEditingTenant({ ...editingTenant, full_name: e.target.value })} 
-                              />
-                            </td>
-                            <td style={styles.td}>
-                              <input 
-                                style={styles.inputMini} 
-                                value={editingTenant.room_no} 
-                                onChange={e => setEditingTenant({ ...editingTenant, room_no: e.target.value })} 
-                              />
-                            </td>
-                            <td style={styles.td}>
-                              <input 
-                                style={styles.inputMini} 
-                                value={editingTenant.phone} 
-                                onChange={e => setEditingTenant({ ...editingTenant, phone: e.target.value })} 
-                              />
-                            </td>
-                            <td style={styles.td}>{formatDate(t.joining_date)}</td>
-                            <td style={styles.td}>
-                              <select 
-                                style={styles.selectMini}
-                                value={editingTenant.rent_status} 
-                                onChange={e => setEditingTenant({ ...editingTenant, rent_status: e.target.value })}
-                              >
-                                <option value="Paid">Paid</option>
-                                <option value="Unpaid">Unpaid</option>
-                                <option value="Pending">Pending</option>
-                              </select>
-                            </td>
-                            <td style={styles.td}>
-                              <select 
-                                style={styles.selectMini}
-                                value={editingTenant.status} 
-                                onChange={e => setEditingTenant({ ...editingTenant, status: e.target.value })}
-                              >
-                                <option value="Active">Active</option>
-                                <option value="Inactive">Inactive</option>
-                              </select>
-                            </td>
-                            <td style={styles.td}>
-                              <div style={{ display: "flex", gap: "8px" }}>
-                                <button type="button" onClick={handleUpdateTenant} style={{ ...styles.primaryBtn, padding: "4px 8px", fontSize: "0.72rem" }}>Save</button>
-                                <button type="button" onClick={() => setEditingTenant(null)} style={{ ...styles.secondaryBtn, padding: "4px 8px", fontSize: "0.72rem" }}>Cancel</button>
+                                {p.status !== "Inactive" && (
+                                  <button 
+                                    type="button" 
+                                    style={styles.actionIconBtn} 
+                                    onClick={(e) => { e.stopPropagation(); handleArchive(p.id, "property"); }}
+                                    title="Archive Lease"
+                                  >
+                                    <MdArchive size={16} color="#ef4444" />
+                                  </button>
+                                )}
                               </div>
                             </td>
                           </tr>
                         );
-                      }
+                      })}
+                    </tbody>
+                  </table>
+                ) : (
+                  /* Tenants Directory Table View */
+                  <table style={styles.table}>
+                    <thead>
+                      <tr>
+                        <th style={styles.th}>Tenant</th>
+                        <th style={styles.th}>Room No</th>
+                        <th style={styles.th}>Phone</th>
+                        <th style={styles.th}>Join Date</th>
+                        <th style={styles.th}>Rent Status</th>
+                        <th style={styles.th}>Status</th>
+                        <th style={styles.th}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredTenants.map(t => {
+                        const isSelected = t.id === selectedTenantId;
+                        const isEditing = editingTenant && editingTenant.id === t.id;
+                        
+                        // Get initials for Avatar Badge
+                        const initials = t.full_name
+                          .split(" ")
+                          .map(n => n[0])
+                          .join("")
+                          .toUpperCase()
+                          .slice(0, 2);
 
-                      return (
-                        <tr
-                          key={t.id}
-                          style={{ ...styles.tr, ...(isSelected ? styles.trActive : {}) }}
-                          onClick={() => setSelectedTenantId(t.id)}
-                        >
-                          <td style={styles.td}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                              <span style={styles.avatar}>{initials}</span>
-                              <div>
-                                <strong>{t.full_name}</strong>
-                                {t.hired_properties?.name && (
-                                  <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "2px" }}>
-                                    {t.hired_properties.name}
-                                  </div>
-                                )}
+                        if (isEditing) {
+                          return (
+                            <tr key={t.id} style={{ ...styles.tr, ...styles.trActive }}>
+                              <td style={styles.td}>
+                                <input 
+                                  style={styles.inputMini} 
+                                  value={editingTenant.full_name} 
+                                  onChange={e => setEditingTenant({ ...editingTenant, full_name: e.target.value })} 
+                                />
+                              </td>
+                              <td style={styles.td}>
+                                <input 
+                                  style={styles.inputMini} 
+                                  value={editingTenant.room_no} 
+                                  onChange={e => setEditingTenant({ ...editingTenant, room_no: e.target.value })} 
+                                />
+                              </td>
+                              <td style={styles.td}>
+                                <input 
+                                  style={styles.inputMini} 
+                                  value={editingTenant.phone} 
+                                  onChange={e => setEditingTenant({ ...editingTenant, phone: e.target.value })} 
+                                />
+                              </td>
+                              <td style={styles.td}>{formatDate(t.joining_date)}</td>
+                              <td style={styles.td}>
+                                <select 
+                                  style={styles.selectMini}
+                                  value={editingTenant.rent_status} 
+                                  onChange={e => setEditingTenant({ ...editingTenant, rent_status: e.target.value })}
+                                >
+                                  <option value="Paid">Paid</option>
+                                  <option value="Unpaid">Unpaid</option>
+                                  <option value="Pending">Pending</option>
+                                </select>
+                              </td>
+                              <td style={styles.td}>
+                                <select 
+                                  style={styles.selectMini}
+                                  value={editingTenant.status} 
+                                  onChange={e => setEditingTenant({ ...editingTenant, status: e.target.value })}
+                                >
+                                  <option value="Active">Active</option>
+                                  <option value="Inactive">Inactive</option>
+                                </select>
+                              </td>
+                              <td style={styles.td}>
+                                <div style={{ display: "flex", gap: "8px" }}>
+                                  <button type="button" onClick={handleUpdateTenant} style={{ ...styles.primaryBtn, padding: "4px 8px", fontSize: "0.72rem" }}>Save</button>
+                                  <button type="button" onClick={() => setEditingTenant(null)} style={{ ...styles.secondaryBtn, padding: "4px 8px", fontSize: "0.72rem" }}>Cancel</button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        }
+
+                        return (
+                          <tr
+                            key={t.id}
+                            style={{ ...styles.tr, ...(isSelected ? styles.trActive : {}) }}
+                            onClick={() => setSelectedTenantId(t.id)}
+                          >
+                            <td style={styles.td}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                <span style={styles.avatar}>{initials}</span>
+                                <div>
+                                  <strong>{t.full_name}</strong>
+                                  {t.hired_properties?.name && (
+                                    <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "2px" }}>
+                                      {t.hired_properties.name}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          <td style={styles.td}>
-                            <span style={styles.roomTag}>{t.room_no || "N/A"}</span>
-                          </td>
-                          <td style={styles.td}>{t.phone}</td>
-                          <td style={styles.td}>{formatDate(t.joining_date)}</td>
-                          <td style={styles.td}>
-                            <span style={{
-                              ...styles.badge,
-                              background: t.rent_status === "Paid" ? "#e6fbf2" : t.rent_status === "Pending" ? "#fffbeb" : "#fdf2f2",
-                              color: t.rent_status === "Paid" ? "#10b981" : t.rent_status === "Pending" ? "#d97706" : "#ef4444"
-                            }}>
-                              {t.rent_status}
-                            </span>
-                          </td>
-                          <td style={styles.td}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                              <span style={{ 
-                                display: "inline-block", 
-                                width: "6px", 
-                                height: "6px", 
-                                borderRadius: "50%", 
-                                background: t.status === "Active" ? "#10b981" : "#94a3b8" 
-                              }} />
-                              <span style={{ fontSize: "0.8rem", color: t.status === "Active" ? "#10b981" : "#64748b" }}>
-                                {t.status}
+                            </td>
+                            <td style={styles.td}>
+                              <span style={styles.roomTag}>{t.room_no || "N/A"}</span>
+                            </td>
+                            <td style={styles.td}>{t.phone}</td>
+                            <td style={styles.td}>{formatDate(t.joining_date)}</td>
+                            <td style={styles.td}>
+                              <span style={{
+                                ...styles.badge,
+                                background: t.rent_status === "Paid" ? "#e6fbf2" : t.rent_status === "Pending" ? "#fffbeb" : "#fdf2f2",
+                                color: t.rent_status === "Paid" ? "#10b981" : t.rent_status === "Pending" ? "#d97706" : "#ef4444"
+                              }}>
+                                {t.rent_status}
                               </span>
-                            </div>
-                          </td>
-                          <td style={styles.td}>
-                            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-                              <button 
-                                type="button" 
-                                style={styles.actionIconBtn} 
-                                onClick={(e) => { e.stopPropagation(); setSelectedTenantId(t.id); }}
-                                title="View Details"
-                              >
-                                <MdVisibility size={16} color="#2563eb" />
-                              </button>
-                              <button 
-                                type="button" 
-                                style={styles.actionIconBtn} 
-                                onClick={(e) => { e.stopPropagation(); setEditingTenant({ ...t }); }}
-                                title="Edit Tenant"
-                              >
-                                <MdEdit size={16} color="#7c3aed" />
-                              </button>
-                              {t.status !== "Inactive" && (
+                            </td>
+                            <td style={styles.td}>
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                <span style={{ 
+                                  display: "inline-block", 
+                                  width: "6px", 
+                                  height: "6px", 
+                                  borderRadius: "50%", 
+                                  background: t.status === "Active" ? "#10b981" : "#94a3b8" 
+                                }} />
+                                <span style={{ fontSize: "0.8rem", color: t.status === "Active" ? "#10b981" : "#64748b" }}>
+                                  {t.status}
+                                </span>
+                              </div>
+                            </td>
+                            <td style={styles.td}>
+                              <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                                 <button 
                                   type="button" 
                                   style={styles.actionIconBtn} 
-                                  onClick={(e) => { e.stopPropagation(); handleArchive(t.id, "tenant"); }}
-                                  title="Archive Tenant"
+                                  onClick={(e) => { e.stopPropagation(); setSelectedTenantId(t.id); }}
+                                  title="View Details"
                                 >
-                                  <MdArchive size={16} color="#ef4444" />
+                                  <MdVisibility size={16} color="#2563eb" />
                                 </button>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              )}
-              {activeTab !== "Agreements" && filteredTenants.length === 0 && !loading && <div style={styles.empty}>No occupants found.</div>}
-              {activeTab === "Agreements" && properties.length === 0 && !loading && <div style={styles.empty}>No leased properties found.</div>}
-              {loading && <div style={styles.empty}>Loading directory records...</div>}
+                                <button 
+                                  type="button" 
+                                  style={styles.actionIconBtn} 
+                                  onClick={(e) => { e.stopPropagation(); setEditingTenant({ ...t }); }}
+                                  title="Edit Tenant"
+                                >
+                                  <MdEdit size={16} color="#7c3aed" />
+                                </button>
+                                {t.status !== "Inactive" && (
+                                  <button 
+                                    type="button" 
+                                    style={styles.actionIconBtn} 
+                                    onClick={(e) => { e.stopPropagation(); handleArchive(t.id, "tenant"); }}
+                                    title="Archive Tenant"
+                                  >
+                                    <MdArchive size={16} color="#ef4444" />
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+                {activeTab !== "Agreements" && filteredTenants.length === 0 && !loading && <div style={styles.empty}>No occupants found.</div>}
+                {activeTab === "Agreements" && filteredProperties.length === 0 && !loading && <div style={styles.empty}>No leased properties found.</div>}
+                {loading && <div style={styles.empty}>Loading directory records...</div>}
+              </div>
             </div>
           )}
         </div>
@@ -716,17 +779,27 @@ const styles = {
   page: { display: "flex", gap: "20px", width: "100%" },
   left: { flex: 1.8, minWidth: "0" },
   panel: { background: "#fff", border: "1px solid #e2e8f0", borderRadius: "4px", padding: "24px", display: "flex", flexDirection: "column", gap: "20px" },
-  panelHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "20px" },
-  panelTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: "1rem", fontWeight: 700, color: "#111625" },
-  panelSub: { fontSize: "0.78rem", color: "#64748b", marginTop: "2px" },
-  primaryBtn: { background: "#0038a8", color: "#fff", border: "none", borderRadius: "4px", padding: "10px 16px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" },
-  secondaryBtn: { background: "#fff", color: "#64748b", border: "1px solid #cbd5e1", borderRadius: "4px", padding: "8px 14px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" },
 
-  tabHeader: { display: "flex", gap: "6px", borderBottom: "2px solid #e2e8f0", paddingBottom: "10px", flexWrap: "wrap" },
-  tabBtn: { background: "none", border: "none", color: "#64748b", fontSize: "0.8rem", fontWeight: 600, padding: "8px 12px", cursor: "pointer", outline: "none" },
+  // Top control bar matching screenshot
+  topControlBar: { display: "flex", gap: "16px", justifyContent: "space-between", alignItems: "center", width: "100%", flexWrap: "wrap" },
+  searchWrapper: { display: "flex", alignItems: "center", border: "1px solid #cbd5e1", borderRadius: "8px", background: "#fff", padding: "6px 12px", width: "300px", position: "relative" },
+  searchIcon: { marginRight: "8px" },
+  searchInput: { border: "none", outline: "none", fontSize: "0.85rem", color: "#0f172a", width: "100%" },
+
+  actionButtonGroup: { display: "flex", gap: "12px", alignItems: "center" },
+  filterBtn: { display: "flex", alignItems: "center", background: "#fff", color: "#475569", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "8px 16px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", outline: "none" },
+  addTenantBtn: { background: "#7c3aed", color: "#fff", border: "none", borderRadius: "8px", padding: "10px 18px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", outline: "none" },
+  addPropertyBtn: { background: "#3b82f6", color: "#fff", border: "none", borderRadius: "8px", padding: "10px 18px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer", outline: "none" },
+
+  tabHeader: { display: "flex", gap: "6px", borderBottom: "2px solid #e2e8f0", paddingBottom: "10px", flexWrap: "wrap", marginTop: "10px" },
+  tabBtn: { background: "none", border: "none", color: "#64748b", fontSize: "0.82rem", fontWeight: 600, padding: "8px 12px", cursor: "pointer", outline: "none" },
   tabBtnActive: { color: "#0038a8", borderBottom: "2px solid #0038a8" },
 
-  form: { background: "#f8fafc", padding: "20px", borderRadius: "4px", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: "12px" },
+  // Header above table
+  tableHeaderSection: { borderBottom: "1px solid #f1f5f9", paddingBottom: "10px", marginBottom: "16px", marginTop: "16px" },
+  tableTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: "1.05rem", fontWeight: 700, color: "#0f172a" },
+
+  form: { background: "#f8fafc", padding: "20px", borderRadius: "8px", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: "12px" },
   formRow: { display: "flex", gap: "16px" },
   formGroup: { display: "flex", flexDirection: "column", gap: "6px" },
   label: { fontSize: "0.65rem", fontWeight: 700, letterSpacing: "1px", color: "#111625", textTransform: "uppercase" },
