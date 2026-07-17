@@ -254,7 +254,22 @@ function getModuleIcon(key) {
             )}
           </div>
 
-          {activeModule && <span style={s.activeAppPill}>{activeModule.label}</span>}
+          {activeModule && (
+            <button 
+              type="button" 
+              style={{ ...s.activeAppPill, cursor: "pointer", border: "1px solid #99f6e4", outline: "none", fontFamily: "inherit" }}
+              onClick={() => {
+                if (activeModule.key === "property_management") {
+                  setActiveView("property_dashboard");
+                } else {
+                  setActiveView(activeModule.subItems[0].key);
+                }
+              }}
+              title="Return to Overview / Dashboard"
+            >
+              {activeModule.label}
+            </button>
+          )}
           <nav style={s.subNav} aria-label="Module menu">
             {activeModule?.subItems.map((sub) => {
               const isActive = activeView === sub.key || 
