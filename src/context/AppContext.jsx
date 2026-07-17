@@ -433,7 +433,7 @@ export function AppProvider({ children }) {
   }
 
   function canAccessRaw(view) {
-    if (activeRole === "Admin Manager" && [
+    if (["Super Admin", "Admin Manager"].includes(activeRole) && [
       "property_management", 
       "properties_all", 
       "properties_active", 
