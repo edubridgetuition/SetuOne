@@ -475,7 +475,13 @@ function getModuleIcon(key) {
           <>
             <span 
               style={{ ...s.breadcrumbMuted, cursor: "pointer", transition: "color 0.2s" }} 
-              onClick={() => setActiveView(activeModule?.subItems[0]?.key)}
+              onClick={() => {
+                if (activeModule?.key === "property_management") {
+                  setActiveView("property_dashboard");
+                } else {
+                  setActiveView(activeModule?.subItems[0]?.key);
+                }
+              }}
               onMouseEnter={(e) => e.target.style.color = "#0038a8"}
               onMouseLeave={(e) => e.target.style.color = s.breadcrumbMuted.color}
             >
