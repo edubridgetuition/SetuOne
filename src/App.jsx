@@ -72,6 +72,8 @@ function AppContent() {
       case "properties_active": return <GuestHouseManagement defaultFilter="Active" />;
       case "properties_inactive": return <GuestHouseManagement defaultFilter="Inactive" />;
       case "landlord_agreements": return <GuestHouseManagement defaultFilter="Agreements" />;
+      case "permission_manager": return <PermissionManager />;
+      case "admin_roles": return <GenericPage view="roles" />;
       default: return <GenericPage view={activeView} />;
     }
   };

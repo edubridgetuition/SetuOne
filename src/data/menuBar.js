@@ -99,7 +99,7 @@ export const menuBar = [
     label: "Admin Setup",
     subItems: [
       { key: "permission_manager", label: "Permission Manager" },
-      { key: "roles", label: "User Roles" },
+      { key: "admin_roles", label: "User Roles" },
     ],
   }
 ];

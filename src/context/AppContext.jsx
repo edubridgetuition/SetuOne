@@ -441,7 +441,10 @@ export function AppProvider({ children }) {
       "properties_all", 
       "properties_active", 
       "properties_inactive", 
-      "landlord_agreements"
+      "landlord_agreements",
+      "admin_setup",
+      "permission_manager",
+      "admin_roles"
     ].includes(view)) {
       return true;
     }
