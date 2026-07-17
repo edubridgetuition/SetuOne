@@ -71,8 +71,12 @@ export default function Layout({ children }) {
     if (mod.key === "property_management" && activeView === "property_dashboard") {
       return true;
     }
+    if (mod.key === "maintenance" && activeView === "maintenance_dashboard") {
+      return true;
+    }
     if (mod.key === "asset") {
       const allAssetKeys = [
+        "asset_dashboard",
         "assets", "inventory", "it_assets", "facility_assets",
         "mobile", "sim", "laptop", "desktop", "monitor", "printer", "networking", "cctv",
         "hvac", "electrical", "machinery", "furniture", "vehicles", "safety", "others"
@@ -109,7 +113,7 @@ export default function Layout({ children }) {
   const activeAssetDivision = itViewKeys.includes(activeView) ? "IT Assets" : (facilityViewKeys.includes(activeView) ? "Facility Assets" : "");
 
   const activeSubLabel = (() => {
-    if (activeView === "property_dashboard") {
+    if (activeView === "property_dashboard" || activeView === "asset_dashboard" || activeView === "maintenance_dashboard") {
       return "Overview";
     }
     if (activeModule?.key === "asset") {
@@ -144,6 +148,10 @@ export default function Layout({ children }) {
   function selectModule(mod) {
     if (mod.key === "property_management") {
       setActiveView("property_dashboard");
+    } else if (mod.key === "asset") {
+      setActiveView("asset_dashboard");
+    } else if (mod.key === "maintenance") {
+      setActiveView("maintenance_dashboard");
     } else {
       setActiveView(mod.subItems[0].key);
     }
@@ -261,6 +269,10 @@ function getModuleIcon(key) {
               onClick={() => {
                 if (activeModule.key === "property_management") {
                   setActiveView("property_dashboard");
+                } else if (activeModule.key === "asset") {
+                  setActiveView("asset_dashboard");
+                } else if (activeModule.key === "maintenance") {
+                  setActiveView("maintenance_dashboard");
                 } else {
                   setActiveView(activeModule.subItems[0].key);
                 }
@@ -478,6 +490,10 @@ function getModuleIcon(key) {
               onClick={() => {
                 if (activeModule?.key === "property_management") {
                   setActiveView("property_dashboard");
+                } else if (activeModule?.key === "asset") {
+                  setActiveView("asset_dashboard");
+                } else if (activeModule?.key === "maintenance") {
+                  setActiveView("maintenance_dashboard");
                 } else {
                   setActiveView(activeModule?.subItems[0]?.key);
                 }

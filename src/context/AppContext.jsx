@@ -436,6 +436,8 @@ export function AppProvider({ children }) {
     if (["Super Admin", "Admin Manager"].includes(activeRole) && [
       "property_management", 
       "property_dashboard",
+      "asset_dashboard",
+      "maintenance_dashboard",
       "properties_all", 
       "properties_active", 
       "properties_inactive", 

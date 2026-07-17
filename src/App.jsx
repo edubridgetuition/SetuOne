@@ -19,6 +19,8 @@ import AdminConsoleSettings from "./pages/AdminConsoleSettings";
 import EnergyMonitoring from "./pages/EnergyMonitoring";
 import VendorManagement from "./pages/VendorManagement";
 import GuestHouseManagement from "./pages/GuestHouseManagement";
+import AssetDashboard from "./pages/AssetDashboard";
+import MaintenanceDashboard from "./pages/MaintenanceDashboard";
 
 function AppContent() {
   const { session, activeView } = useApp();
@@ -28,6 +30,8 @@ function AppContent() {
   const renderView = () => {
     switch (activeView) {
       case "dashboard": return <Dashboard />;
+      case "maintenance_dashboard": return <MaintenanceDashboard />;
+      case "asset_dashboard": return <AssetDashboard />;
       case "checklist": return <Checklist />;
       case "tickets": return <Tickets />;
       
