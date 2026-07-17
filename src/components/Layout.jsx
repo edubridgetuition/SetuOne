@@ -30,6 +30,7 @@ const appIconColors = {
   attendance: ["#f0fdfa", "#0f766e"],
   reports: ["#fefce8", "#ca8a04"],
   roles: ["#fff1f2", "#e11d48"],
+  property_management: ["#fffbeb", "#d97706"],
 };
 
 export default function Layout({ children }) {
@@ -185,6 +186,9 @@ function getModuleIcon(key) {
 
     case "roles":
       return <MdSettings />;
+
+    case "property_management":
+      return <MdApartment />;
 
     default:
       return <MdFolder />;

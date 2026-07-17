@@ -18,6 +18,7 @@ import AutomationSettings from "./pages/AutomationSettings";
 import AdminConsoleSettings from "./pages/AdminConsoleSettings";
 import EnergyMonitoring from "./pages/EnergyMonitoring";
 import VendorManagement from "./pages/VendorManagement";
+import GuestHouseManagement from "./pages/GuestHouseManagement";
 
 function AppContent() {
   const { session, activeView } = useApp();
@@ -62,6 +63,10 @@ function AppContent() {
       case "automation": return <AutomationSettings />;
       case "admin_console": return <AdminConsoleSettings />;
       case "energy": return <EnergyMonitoring />;
+      case "properties_all": return <GuestHouseManagement defaultFilter="All" />;
+      case "properties_active": return <GuestHouseManagement defaultFilter="Active" />;
+      case "properties_inactive": return <GuestHouseManagement defaultFilter="Inactive" />;
+      case "landlord_agreements": return <GuestHouseManagement defaultFilter="Agreements" />;
       default: return <GenericPage view={activeView} />;
     }
   };

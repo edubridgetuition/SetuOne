@@ -65,6 +65,16 @@ export const menuBar = [
     ],
   },
   {
+    key: "property_management",
+    label: "Property Management",
+    subItems: [
+      { key: "properties_all", label: "All" },
+      { key: "properties_active", label: "Active" },
+      { key: "properties_inactive", label: "Inactive" },
+      { key: "landlord_agreements", label: "Hired Flats & Landlord Agreements" }
+    ]
+  },
+  {
     key: "reports",
     label: "Reports",
     subItems: [
