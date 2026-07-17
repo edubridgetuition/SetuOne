@@ -435,6 +435,7 @@ export function AppProvider({ children }) {
   function canAccessRaw(view) {
     if (["Super Admin", "Admin Manager"].includes(activeRole) && [
       "property_management", 
+      "property_dashboard",
       "properties_all", 
       "properties_active", 
       "properties_inactive", 

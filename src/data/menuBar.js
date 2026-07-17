@@ -68,6 +68,7 @@ export const menuBar = [
     key: "property_management",
     label: "Property Management",
     subItems: [
+      { key: "property_dashboard", label: "Dashboard" },
       { key: "properties_all", label: "All" },
       { key: "properties_active", label: "Active" },
       { key: "properties_inactive", label: "Inactive" },

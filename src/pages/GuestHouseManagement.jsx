@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useApp } from "../context/appContextCore";
 import { supabase } from "../lib/supabase";
-import { MdEdit, MdArchive, MdVisibility, MdSearch, MdFilterList } from "react-icons/md";
+import { MdEdit, MdArchive, MdVisibility, MdSearch, MdFilterList, MdHome, MdPeople, MdPayments, MdPercent } from "react-icons/md";
 
 export default function GuestHouseManagement({ defaultFilter = "All" }) {
   const { session } = useApp();
@@ -238,11 +238,31 @@ export default function GuestHouseManagement({ defaultFilter = "All" }) {
   const selectedTenant = tenants.find(t => t.id === selectedTenantId);
   const selectedProperty = properties.find(p => p.id === selectedPropertyId);
 
-  // Counts
+  // Counts & Calculations
   const totalTenantsCount = tenants.length;
   const activeTenantsCount = tenants.filter(t => t.status === "Active").length;
   const inactiveTenantsCount = tenants.filter(t => t.status === "Inactive").length;
+  
   const totalPropertiesCount = properties.length;
+  const occupiedPropertiesCount = properties.filter(p => p.status === "Occupied").length;
+  const activeRentCommitment = properties
+    .filter(p => p.status !== "Inactive")
+    .reduce((sum, p) => sum + (p.monthly_rent || 0), 0);
+
+  const occupancyRate = totalPropertiesCount > 0 
+    ? Math.round((occupiedPropertiesCount / totalPropertiesCount) * 100) 
+    : 0;
+
+  // Sorted list for Dashboard Sub-sections
+  const soonExpiringAgreements = [...properties]
+    .filter(p => p.status !== "Inactive" && p.agreement_end_date)
+    .sort((a, b) => new Date(a.agreement_end_date) - new Date(b.agreement_end_date))
+    .slice(0, 4);
+
+  const recentCheckins = [...tenants]
+    .filter(t => t.status === "Active")
+    .sort((a, b) => new Date(b.joining_date) - new Date(a.joining_date))
+    .slice(0, 4);
 
   // Header Title mapping
   let tableHeaderTitle = "All Tenants";
@@ -252,7 +272,7 @@ export default function GuestHouseManagement({ defaultFilter = "All" }) {
 
   return (
     <div style={styles.page}>
-      <div style={styles.left}>
+      <div style={{ ...styles.left, flex: activeTab === "Dashboard" ? 1 : 1.8 }}>
         <div style={styles.panel}>
           
           {/* Top Control Bar with Search and Actions */}
@@ -296,6 +316,7 @@ export default function GuestHouseManagement({ defaultFilter = "All" }) {
           {formType === null && (
             <div style={styles.tabHeader}>
               {[
+                { key: "Dashboard", label: "Dashboard" },
                 { key: "All", label: `All Tenants (${totalTenantsCount})` },
                 { key: "Active", label: `Active (${activeTenantsCount})` },
                 { key: "Inactive", label: `Inactive (${inactiveTenantsCount})` },
@@ -449,6 +470,139 @@ export default function GuestHouseManagement({ defaultFilter = "All" }) {
                 <button style={styles.secondaryBtn} type="button" onClick={() => setFormType(null)}>Cancel</button>
               </div>
             </form>
+          ) : activeTab === "Dashboard" ? (
+            /* Dashboard Executive View Screen */
+            <div style={styles.dashboardContainer}>
+              
+              {/* Dashboard Metric Row */}
+              <div style={styles.dashStatsGrid}>
+                <div style={styles.dashCard}>
+                  <div style={styles.dashCardHeader}>
+                    <div style={styles.dashCardInfo}>
+                      <span style={styles.dashLabel}>Hired Properties</span>
+                      <span style={styles.dashValue}>{totalPropertiesCount}</span>
+                    </div>
+                    <div style={{ ...styles.dashIconCircle, background: "#eff6ff", color: "#3b82f6" }}>
+                      <MdHome size={22} />
+                    </div>
+                  </div>
+                  <div style={styles.dashCardFooter} onClick={() => setActiveTab("Agreements")}>
+                    Manage properties →
+                  </div>
+                </div>
+
+                <div style={styles.dashCard}>
+                  <div style={styles.dashCardHeader}>
+                    <div style={styles.dashCardInfo}>
+                      <span style={styles.dashLabel}>Active Stays</span>
+                      <span style={styles.dashValue}>{activeTenantsCount}</span>
+                    </div>
+                    <div style={{ ...styles.dashIconCircle, background: "#f5f3ff", color: "#7c3aed" }}>
+                      <MdPeople size={22} />
+                    </div>
+                  </div>
+                  <div style={styles.dashCardFooter} onClick={() => setActiveTab("Active")}>
+                    View active occupants →
+                  </div>
+                </div>
+
+                <div style={styles.dashCard}>
+                  <div style={styles.dashCardHeader}>
+                    <div style={styles.dashCardInfo}>
+                      <span style={styles.dashLabel}>Monthly Rent Outgoings</span>
+                      <span style={styles.dashValue}>₹{activeRentCommitment.toLocaleString("en-IN")}</span>
+                    </div>
+                    <div style={{ ...styles.dashIconCircle, background: "#f0fdf4", color: "#10b981" }}>
+                      <MdPayments size={22} />
+                    </div>
+                  </div>
+                  <div style={styles.dashCardFooter} onClick={() => setActiveTab("Agreements")}>
+                    Agreements ledgers →
+                  </div>
+                </div>
+
+                <div style={styles.dashCard}>
+                  <div style={styles.dashCardHeader}>
+                    <div style={styles.dashCardInfo}>
+                      <span style={styles.dashLabel}>Occupancy Rate</span>
+                      <span style={styles.dashValue}>{occupancyRate}%</span>
+                    </div>
+                    <div style={{ ...styles.dashIconCircle, background: "#fff7ed", color: "#ea580c" }}>
+                      <MdPercent size={22} />
+                    </div>
+                  </div>
+                  <div style={styles.dashCardFooter}>
+                    Based on flat allocations
+                  </div>
+                </div>
+              </div>
+
+              {/* Two Column Grid */}
+              <div style={styles.dashTwoColumnGrid}>
+                {/* Column 1: Soon Expiring Agreements */}
+                <div style={styles.dashGridCol}>
+                  <h4 style={styles.dashColTitle}>Soon Expiring Agreements</h4>
+                  <div style={styles.dashColTableWrap}>
+                    <table style={styles.table}>
+                      <thead>
+                        <tr>
+                          <th style={styles.th}>Property</th>
+                          <th style={styles.th}>Landlord</th>
+                          <th style={styles.th}>Rent</th>
+                          <th style={styles.th}>Expiry</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {soonExpiringAgreements.map(p => (
+                          <tr key={p.id} style={styles.tr}>
+                            <td style={styles.td}><strong>{p.name}</strong></td>
+                            <td style={styles.td}>{p.owner_name}</td>
+                            <td style={styles.td}>₹{(p.monthly_rent || 0).toLocaleString("en-IN")}</td>
+                            <td style={styles.td}>
+                              <span style={{ color: "#ef4444", fontWeight: 600 }}>{p.agreement_end_date}</span>
+                            </td>
+                          </tr>
+                        ))}
+                        {soonExpiringAgreements.length === 0 && (
+                          <tr><td colSpan={4} style={styles.empty}>No agreements found.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Column 2: Recent Check-ins */}
+                <div style={styles.dashGridCol}>
+                  <h4 style={styles.dashColTitle}>Recent Check-Ins</h4>
+                  <div style={styles.dashColTableWrap}>
+                    <table style={styles.table}>
+                      <thead>
+                        <tr>
+                          <th style={styles.th}>Tenant</th>
+                          <th style={styles.th}>Room</th>
+                          <th style={styles.th}>Phone</th>
+                          <th style={styles.th}>Join Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {recentCheckins.map(t => (
+                          <tr key={t.id} style={styles.tr}>
+                            <td style={styles.td}><strong>{t.full_name}</strong></td>
+                            <td style={styles.td}><span style={styles.roomTag}>{t.room_no || "N/A"}</span></td>
+                            <td style={styles.td}>{t.phone}</td>
+                            <td style={styles.td}>{formatDate(t.joining_date)}</td>
+                          </tr>
+                        ))}
+                        {recentCheckins.length === 0 && (
+                          <tr><td colSpan={4} style={styles.empty}>No check-ins logged.</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+            </div>
           ) : (
             /* Lists Directories Tables rendering */
             <div>
@@ -691,95 +845,97 @@ export default function GuestHouseManagement({ defaultFilter = "All" }) {
         </div>
       </div>
 
-      {/* Right Details Panel */}
-      <div style={styles.detailPanel}>
-        {activeTab === "Agreements" ? (
-          /* Property Details Panel */
-          !selectedProperty ? (
-            <div style={styles.emptyDetail}>Select a property from the directory to view agreements ledger.</div>
-          ) : (
-            <div>
-              <div style={styles.detailHeader}>
-                <div>
-                  <span style={styles.muted}>Property Specification</span>
-                  <h3 style={styles.detailNo}>{selectedProperty.name}</h3>
-                </div>
-              </div>
-
-              <div style={styles.descBox}>
-                <span style={styles.muted}>Lease Address</span>
-                <p style={{ fontSize: "0.85rem", color: "#334155", marginTop: "6px", lineHeight: "1.4" }}>
-                  {selectedProperty.address}
-                </p>
-              </div>
-
-              <div style={styles.descBox}>
-                <span style={styles.muted}>Landlord / Contact Details</span>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "8px", marginTop: "10px", fontSize: "0.82rem" }}>
-                  <div><strong>Full Name:</strong> {selectedProperty.owner_name || "N/A"}</div>
-                  <div><strong>Phone / Contact:</strong> {selectedProperty.owner_contact || "N/A"}</div>
-                </div>
-              </div>
-
-              <div style={styles.descBox}>
-                <span style={styles.muted}>Rent & Agreement Ledger</span>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "8px", marginTop: "10px", fontSize: "0.82rem" }}>
-                  <div><strong>Monthly Rent Payout:</strong> ₹{(selectedProperty.monthly_rent || 0).toLocaleString("en-IN")}</div>
-                  <div><strong>Security Deposit:</strong> ₹{(selectedProperty.security_deposit || 0).toLocaleString("en-IN")}</div>
-                  <div><strong>Agreement Period:</strong> {selectedProperty.agreement_start_date || "N/A"} to {selectedProperty.agreement_end_date || "N/A"}</div>
+      {/* Right Details Panel (Hidden on Dashboard View) */}
+      {activeTab !== "Dashboard" && (
+        <div style={styles.detailPanel}>
+          {activeTab === "Agreements" ? (
+            /* Property Details Panel */
+            !selectedProperty ? (
+              <div style={styles.emptyDetail}>Select a property from the directory to view agreements ledger.</div>
+            ) : (
+              <div>
+                <div style={styles.detailHeader}>
                   <div>
-                    <strong>Lease Status: </strong>
-                    <span style={{ fontWeight: "bold", color: selectedProperty.status === 'Inactive' ? '#ef4444' : '#16a34a' }}>
-                      {selectedProperty.status}
-                    </span>
+                    <span style={styles.muted}>Property Specification</span>
+                    <h3 style={styles.detailNo}>{selectedProperty.name}</h3>
+                  </div>
+                </div>
+
+                <div style={styles.descBox}>
+                  <span style={styles.muted}>Lease Address</span>
+                  <p style={{ fontSize: "0.85rem", color: "#334155", marginTop: "6px", lineHeight: "1.4" }}>
+                    {selectedProperty.address}
+                  </p>
+                </div>
+
+                <div style={styles.descBox}>
+                  <span style={styles.muted}>Landlord / Contact Details</span>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "8px", marginTop: "10px", fontSize: "0.82rem" }}>
+                    <div><strong>Full Name:</strong> {selectedProperty.owner_name || "N/A"}</div>
+                    <div><strong>Phone / Contact:</strong> {selectedProperty.owner_contact || "N/A"}</div>
+                  </div>
+                </div>
+
+                <div style={styles.descBox}>
+                  <span style={styles.muted}>Rent & Agreement Ledger</span>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "8px", marginTop: "10px", fontSize: "0.82rem" }}>
+                    <div><strong>Monthly Rent Payout:</strong> ₹{(selectedProperty.monthly_rent || 0).toLocaleString("en-IN")}</div>
+                    <div><strong>Security Deposit:</strong> ₹{(selectedProperty.security_deposit || 0).toLocaleString("en-IN")}</div>
+                    <div><strong>Agreement Period:</strong> {selectedProperty.agreement_start_date || "N/A"} to {selectedProperty.agreement_end_date || "N/A"}</div>
+                    <div>
+                      <strong>Lease Status: </strong>
+                      <span style={{ fontWeight: "bold", color: selectedProperty.status === 'Inactive' ? '#ef4444' : '#16a34a' }}>
+                        {selectedProperty.status}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )
-        ) : (
-          /* Tenant / Occupant Details Panel */
-          !selectedTenant ? (
-            <div style={styles.emptyDetail}>Select a tenant profile to view stay specifications.</div>
+            )
           ) : (
-            <div>
-              <div style={styles.detailHeader}>
-                <div>
-                  <span style={styles.muted}>Stay Occupancy Details</span>
-                  <h3 style={styles.detailNo}>{selectedTenant.full_name}</h3>
+            /* Tenant / Occupant Details Panel */
+            !selectedTenant ? (
+              <div style={styles.emptyDetail}>Select a tenant profile to view stay specifications.</div>
+            ) : (
+              <div>
+                <div style={styles.detailHeader}>
+                  <div>
+                    <span style={styles.muted}>Stay Occupancy Details</span>
+                    <h3 style={styles.detailNo}>{selectedTenant.full_name}</h3>
+                  </div>
                 </div>
-              </div>
 
-              <div style={styles.descBox}>
-                <span style={styles.muted}>Assigned Residence</span>
-                <p style={{ fontSize: "0.85rem", color: "#334155", marginTop: "6px", fontWeight: "bold" }}>
-                  {selectedTenant.hired_properties?.name || "No Flat Assigned"}
-                </p>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "6px", marginTop: "10px", fontSize: "0.82rem" }}>
-                  <div><strong>Room / Space No:</strong> {selectedTenant.room_no || "N/A"}</div>
-                  <div><strong>Occupant Phone:</strong> {selectedTenant.phone}</div>
+                <div style={styles.descBox}>
+                  <span style={styles.muted}>Assigned Residence</span>
+                  <p style={{ fontSize: "0.85rem", color: "#334155", marginTop: "6px", fontWeight: "bold" }}>
+                    {selectedTenant.hired_properties?.name || "No Flat Assigned"}
+                  </p>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "6px", marginTop: "10px", fontSize: "0.82rem" }}>
+                    <div><strong>Room / Space No:</strong> {selectedTenant.room_no || "N/A"}</div>
+                    <div><strong>Occupant Phone:</strong> {selectedTenant.phone}</div>
+                  </div>
                 </div>
-              </div>
 
-              <div style={styles.descBox}>
-                <span style={styles.muted}>Lease & Rent Status</span>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "6px", marginTop: "10px", fontSize: "0.82rem" }}>
-                  <div><strong>Check-in / Join Date:</strong> {formatDate(selectedTenant.joining_date)}</div>
-                  <div><strong>Rent Payment Status:</strong> {selectedTenant.rent_status}</div>
-                  <div><strong>Occupancy Profile:</strong> {selectedTenant.status}</div>
+                <div style={styles.descBox}>
+                  <span style={styles.muted}>Lease & Rent Status</span>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "6px", marginTop: "10px", fontSize: "0.82rem" }}>
+                    <div><strong>Check-in / Join Date:</strong> {formatDate(selectedTenant.joining_date)}</div>
+                    <div><strong>Rent Payment Status:</strong> {selectedTenant.rent_status}</div>
+                    <div><strong>Occupancy Profile:</strong> {selectedTenant.status}</div>
+                  </div>
                 </div>
               </div>
-            </div>
-          )
-        )}
-      </div>
+            )
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 const styles = {
   page: { display: "flex", gap: "20px", width: "100%" },
-  left: { flex: 1.8, minWidth: "0" },
+  left: { flex: 1.8, minWidth: "0", transition: "all 0.3s ease" },
   panel: { background: "#fff", border: "1px solid #e2e8f0", borderRadius: "4px", padding: "24px", display: "flex", flexDirection: "column", gap: "20px" },
 
   // Top control bar matching screenshot
@@ -800,6 +956,22 @@ const styles = {
   // Header above table
   tableHeaderSection: { borderBottom: "1px solid #f1f5f9", paddingBottom: "10px", marginBottom: "16px", marginTop: "16px" },
   tableTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: "1.05rem", fontWeight: 700, color: "#0f172a" },
+
+  // Dashboard Executive Styles
+  dashboardContainer: { display: "flex", flexDirection: "column", gap: "24px", marginTop: "10px" },
+  dashStatsGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "20px" },
+  dashCard: { background: "#fff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "20px", display: "flex", flexDirection: "column", justifyContent: "space-between", gap: "16px", boxShadow: "0 1px 3px rgba(0,0,0,0.02)" },
+  dashCardHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start" },
+  dashCardInfo: { display: "flex", flexDirection: "column", gap: "6px" },
+  dashLabel: { fontSize: "0.75rem", fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" },
+  dashValue: { fontSize: "1.5rem", fontWeight: 800, color: "#0f172a", fontFamily: "'Space Grotesk', sans-serif" },
+  dashIconCircle: { width: "42px", height: "42px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" },
+  dashCardFooter: { borderTop: "1px solid #f1f5f9", paddingTop: "12px", fontSize: "0.78rem", color: "#0038a8", fontWeight: 600, cursor: "pointer", transition: "color 0.2s" },
+
+  dashTwoColumnGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "24px" },
+  dashGridCol: { background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "20px", display: "flex", flexDirection: "column", gap: "16px" },
+  dashColTitle: { fontSize: "0.95rem", fontWeight: 700, color: "#0f172a", fontFamily: "'Space Grotesk', sans-serif" },
+  dashColTableWrap: { background: "#fff", borderRadius: "8px", border: "1px solid #e2e8f0", overflowX: "auto" },
 
   form: { background: "#f8fafc", padding: "20px", borderRadius: "8px", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: "12px" },
   formRow: { display: "flex", gap: "16px" },

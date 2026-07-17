@@ -31,6 +31,7 @@ export const permissionTabs = [
   { key: "reports", label: "Reports" },
   { key: "roles", label: "User Roles" },
   { key: "property_management", label: "Property Management" },
+  { key: "property_dashboard", label: "Property Dashboard" },
   { key: "properties_all", label: "All Properties" },
   { key: "properties_active", label: "Active Properties" },
   { key: "properties_inactive", label: "Inactive Properties" },
@@ -39,14 +40,14 @@ export const permissionTabs = [
 
 export const defaultCompanyPermissions = {
   orion: {
-    "Admin Manager": ["dashboard", "maintenance", "checklist", "tickets", "ppm", "asset", "assets", "inventory", "itasset", "mobile", "sim", "furniture", "hvac", "vendors", "reports", "property_management", "properties_all", "properties_active", "properties_inactive", "landlord_agreements"],
+    "Admin Manager": ["dashboard", "maintenance", "checklist", "tickets", "ppm", "asset", "assets", "inventory", "itasset", "mobile", "sim", "furniture", "hvac", "vendors", "reports", "property_management", "property_dashboard", "properties_all", "properties_active", "properties_inactive", "landlord_agreements"],
     Employee: ["dashboard", "tickets", "visitors"],
     Vendor: ["dashboard", "tickets", "workorders"],
     "Security Supervisor": ["dashboard", "visitors", "security", "attendance"],
     "HK Supervisor": ["dashboard", "checklist", "housekeeping", "attendance"],
   },
   greenfield: {
-    "Admin Manager": ["dashboard", "maintenance", "tickets", "reports", "property_management", "properties_all", "properties_active", "properties_inactive", "landlord_agreements"],
+    "Admin Manager": ["dashboard", "maintenance", "tickets", "reports", "property_management", "property_dashboard", "properties_all", "properties_active", "properties_inactive", "landlord_agreements"],
     Employee: ["dashboard", "tickets"],
     Vendor: ["dashboard", "tickets"],
     "Security Supervisor": ["dashboard", "visitors", "security"],

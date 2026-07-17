@@ -63,6 +63,7 @@ function AppContent() {
       case "automation": return <AutomationSettings />;
       case "admin_console": return <AdminConsoleSettings />;
       case "energy": return <EnergyMonitoring />;
+      case "property_dashboard": return <GuestHouseManagement defaultFilter="Dashboard" />;
       case "properties_all": return <GuestHouseManagement defaultFilter="All" />;
       case "properties_active": return <GuestHouseManagement defaultFilter="Active" />;
       case "properties_inactive": return <GuestHouseManagement defaultFilter="Inactive" />;
