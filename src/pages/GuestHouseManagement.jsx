@@ -269,6 +269,7 @@ export default function GuestHouseManagement({ defaultFilter = "All" }) {
   if (activeTab === "Active") tableHeaderTitle = "Active Tenants";
   else if (activeTab === "Inactive") tableHeaderTitle = "Inactive Tenants";
   else if (activeTab === "Agreements") tableHeaderTitle = "Flats & Landlord Agreements";
+  else if (activeTab === "Dashboard") tableHeaderTitle = "Property Overview";
 
   return (
     <div style={styles.page}>
@@ -316,7 +317,7 @@ export default function GuestHouseManagement({ defaultFilter = "All" }) {
           {formType === null && (
             <div style={styles.tabHeader}>
               {[
-                { key: "Dashboard", label: "Dashboard" },
+                { key: "Dashboard", label: "Overview" },
                 { key: "All", label: `All Tenants (${totalTenantsCount})` },
                 { key: "Active", label: `Active (${activeTenantsCount})` },
                 { key: "Inactive", label: `Inactive (${inactiveTenantsCount})` },

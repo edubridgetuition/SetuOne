@@ -68,6 +68,9 @@ export default function Layout({ children }) {
     .filter((mod) => mod.subItems.length > 0), [canAccess]);
 
   const activeModule = accessibleModules.find((mod) => {
+    if (mod.key === "property_management" && activeView === "property_dashboard") {
+      return true;
+    }
     if (mod.key === "asset") {
       const allAssetKeys = [
         "assets", "inventory", "it_assets", "facility_assets",
@@ -106,6 +109,9 @@ export default function Layout({ children }) {
   const activeAssetDivision = itViewKeys.includes(activeView) ? "IT Assets" : (facilityViewKeys.includes(activeView) ? "Facility Assets" : "");
 
   const activeSubLabel = (() => {
+    if (activeView === "property_dashboard") {
+      return "Overview";
+    }
     if (activeModule?.key === "asset") {
       if (activeView === "assets") return "Asset Management";
       if (activeView === "inventory") return "Inventory";
@@ -136,7 +142,11 @@ export default function Layout({ children }) {
   }
 
   function selectModule(mod) {
-    setActiveView(mod.subItems[0].key);
+    if (mod.key === "property_management") {
+      setActiveView("property_dashboard");
+    } else {
+      setActiveView(mod.subItems[0].key);
+    }
     setLauncherOpen(false);
   }
 
