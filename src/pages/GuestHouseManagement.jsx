@@ -75,6 +75,8 @@ export default function GuestHouseManagement({ defaultFilter = "All" }) {
 
   useEffect(() => {
     setActiveTab(defaultFilter);
+    setFormType(null);
+    setSearchQuery("");
   }, [defaultFilter]);
 
   useEffect(() => {
