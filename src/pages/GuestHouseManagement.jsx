@@ -317,7 +317,6 @@ export default function GuestHouseManagement({ defaultFilter = "All" }) {
           {formType === null && (
             <div style={styles.tabHeader}>
               {[
-                { key: "Dashboard", label: "Overview" },
                 { key: "All", label: `All Tenants (${totalTenantsCount})` },
                 { key: "Active", label: `Active (${activeTenantsCount})` },
                 { key: "Inactive", label: `Inactive (${inactiveTenantsCount})` },
