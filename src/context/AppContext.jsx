@@ -433,6 +433,16 @@ export function AppProvider({ children }) {
   }
 
   function canAccessRaw(view) {
+    if (activeRole === "Admin Manager" && [
+      "property_management", 
+      "properties_all", 
+      "properties_active", 
+      "properties_inactive", 
+      "landlord_agreements"
+    ].includes(view)) {
+      return true;
+    }
+
     const saved = localStorage.getItem("setuone_company_permissions");
     if (saved) {
       try {
