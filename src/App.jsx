@@ -23,9 +23,9 @@ import AssetDashboard from "./pages/AssetDashboard";
 import MaintenanceDashboard from "./pages/MaintenanceDashboard";
 
 function AppContent() {
-  const { session, activeView, isPasswordResetFlow } = useApp();
+  const { session, activeView } = useApp();
 
-  if (!session || isPasswordResetFlow) return <LoginPage />;
+  if (!session) return <LoginPage />;
 
   const renderView = () => {
     switch (activeView) {

@@ -84,20 +84,17 @@ export async function fetchUserProfile(userId) {
 
 export async function sendPasswordResetOtp(email) {
   try {
-    const siteUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: siteUrl
-    });
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email);
     if (error) throw error;
-    return { success: true, data, message: 'Password reset email sent successfully.', error: null };
+    return { success: true, data, message: 'OTP code sent successfully to your email.', error: null };
   } catch (error) {
-    return { success: false, data: null, message: error.message || 'Failed to send password reset email.', error };
+    return { success: false, data: null, message: error.message || 'Failed to send OTP code.', error };
   }
 }
 
 export async function verifyOtpAndResetPassword(email, token, newPassword) {
   try {
-    // 1. Verify OTP token
+    // 1. Verify 6-digit OTP token
     const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
       email,
       token: token.trim(),
@@ -119,6 +116,9 @@ export async function verifyOtpAndResetPassword(email, token, newPassword) {
       password: newPassword
     });
     if (updateError) throw updateError;
+
+    // 3. Sign out temporary recovery session
+    await supabase.auth.signOut();
 
     return { success: true, data: updateData, message: 'Password updated successfully.', error: null };
   } catch (error) {
