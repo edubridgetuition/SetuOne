@@ -5,7 +5,7 @@ import { supabase } from "../lib/supabase";
 import { MdVisibility, MdVisibilityOff, MdArrowBack } from "react-icons/md";
 
 export default function LoginPage() {
-  const { login, signup, sendPasswordResetOtp, verifyOtpAndResetPassword } = useApp();
+  const { login, signup, sendPasswordResetOtp, verifyOtpAndResetPassword, setIsPasswordResetFlow } = useApp();
   
   // Modes: 'signin', 'signup', 'forgotPassword'
   const [authMode, setAuthMode] = useState("signin");
@@ -204,16 +204,19 @@ export default function LoginPage() {
       });
       if (updateErr) throw updateErr;
 
-      setSuccessMsg("Password updated successfully! You can now sign in using your new password.");
-      setAuthMode("signin");
-      setForgotStep(1);
-      setPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-
+      setSuccessMsg("Password updated successfully! Entering dashboard...");
       if (window.history && window.history.replaceState) {
         window.history.replaceState(null, "", window.location.pathname);
       }
+
+      setTimeout(() => {
+        setIsPasswordResetFlow(false);
+        setAuthMode("signin");
+        setForgotStep(1);
+        setPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      }, 1200);
     } catch (err) {
       setError("Failed to update password: " + err.message);
     } finally {
