@@ -251,10 +251,23 @@ export function AppProvider({ children }) {
   const [consumptionHistory, setConsumptionHistory] = useState([]);
   const [energyDashboard, setEnergyDashboard] = useState(null);
   
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Initialize Session on Page Load
+  // Initialize Session on Page Load & Detect Reset Password Tokens
   useEffect(() => {
+    const hash = window.location.hash || "";
+    const search = window.location.search || "";
+    if (hash.includes("type=recovery") || hash.includes("type=magiclink") || search.includes("type=recovery") || search.includes("code=")) {
+      setShowResetPasswordModal(true);
+    }
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setShowResetPasswordModal(true);
+      }
+    });
+
     async function initSession() {
       const sessionRes = await getCurrentSession();
       if (sessionRes.success && sessionRes.data) {
@@ -263,6 +276,12 @@ export function AppProvider({ children }) {
       setLoading(false);
     }
     initSession();
+
+    return () => {
+      if (authListener && authListener.subscription) {
+        authListener.subscription.unsubscribe();
+      }
+    };
   }, []);
 
   // Fetch live ticket items, locations list, and staff members dynamically on login session success
@@ -1758,7 +1777,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{ 
       session, activeTenant, setActiveTenant, activeRole, setActiveRole, 
       activeView, setActiveView, tickets, locations, assignees, tenantData, 
-      login, signup, logout, sendPasswordResetOtp, verifyOtpAndResetPassword, canAccess, createTicket, updateTicket,
+      login, signup, logout, sendPasswordResetOtp, verifyOtpAndResetPassword, showResetPasswordModal, setShowResetPasswordModal, canAccess, createTicket, updateTicket,
       
       // Asset values
       assets, totalAssetsCount, assetMetadata, loadAssets, loadAssetDetails,

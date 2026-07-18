@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../context/appContextCore";
+import { supabase } from "../lib/supabase";
 import { menuBar } from "../data/menuBar";
 import {
   MdDashboard,
@@ -44,13 +44,60 @@ export default function Layout({ children }) {
     logout,
     inboxNotifications = [],
     loadInboxNotifications,
-    markRead 
+    markRead,
+    showResetPasswordModal,
+    setShowResetPasswordModal
   } = useApp();
   const [launcherOpen, setLauncherOpen] = useState(false);
   const [hoveredTab, setHoveredTab] = useState(null);
   const [hoveredItemKey, setHoveredItemKey] = useState(null);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
   const closeTimer = useRef(null);
+
+  // Reset Password Modal Form States
+  const [modalPassword, setModalPassword] = useState("");
+  const [modalConfirmPassword, setModalConfirmPassword] = useState("");
+  const [modalError, setModalError] = useState("");
+  const [modalSuccess, setModalSuccess] = useState("");
+  const [modalLoading, setModalLoading] = useState(false);
+
+  async function handleModalPasswordUpdate(e) {
+    e.preventDefault();
+    setModalError("");
+    setModalSuccess("");
+
+    if (!modalPassword || modalPassword.length < 6) {
+      setModalError("Password must be at least 6 characters long.");
+      return;
+    }
+    if (modalPassword !== modalConfirmPassword) {
+      setModalError("Passwords do not match.");
+      return;
+    }
+
+    setModalLoading(true);
+    try {
+      const { error: updateErr } = await supabase.auth.updateUser({
+        password: modalPassword
+      });
+      if (updateErr) throw updateErr;
+
+      setModalSuccess("Password updated successfully!");
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, "", window.location.pathname);
+      }
+      setTimeout(() => {
+        setShowResetPasswordModal(false);
+        setModalPassword("");
+        setModalConfirmPassword("");
+        setModalSuccess("");
+      }, 1200);
+    } catch (err) {
+      setModalError("Failed to update password: " + err.message);
+    } finally {
+      setModalLoading(false);
+    }
+  }
 
   useEffect(() => {
     if (session) {
@@ -515,6 +562,101 @@ function getModuleIcon(key) {
 </section>
         <section style={s.content}>{children}</section>
       </main>
+
+      {/* Set New Password Popup Modal */}
+      {showResetPasswordModal && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(15, 23, 42, 0.75)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 99999,
+          padding: "20px"
+        }}>
+          <div style={{
+            background: "#fff",
+            borderRadius: "12px",
+            width: "100%",
+            maxWidth: "420px",
+            padding: "28px",
+            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+            border: "1px solid #e2e8f0"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "8px" }}>
+              <span style={{ fontSize: "1.4rem" }}>🔑</span>
+              <h3 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 800, color: "#0f172a" }}>
+                Set New Password
+              </h3>
+            </div>
+            
+            <p style={{ margin: "0 0 20px 0", fontSize: "0.85rem", color: "#64748b", lineHeight: 1.5 }}>
+              You accessed your account via a password reset link. Please enter your new password below.
+            </p>
+
+            {modalError && (
+              <div style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444", padding: "10px 14px", borderRadius: "6px", fontSize: "0.8rem", marginBottom: "16px" }}>
+                ⚠️ {modalError}
+              </div>
+            )}
+
+            {modalSuccess && (
+              <div style={{ background: "rgba(34,197,94,0.1)", color: "#16a34a", padding: "10px 14px", borderRadius: "6px", fontSize: "0.8rem", marginBottom: "16px" }}>
+                ✓ {modalSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleModalPasswordUpdate} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "0.7rem", fontWeight: 800, letterSpacing: "1px", color: "#334155" }}>
+                  NEW PASSWORD
+                </label>
+                <input
+                  type="password"
+                  value={modalPassword}
+                  onChange={e => setModalPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  required
+                  style={{ width: "100%", padding: "10px 14px", fontSize: "0.9rem", border: "1px solid #cbd5e1", borderRadius: "6px", outline: "none" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                <label style={{ fontSize: "0.7rem", fontWeight: 800, letterSpacing: "1px", color: "#334155" }}>
+                  CONFIRM NEW PASSWORD
+                </label>
+                <input
+                  type="password"
+                  value={modalConfirmPassword}
+                  onChange={e => setModalConfirmPassword(e.target.value)}
+                  placeholder="Repeat new password"
+                  required
+                  style={{ width: "100%", padding: "10px 14px", fontSize: "0.9rem", border: "1px solid #cbd5e1", borderRadius: "6px", outline: "none" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px", marginTop: "8px" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowResetPasswordModal(false)}
+                  style={{ background: "#f1f5f9", border: "1px solid #e2e8f0", color: "#64748b", padding: "9px 16px", borderRadius: "6px", fontSize: "0.85rem", fontWeight: 600, cursor: "pointer" }}
+                >
+                  Close
+                </button>
+                <button
+                  type="submit"
+                  disabled={modalLoading}
+                  style={{ background: "#0038a8", border: "none", color: "#fff", padding: "9px 20px", borderRadius: "6px", fontSize: "0.85rem", fontWeight: 700, cursor: "pointer" }}
+                >
+                  {modalLoading ? "Saving..." : "Update Password ✓"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
