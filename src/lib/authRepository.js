@@ -84,11 +84,14 @@ export async function fetchUserProfile(userId) {
 
 export async function sendPasswordResetOtp(email) {
   try {
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email);
+    const siteUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: siteUrl
+    });
     if (error) throw error;
-    return { success: true, data, message: 'Password reset OTP email sent successfully.', error: null };
+    return { success: true, data, message: 'Password reset email sent successfully.', error: null };
   } catch (error) {
-    return { success: false, data: null, message: error.message || 'Failed to send password reset OTP.', error };
+    return { success: false, data: null, message: error.message || 'Failed to send password reset email.', error };
   }
 }
 
