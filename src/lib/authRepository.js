@@ -81,3 +81,44 @@ export async function fetchUserProfile(userId) {
     return { success: false, data: null, message: error.message || 'Profile fetch failed.', error };
   }
 }
+
+export async function sendPasswordResetOtp(email) {
+  try {
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) throw error;
+    return { success: true, data, message: 'Password reset OTP email sent successfully.', error: null };
+  } catch (error) {
+    return { success: false, data: null, message: error.message || 'Failed to send password reset OTP.', error };
+  }
+}
+
+export async function verifyOtpAndResetPassword(email, token, newPassword) {
+  try {
+    // 1. Verify OTP token
+    const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+      email,
+      token: token.trim(),
+      type: 'recovery'
+    });
+
+    if (verifyError) {
+      // Fallback try type 'email'
+      const { error: v2Error } = await supabase.auth.verifyOtp({
+        email,
+        token: token.trim(),
+        type: 'email'
+      });
+      if (v2Error) throw verifyError;
+    }
+
+    // 2. Update user password
+    const { data: updateData, error: updateError } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+    if (updateError) throw updateError;
+
+    return { success: true, data: updateData, message: 'Password updated successfully.', error: null };
+  } catch (error) {
+    return { success: false, data: null, message: error.message || 'Verification or password update failed.', error };
+  }
+}

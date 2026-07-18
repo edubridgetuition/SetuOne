@@ -7,6 +7,8 @@ import {
   login as authLogin, 
   logout as authLogout,
   register as authRegister,
+  sendPasswordResetOtp as authSendResetOtp,
+  verifyOtpAndResetPassword as authVerifyOtpResetPassword,
   fetchTickets,
   fetchLocations,
   fetchAssignees,
@@ -430,6 +432,14 @@ export function AppProvider({ children }) {
     await authLogout();
     setSession(null);
     setActiveView("dashboard");
+  }
+
+  async function sendPasswordResetOtp(email) {
+    return await authSendResetOtp(email);
+  }
+
+  async function verifyOtpAndResetPassword(email, token, newPassword) {
+    return await authVerifyOtpResetPassword(email, token, newPassword);
   }
 
   function canAccessRaw(view) {
@@ -1748,7 +1758,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{ 
       session, activeTenant, setActiveTenant, activeRole, setActiveRole, 
       activeView, setActiveView, tickets, locations, assignees, tenantData, 
-      login, signup, logout, canAccess, createTicket, updateTicket,
+      login, signup, logout, sendPasswordResetOtp, verifyOtpAndResetPassword, canAccess, createTicket, updateTicket,
       
       // Asset values
       assets, totalAssetsCount, assetMetadata, loadAssets, loadAssetDetails,

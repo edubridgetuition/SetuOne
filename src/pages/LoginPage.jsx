@@ -1,64 +1,161 @@
 import { useState } from "react";
 import { useApp } from "../context/appContextCore";
 import { demoUsers } from "../data/appData";
-import { MdVisibility, MdVisibilityOff } from "react-icons/md";
+import { MdVisibility, MdVisibilityOff, MdLockReset, MdArrowBack } from "react-icons/md";
 
 export default function LoginPage() {
-  const { login, signup } = useApp();
-  const [isSignUp, setIsSignUp] = useState(false);
+  const { login, signup, sendPasswordResetOtp, verifyOtpAndResetPassword } = useApp();
+  
+  // Modes: 'signin', 'signup', 'forgotPassword'
+  const [authMode, setAuthMode] = useState("signin");
+  
+  // Forgot Password Steps: 1 (Request OTP), 2 (Verify OTP & Reset Password)
+  const [forgotStep, setForgotStep] = useState(1);
+
+  // Form Fields
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState("");
   const [companyName, setCompanyName] = useState("");
+
+  // OTP Fields
+  const [otpCode, setOtpCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  // Feedback States
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // Set default values on mode toggle
-  function toggleMode() {
-    setIsSignUp(!isSignUp);
+  // Reset Form
+  function switchMode(newMode) {
+    setAuthMode(newMode);
+    setForgotStep(1);
     setError("");
     setSuccessMsg("");
     setEmail("");
     setPassword("");
     setFullName("");
     setCompanyName("");
+    setOtpCode("");
+    setNewPassword("");
+    setConfirmPassword("");
   }
 
+  // Handle Login & Signup
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
     setSuccessMsg("");
+    setLoading(true);
 
-    if (isSignUp) {
-      if (!companyName || !companyName.trim()) {
-        setError("Please enter a company name.");
-        return;
-      }
+    try {
+      if (authMode === "signup") {
+        if (!companyName || !companyName.trim()) {
+          setError("Please enter a company name.");
+          setLoading(false);
+          return;
+        }
 
-      const res = await signup(email, password, fullName, companyName.trim(), "Admin Manager");
-      if (res.success) {
-        setSuccessMsg("Registration successful! You can now sign in using your credentials.");
-        setIsSignUp(false);
-        // Autofill registered email
-        setEmail(email);
-      } else {
-        setError(res.message || "Registration failed. Please try again.");
+        const res = await signup(email, password, fullName, companyName.trim(), "Admin Manager");
+        if (res.success) {
+          setSuccessMsg("Registration successful! You can now sign in using your credentials.");
+          setAuthMode("signin");
+          setEmail(email);
+        } else {
+          setError(res.message || "Registration failed. Please try again.");
+        }
+      } else if (authMode === "signin") {
+        if (!companyName || !companyName.trim()) {
+          setError("Please enter your company name.");
+          setLoading(false);
+          return;
+        }
+        const res = await login(email, password, companyName.trim());
+        if (!res.success) setError(res.message);
       }
-    } else {
-      if (!companyName || !companyName.trim()) {
-        setError("Please enter your company name.");
-        return;
-      }
-      const res = await login(email, password, companyName.trim());
-      if (!res.success) setError(res.message);
+    } catch (err) {
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
+      setLoading(false);
     }
   }
 
+  // Step 1: Send OTP to Email
+  async function handleSendOtp(e) {
+    e.preventDefault();
+    setError("");
+    setSuccessMsg("");
+
+    if (!email || !email.trim()) {
+      setError("Please enter your registered email address.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await sendPasswordResetOtp(email.trim());
+      if (res.success) {
+        setSuccessMsg(`OTP Code sent successfully to ${email}. Check your inbox or spam folder.`);
+        setForgotStep(2);
+      } else {
+        setError(res.message || "Failed to send OTP code. Please check your email and try again.");
+      }
+    } catch (err) {
+      setError("Failed to send OTP email: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Step 2: Verify OTP & Reset Password
+  async function handleResetPassword(e) {
+    e.preventDefault();
+    setError("");
+    setSuccessMsg("");
+
+    if (!otpCode || !otpCode.trim()) {
+      setError("Please enter the 6-digit OTP code received in your email.");
+      return;
+    }
+    if (!newPassword || newPassword.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await verifyOtpAndResetPassword(email.trim(), otpCode.trim(), newPassword);
+      if (res.success) {
+        setSuccessMsg("Password reset successfully! You can now log in with your new password.");
+        setAuthMode("signin");
+        setPassword("");
+        setOtpCode("");
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        setError(res.message || "Invalid OTP code or expired session. Please try again.");
+      }
+    } catch (err) {
+      setError("Verification failed: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Demo Login Quick Trigger
   async function demoLogin(demoEmail) {
     const demoCompany = "On2Cook Pvt Ltd";
+    setLoading(true);
     const res = await login(demoEmail, "demo123", demoCompany);
     if (!res.success) setError(res.message || "Demo login failed.");
+    setLoading(false);
   }
 
   return (
@@ -90,11 +187,21 @@ export default function LoginPage() {
       {/* Right Form Pane */}
       <div style={styles.formPane}>
         <div style={styles.formWrapper}>
-          <span style={styles.formTag}>{isSignUp ? "CREATE ADMIN ACCOUNT" : "SIGN IN"}</span>
-          <h2 style={styles.formTitle}>{isSignUp ? "Get started." : "Welcome back."}</h2>
+          <span style={styles.formTag}>
+            {authMode === "signup" ? "CREATE ADMIN ACCOUNT" : authMode === "forgotPassword" ? "SECURITY & RECOVERY" : "SIGN IN"}
+          </span>
+          
+          <h2 style={styles.formTitle}>
+            {authMode === "signup" ? "Get started." : authMode === "forgotPassword" ? "Reset Password" : "Welcome back."}
+          </h2>
+          
           <p style={styles.formSubtitle}>
-            {isSignUp 
-              ? "Register a new client company and administrative user." 
+            {authMode === "signup"
+              ? "Register a new client company and administrative user."
+              : authMode === "forgotPassword"
+              ? forgotStep === 1
+                ? "Enter your registered email address to receive a 6-digit OTP code."
+                : `Enter the OTP code sent to ${email} and your new password.`
               : "Use your work email and password to continue."}
           </p>
 
@@ -112,71 +219,188 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} style={styles.form}>
-            {isSignUp && (
-              <div style={styles.formGroup}>
-                <label style={styles.label}>FULL NAME</label>
-                <input style={styles.input} type="text" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="John Doe" required />
-              </div>
-            )}
-            <div style={styles.formGroup}>
-              <label style={styles.label}>COMPANY NAME</label>
-              <input style={styles.input} type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="ABC Ltd." required />
-              {isSignUp && <span style={styles.fieldNote}>(this name will use while doing sign in)</span>}
-            </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>EMAIL</label>
-              <input style={styles.input} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@company.com" required />
-            </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>PASSWORD</label>
-              <div style={{ position: "relative", width: "100%" }}>
-                <input 
-                  style={{ ...styles.input, paddingRight: "40px" }} 
-                  type={showPassword ? "text" : "password"} 
-                  value={password} 
-                  onChange={e => setPassword(e.target.value)} 
-                  placeholder="••••••••" 
-                  required 
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: "absolute",
-                    right: "12px",
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: "#64748b",
-                    padding: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center"
-                  }}
-                >
-                  {showPassword ? <MdVisibilityOff size={18} /> : <MdVisibility size={18} />}
+          {authMode === "forgotPassword" ? (
+            /* Forgot Password / OTP Flow */
+            forgotStep === 1 ? (
+              /* Step 1: Send OTP */
+              <form onSubmit={handleSendOtp} style={styles.form}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>REGISTERED WORK EMAIL</label>
+                  <input
+                    style={styles.input}
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="name@company.com"
+                    required
+                  />
+                </div>
+
+                <button style={styles.btnLogin} type="submit" disabled={loading}>
+                  {loading ? "Sending OTP..." : "Send OTP via Email"} <span>→</span>
                 </button>
+
+                <div style={{ marginTop: "16px", textAlign: "center" }}>
+                  <button
+                    type="button"
+                    onClick={() => switchMode("signin")}
+                    style={styles.linkBtn}
+                  >
+                    <MdArrowBack style={{ marginRight: "4px" }} /> Back to Sign In
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* Step 2: Verify OTP & Change Password */
+              <form onSubmit={handleResetPassword} style={styles.form}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>EMAIL ADDRESS</label>
+                  <input style={{ ...styles.input, background: "#f8fafc" }} type="email" value={email} readOnly />
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>6-DIGIT OTP CODE</label>
+                  <input
+                    style={{ ...styles.input, letterSpacing: "3px", fontWeight: "bold", textAlign: "center", fontSize: "1.1rem" }}
+                    type="text"
+                    maxLength={6}
+                    value={otpCode}
+                    onChange={e => setOtpCode(e.target.value)}
+                    placeholder="123456"
+                    required
+                  />
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>NEW PASSWORD</label>
+                  <div style={{ position: "relative", width: "100%" }}>
+                    <input
+                      style={{ ...styles.input, paddingRight: "40px" }}
+                      type={showPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      placeholder="At least 6 characters"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={styles.eyeBtn}
+                    >
+                      {showPassword ? <MdVisibilityOff size={18} /> : <MdVisibility size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>CONFIRM NEW PASSWORD</label>
+                  <input
+                    style={styles.input}
+                    type="password"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    placeholder="Repeat new password"
+                    required
+                  />
+                </div>
+
+                <button style={{ ...styles.btnLogin, background: "#16a34a" }} type="submit" disabled={loading}>
+                  {loading ? "Verifying..." : "Verify OTP & Change Password"} <span>✓</span>
+                </button>
+
+                <div style={{ display: "flex", justifyContent: "space-between", marginTop: "16px" }}>
+                  <button
+                    type="button"
+                    onClick={handleSendOtp}
+                    style={{ ...styles.linkBtn, color: "#64748b" }}
+                    disabled={loading}
+                  >
+                    Resend OTP
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => switchMode("signin")}
+                    style={styles.linkBtn}
+                  >
+                    Back to Sign In
+                  </button>
+                </div>
+              </form>
+            )
+          ) : (
+            /* Sign In / Sign Up Form */
+            <form onSubmit={handleSubmit} style={styles.form}>
+              {authMode === "signup" && (
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>FULL NAME</label>
+                  <input style={styles.input} type="text" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="John Doe" required />
+                </div>
+              )}
+
+              <div style={styles.formGroup}>
+                <label style={styles.label}>COMPANY NAME</label>
+                <input style={styles.input} type="text" value={companyName} onChange={e => setCompanyName(e.target.value)} placeholder="ABC Ltd." required />
+                {authMode === "signup" && <span style={styles.fieldNote}>(this name will be used during sign in)</span>}
               </div>
+
+              <div style={styles.formGroup}>
+                <label style={styles.label}>EMAIL</label>
+                <input style={styles.input} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@company.com" required />
+              </div>
+
+              <div style={styles.formGroup}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <label style={styles.label}>PASSWORD</label>
+                  {authMode === "signin" && (
+                    <button
+                      type="button"
+                      onClick={() => switchMode("forgotPassword")}
+                      style={{ background: "none", border: "none", color: "#0038a8", fontSize: "0.72rem", cursor: "pointer", fontWeight: 700 }}
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ position: "relative", width: "100%" }}>
+                  <input
+                    style={{ ...styles.input, paddingRight: "40px" }}
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={styles.eyeBtn}
+                  >
+                    {showPassword ? <MdVisibilityOff size={18} /> : <MdVisibility size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <button style={styles.btnLogin} type="submit" disabled={loading}>
+                {loading ? "Processing..." : authMode === "signup" ? "Sign up" : "Sign in"} <span>→</span>
+              </button>
+            </form>
+          )}
+
+          {authMode !== "forgotPassword" && (
+            <div style={{ marginTop: "20px", textAlign: "center" }}>
+              <button
+                type="button"
+                onClick={() => switchMode(authMode === "signup" ? "signin" : "signup")}
+                style={styles.linkBtn}
+              >
+                {authMode === "signup" ? "Already have an account? Sign In" : "Don't have an admin account? Sign Up"}
+              </button>
             </div>
-            <button style={styles.btnLogin} type="submit">
-              {isSignUp ? "Sign up" : "Sign in"} <span>→</span>
-            </button>
-          </form>
+          )}
 
-          <div style={{ marginTop: "20px", textAlign: "center" }}>
-            <button 
-              type="button" 
-              onClick={toggleMode} 
-              style={{ background: "none", border: "none", color: "#0038a8", fontSize: "0.8rem", cursor: "pointer", fontWeight: 600, textDecoration: "underline" }}
-            >
-              {isSignUp ? "Already have an account? Sign In" : "Don't have an admin account? Sign Up"}
-            </button>
-          </div>
-
-          {!isSignUp && (
+          {authMode === "signin" && (
             <>
               <div style={styles.helperInfo}>
                 Quick demo login:
@@ -227,6 +451,10 @@ const styles = {
   formGroup: { display: "flex", flexDirection: "column", gap: "6px" },
   label: { fontSize: "0.65rem", fontWeight: 700, letterSpacing: "1.5px", color: "#111625" },
   input: { width: "100%", padding: "10px 14px", fontSize: "0.85rem", color: "#111625", border: "1px solid #e2e8f0", borderRadius: "4px", background: "#fff", outline: "none" },
+  fieldNote: { fontSize: "0.7rem", color: "#94a3b8", marginTop: "2px" },
+
+  eyeBtn: { position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#64748b", padding: 0, display: "flex", alignItems: "center", justifyContent: "center" },
+  linkBtn: { background: "none", border: "none", color: "#0038a8", fontSize: "0.8rem", cursor: "pointer", fontWeight: 600, textDecoration: "underline", display: "inline-flex", alignItems: "center" },
 
   btnLogin: { width: "100%", marginTop: "10px", display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px", padding: "12px 20px", fontSize: "0.9rem", fontWeight: 600, borderRadius: "4px", border: "none", cursor: "pointer", background: "#0038a8", color: "#fff" },
 
@@ -234,11 +462,5 @@ const styles = {
   demoGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginTop: "10px" },
   demoBtn: { background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: "4px", padding: "9px 10px", cursor: "pointer", textAlign: "left", display: "flex", flexDirection: "column", gap: "2px" },
   demoRole: { color: "#0038a8", fontSize: "0.68rem", fontWeight: 700 },
-  demoName: { color: "#64748b", fontSize: "0.72rem" },
-
-  signupTabs: { display: "flex", gap: "8px", borderBottom: "1px solid #e2e8f0", paddingBottom: "10px", marginBottom: "10px" },
-  tab: { flex: 1, padding: "8px 12px", border: "none", background: "none", borderBottom: "2px solid transparent", cursor: "pointer", fontSize: "0.8rem", color: "#64748b", fontWeight: 600, transition: "all 0.15s ease", textAlign: "center" },
-  activeTab: { flex: 1, padding: "8px 12px", border: "none", background: "none", borderBottom: "2px solid #0038a8", cursor: "pointer", fontSize: "0.8rem", color: "#0038a8", fontWeight: 700, transition: "all 0.15s ease", textAlign: "center" },
-  fieldNote: { fontSize: "0.72rem", color: "#64748b", fontStyle: "italic", marginTop: "2px" },
-  select: { width: "100%", padding: "10px 14px", fontSize: "0.85rem", color: "#111625", border: "1px solid #e2e8f0", borderRadius: "4px", background: "#fff", outline: "none", cursor: "pointer" },
+  demoName: { color: "#64748b", fontSize: "0.72rem" }
 };
