@@ -84,9 +84,9 @@ export async function fetchUserProfile(userId) {
 
 export async function sendPasswordResetOtp(email) {
   try {
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email);
+    const { data, error } = await supabase.auth.signInWithOtp({ email });
     if (error) throw error;
-    return { success: true, data, message: 'OTP code sent successfully to your email.', error: null };
+    return { success: true, data, message: '6-digit OTP code sent successfully to your email.', error: null };
   } catch (error) {
     return { success: false, data: null, message: error.message || 'Failed to send OTP code.', error };
   }
@@ -95,20 +95,19 @@ export async function sendPasswordResetOtp(email) {
 export async function verifyOtpAndResetPassword(email, token, newPassword) {
   try {
     // 1. Verify 6-digit OTP token
-    const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+    const { error: e1 } = await supabase.auth.verifyOtp({
       email,
       token: token.trim(),
-      type: 'recovery'
+      type: 'email'
     });
 
-    if (verifyError) {
-      // Fallback try type 'email'
-      const { error: v2Error } = await supabase.auth.verifyOtp({
+    if (e1) {
+      const { error: e2 } = await supabase.auth.verifyOtp({
         email,
         token: token.trim(),
-        type: 'email'
+        type: 'recovery'
       });
-      if (v2Error) throw verifyError;
+      if (e2) throw e1;
     }
 
     // 2. Update user password
@@ -122,6 +121,6 @@ export async function verifyOtpAndResetPassword(email, token, newPassword) {
 
     return { success: true, data: updateData, message: 'Password updated successfully.', error: null };
   } catch (error) {
-    return { success: false, data: null, message: error.message || 'Verification or password update failed.', error };
+    return { success: false, data: null, message: error.message || 'Invalid 6-digit OTP code or expired token.', error };
   }
 }
