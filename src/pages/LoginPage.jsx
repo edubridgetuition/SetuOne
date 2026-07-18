@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useApp } from "../context/appContextCore";
 import { demoUsers } from "../data/appData";
-import { MdVisibility, MdVisibilityOff, MdLockReset, MdArrowBack } from "react-icons/md";
+import { supabase } from "../lib/supabase";
+import { MdVisibility, MdVisibilityOff, MdArrowBack } from "react-icons/md";
 
 export default function LoginPage() {
   const { login, signup, sendPasswordResetOtp, verifyOtpAndResetPassword } = useApp();
@@ -9,7 +10,10 @@ export default function LoginPage() {
   // Modes: 'signin', 'signup', 'forgotPassword'
   const [authMode, setAuthMode] = useState("signin");
   
-  // Forgot Password Steps: 1 (Request OTP), 2 (Verify OTP & Reset Password)
+  // Forgot Password Steps: 
+  // 1 = Request Email / OTP
+  // 2 = Manual 6-Digit OTP Code Verification
+  // 3 = Direct Password Update (when Email Link is clicked)
   const [forgotStep, setForgotStep] = useState(1);
 
   // Form Fields
@@ -29,7 +33,35 @@ export default function LoginPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Reset Form
+  // Auto-detect Email Reset Link Clicks (URL Hash / Event Listener)
+  useEffect(() => {
+    const hash = window.location.hash || "";
+    const search = window.location.search || "";
+    
+    // If URL contains recovery token or magic link code
+    if (hash.includes("type=recovery") || search.includes("type=recovery") || search.includes("code=")) {
+      setAuthMode("forgotPassword");
+      setForgotStep(3); // Direct new password screen
+      setSuccessMsg("Email link verified! Enter your new password below.");
+    }
+
+    // Listen to Supabase Auth state changes for PASSWORD_RECOVERY
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setAuthMode("forgotPassword");
+        setForgotStep(3);
+        setSuccessMsg("Email link verified! Enter your new password below.");
+      }
+    });
+
+    return () => {
+      if (authListener && authListener.subscription) {
+        authListener.subscription.unsubscribe();
+      }
+    };
+  }, []);
+
+  // Switch Auth Modes
   function switchMode(newMode) {
     setAuthMode(newMode);
     setForgotStep(1);
@@ -83,7 +115,7 @@ export default function LoginPage() {
     }
   }
 
-  // Step 1: Send OTP to Email
+  // Step 1: Send OTP / Reset Email
   async function handleSendOtp(e) {
     e.preventDefault();
     setError("");
@@ -98,26 +130,26 @@ export default function LoginPage() {
     try {
       const res = await sendPasswordResetOtp(email.trim());
       if (res.success) {
-        setSuccessMsg(`OTP Code sent successfully to ${email}. Check your inbox or spam folder.`);
+        setSuccessMsg(`Reset email & OTP code sent to ${email}. Check your email inbox or click the link in the email.`);
         setForgotStep(2);
       } else {
-        setError(res.message || "Failed to send OTP code. Please check your email and try again.");
+        setError(res.message || "Failed to send password reset email.");
       }
     } catch (err) {
-      setError("Failed to send OTP email: " + err.message);
+      setError("Failed to send reset email: " + err.message);
     } finally {
       setLoading(false);
     }
   }
 
-  // Step 2: Verify OTP & Reset Password
+  // Step 2: Verify Manual 6-Digit OTP Code & Change Password
   async function handleResetPassword(e) {
     e.preventDefault();
     setError("");
     setSuccessMsg("");
 
     if (!otpCode || !otpCode.trim()) {
-      setError("Please enter the 6-digit OTP code received in your email.");
+      setError("Please enter the OTP code received in your email.");
       return;
     }
     if (!newPassword || newPassword.length < 6) {
@@ -133,17 +165,57 @@ export default function LoginPage() {
     try {
       const res = await verifyOtpAndResetPassword(email.trim(), otpCode.trim(), newPassword);
       if (res.success) {
-        setSuccessMsg("Password reset successfully! You can now log in with your new password.");
+        setSuccessMsg("Password updated successfully! You can now log in with your new password.");
         setAuthMode("signin");
+        setForgotStep(1);
         setPassword("");
         setOtpCode("");
         setNewPassword("");
         setConfirmPassword("");
       } else {
-        setError(res.message || "Invalid OTP code or expired session. Please try again.");
+        setError(res.message || "Invalid OTP code or expired session. Try clicking the email link directly.");
       }
     } catch (err) {
       setError("Verification failed: " + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Step 3: Direct Password Update after Email Link Click
+  async function handleDirectPasswordUpdate(e) {
+    e.preventDefault();
+    setError("");
+    setSuccessMsg("");
+
+    if (!newPassword || newPassword.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error: updateErr } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      if (updateErr) throw updateErr;
+
+      setSuccessMsg("Password updated successfully! You can now sign in using your new password.");
+      setAuthMode("signin");
+      setForgotStep(1);
+      setPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+
+      if (window.history && window.history.replaceState) {
+        window.history.replaceState(null, "", window.location.pathname);
+      }
+    } catch (err) {
+      setError("Failed to update password: " + err.message);
     } finally {
       setLoading(false);
     }
@@ -200,8 +272,10 @@ export default function LoginPage() {
               ? "Register a new client company and administrative user."
               : authMode === "forgotPassword"
               ? forgotStep === 1
-                ? "Enter your registered email address to receive a 6-digit OTP code."
-                : `Enter the OTP code sent to ${email} and your new password.`
+                ? "Enter your registered email address to receive a password reset link / OTP."
+                : forgotStep === 2
+                ? `Enter the OTP code sent to ${email} or click the link in your email.`
+                : "Email verified! Enter your new password below."
               : "Use your work email and password to continue."}
           </p>
 
@@ -237,7 +311,7 @@ export default function LoginPage() {
                 </div>
 
                 <button style={styles.btnLogin} type="submit" disabled={loading}>
-                  {loading ? "Sending OTP..." : "Send OTP via Email"} <span>→</span>
+                  {loading ? "Sending..." : "Send Reset Link / OTP"} <span>→</span>
                 </button>
 
                 <div style={{ marginTop: "16px", textAlign: "center" }}>
@@ -250,8 +324,8 @@ export default function LoginPage() {
                   </button>
                 </div>
               </form>
-            ) : (
-              /* Step 2: Verify OTP & Change Password */
+            ) : forgotStep === 2 ? (
+              /* Step 2: Verify 6-Digit Code & Change Password */
               <form onSubmit={handleResetPassword} style={styles.form}>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>EMAIL ADDRESS</label>
@@ -259,14 +333,14 @@ export default function LoginPage() {
                 </div>
 
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>6-DIGIT OTP CODE</label>
+                  <label style={styles.label}>OTP CODE (FROM EMAIL)</label>
                   <input
                     style={{ ...styles.input, letterSpacing: "3px", fontWeight: "bold", textAlign: "center", fontSize: "1.1rem" }}
                     type="text"
-                    maxLength={6}
+                    maxLength={8}
                     value={otpCode}
                     onChange={e => setOtpCode(e.target.value)}
-                    placeholder="123456"
+                    placeholder="Enter Code"
                     required
                   />
                 </div>
@@ -305,7 +379,7 @@ export default function LoginPage() {
                 </div>
 
                 <button style={{ ...styles.btnLogin, background: "#16a34a" }} type="submit" disabled={loading}>
-                  {loading ? "Verifying..." : "Verify OTP & Change Password"} <span>✓</span>
+                  {loading ? "Verifying..." : "Verify & Change Password"} <span>✓</span>
                 </button>
 
                 <div style={{ display: "flex", justifyContent: "space-between", marginTop: "16px" }}>
@@ -315,9 +389,59 @@ export default function LoginPage() {
                     style={{ ...styles.linkBtn, color: "#64748b" }}
                     disabled={loading}
                   >
-                    Resend OTP
+                    Resend Email
                   </button>
 
+                  <button
+                    type="button"
+                    onClick={() => switchMode("signin")}
+                    style={styles.linkBtn}
+                  >
+                    Back to Sign In
+                  </button>
+                </div>
+              </form>
+            ) : (
+              /* Step 3: Direct Password Update via Email Link Click */
+              <form onSubmit={handleDirectPasswordUpdate} style={styles.form}>
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>NEW PASSWORD</label>
+                  <div style={{ position: "relative", width: "100%" }}>
+                    <input
+                      style={{ ...styles.input, paddingRight: "40px" }}
+                      type={showPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={e => setNewPassword(e.target.value)}
+                      placeholder="At least 6 characters"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={styles.eyeBtn}
+                    >
+                      {showPassword ? <MdVisibilityOff size={18} /> : <MdVisibility size={18} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>CONFIRM NEW PASSWORD</label>
+                  <input
+                    style={styles.input}
+                    type="password"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    placeholder="Repeat new password"
+                    required
+                  />
+                </div>
+
+                <button style={{ ...styles.btnLogin, background: "#16a34a" }} type="submit" disabled={loading}>
+                  {loading ? "Updating..." : "Update Password & Continue"} <span>✓</span>
+                </button>
+
+                <div style={{ marginTop: "16px", textAlign: "center" }}>
                   <button
                     type="button"
                     onClick={() => switchMode("signin")}
