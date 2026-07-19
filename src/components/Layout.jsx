@@ -179,7 +179,7 @@ export default function Layout({ children }) {
     return activeModule?.subItems.find((sub) => sub.key === activeView)?.label || "Dashboard";
   })();
 
-  const tenantName = activeRole === "Super Admin" ? (activeTenant === "orion" ? "Orion Corporate Park" : "Greenfield School") : (session?.companyName || "Orion Corporate Park");
+  const tenantName = session?.companyName || (activeTenant === "orion" ? "Orion Corporate Park" : "Greenfield School");
 
   function openLauncher() {
     if (closeTimer.current) clearTimeout(closeTimer.current);
