@@ -272,11 +272,16 @@ export function AppProvider({ children }) {
     });
 
     async function initSession() {
-      const sessionRes = await getCurrentSession();
-      if (sessionRes.success && sessionRes.data) {
-        await applyUserSession(sessionRes.data);
+      try {
+        const sessionRes = await getCurrentSession();
+        if (sessionRes.success && sessionRes.data && sessionRes.data.user) {
+          await applyUserSession(sessionRes.data);
+        }
+      } catch (err) {
+        console.error("Init session error:", err);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     initSession();
 
@@ -310,33 +315,36 @@ export function AppProvider({ children }) {
   }, [session]);
 
   async function applyUserSession(authSession) {
-    const profileRes = await fetchUserProfile(authSession.user.id);
-    
-    if (profileRes.success && profileRes.data) {
-      const profile = profileRes.data;
-      setSession({ 
-        id: profile.id,
-        email: authSession.user.email, 
-        name: profile.full_name,
-        companyId: profile.company_id,
-        companyName: profile.companies?.name || "Orion Corporate Park",
-        branchId: profile.branch_id,
-        departmentId: profile.department_id,
-        tenantId: profile.companies?.tenant_id
-      });
-      setActiveRole(profile.roles?.name || "Employee");
-      setActiveTenant(profile.companies?.tenant_id ? "orion" : "orion");
-    } else {
-      const user = demoUsers[authSession.user.email];
-      if (user) {
+    if (!authSession || !authSession.user) return;
+
+    try {
+      const profileRes = await fetchUserProfile(authSession.user.id);
+      
+      if (profileRes.success && profileRes.data) {
+        const profile = profileRes.data;
         setSession({ 
+          id: profile.id,
           email: authSession.user.email, 
-          name: user.name,
-          companyName: "Orion Corporate Park"
+          name: profile.full_name,
+          companyId: profile.company_id,
+          companyName: profile.companies?.name || "Orion Corporate Park",
+          branchId: profile.branch_id,
+          departmentId: profile.department_id,
+          tenantId: profile.companies?.tenant_id
         });
-        setActiveTenant(user.tenant);
-        setActiveRole(user.role);
+        setActiveRole(profile.roles?.name || "Employee");
+        setActiveTenant(profile.companies?.tenant_id ? "orion" : "orion");
       } else {
+        const user = demoUsers[authSession.user?.email];
+        if (user) {
+          setSession({ 
+            email: authSession.user.email, 
+            name: user.name,
+            companyName: "Orion Corporate Park"
+          });
+          setActiveTenant(user.tenant);
+          setActiveRole(user.role);
+        } else {
         // Dynamic fallback using Supabase Auth raw user metadata
         let resolvedCompanyId = authSession.user.user_metadata?.company_id || null;
         let resolvedCompanyName = authSession.user.user_metadata?.company_name || "Orion Corporate Park";
@@ -424,7 +432,10 @@ export function AppProvider({ children }) {
         setActiveTenant("orion");
       }
     }
+  } catch (err) {
+    console.error("applyUserSession error:", err);
   }
+}
 
   async function login(email, password, enteredCompanyName) {
     const loginRes = await authLogin(email, password);
