@@ -83,16 +83,20 @@ export default function Layout({ children }) {
       });
       if (updateErr) throw updateErr;
 
-      setModalSuccess("Password updated successfully!");
+      setModalSuccess("Password updated successfully! Logging out...");
+      sessionStorage.setItem("password_reset_completed", "true");
+
       if (window.history && window.history.replaceState) {
         window.history.replaceState(null, "", window.location.pathname);
       }
-      setTimeout(() => {
+
+      setTimeout(async () => {
         setShowResetPasswordModal(false);
         setModalPassword("");
         setModalConfirmPassword("");
         setModalSuccess("");
-      }, 1200);
+        await logout();
+      }, 1000);
     } catch (err) {
       setModalError("Failed to update password: " + err.message);
     } finally {

@@ -259,14 +259,15 @@ export function AppProvider({ children }) {
     const hash = window.location.hash || "";
     const search = window.location.search || "";
     const resetRequested = sessionStorage.getItem("setuone_reset_requested") === "true";
+    const resetCompleted = sessionStorage.getItem("password_reset_completed") === "true";
 
-    if (resetRequested || hash.includes("access_token") || hash.includes("type=recovery") || hash.includes("type=magiclink") || search.includes("type=recovery") || search.includes("code=")) {
+    if (!resetCompleted && (resetRequested || hash.includes("access_token") || hash.includes("type=recovery") || hash.includes("type=magiclink") || search.includes("type=recovery") || search.includes("code="))) {
       setShowResetPasswordModal(true);
       sessionStorage.removeItem("setuone_reset_requested");
     }
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === "PASSWORD_RECOVERY") {
+      if (event === "PASSWORD_RECOVERY" && !sessionStorage.getItem("password_reset_completed")) {
         setShowResetPasswordModal(true);
       }
     });
@@ -444,6 +445,7 @@ export function AppProvider({ children }) {
 }
 
   async function login(email, password, enteredCompanyName) {
+    sessionStorage.removeItem("password_reset_completed");
     const loginRes = await authLogin(email, password);
     if (loginRes.success) {
       // Validate company if provided
