@@ -1,3 +1,4 @@
+import { Component } from "react";
 import PermissionManager from "./pages/PermissionManager";
 import { AppProvider } from "./context/AppContext";
 import { useApp } from "./context/appContextCore";
@@ -21,6 +22,43 @@ import VendorManagement from "./pages/VendorManagement";
 import GuestHouseManagement from "./pages/GuestHouseManagement";
 import AssetDashboard from "./pages/AssetDashboard";
 import MaintenanceDashboard from "./pages/MaintenanceDashboard";
+
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ minHeight: "100vh", background: "#0f172a", color: "#fff", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "20px", fontFamily: "sans-serif" }}>
+          <h2 style={{ margin: "0 0 10px 0" }}>SetuOne Application Alert</h2>
+          <p style={{ color: "#94a3b8", fontSize: "0.9rem", marginBottom: "20px" }}>
+            {this.state.error?.message || "A temporary error occurred while rendering the view."}
+          </p>
+          <button 
+            onClick={() => { 
+              if (window.history && window.history.replaceState) {
+                window.history.replaceState(null, "", window.location.pathname);
+              }
+              window.location.href = window.location.origin; 
+            }} 
+            style={{ background: "#3b82f6", color: "#fff", border: "none", padding: "10px 20px", borderRadius: "6px", cursor: "pointer", fontWeight: 600 }}
+          >
+            Return to Login / Home
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function AppContent() {
   const { session, activeView } = useApp();
@@ -83,9 +121,11 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        <AppContent />
+      </AppProvider>
+    </ErrorBoundary>
   );
 }
 

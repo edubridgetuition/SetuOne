@@ -297,18 +297,24 @@ export function AppProvider({ children }) {
     if (!session) return;
     
     async function loadTicketsData() {
-      const [ticketsRes, locationsRes, assigneesRes] = await Promise.all([
-        fetchTickets(),
-        fetchLocations(),
-        fetchAssignees(),
-        loadMasterDefinitions(),
-        loadCustomFieldDefinitions(),
-        loadMeters()
-      ]);
+      try {
+        const res = await fetchTickets();
+        if (res && res.success) setTickets(res.data);
+      } catch (e) { console.warn("fetchTickets error:", e); }
 
-      if (ticketsRes.success) setTickets(ticketsRes.data);
-      if (locationsRes.success) setLocations(locationsRes.data);
-      if (assigneesRes.success) setAssignees(assigneesRes.data);
+      try {
+        const res = await fetchLocations();
+        if (res && res.success) setLocations(res.data);
+      } catch (e) { console.warn("fetchLocations error:", e); }
+
+      try {
+        const res = await fetchAssignees();
+        if (res && res.success) setAssignees(res.data);
+      } catch (e) { console.warn("fetchAssignees error:", e); }
+
+      try { if (typeof loadMasterDefinitions === "function") await loadMasterDefinitions(); } catch (e) {}
+      try { if (typeof loadCustomFieldDefinitions === "function") await loadCustomFieldDefinitions(); } catch (e) {}
+      try { if (typeof loadMeters === "function") await loadMeters(); } catch (e) {}
     }
 
     loadTicketsData();
