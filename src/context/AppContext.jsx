@@ -258,8 +258,11 @@ export function AppProvider({ children }) {
   useEffect(() => {
     const hash = window.location.hash || "";
     const search = window.location.search || "";
-    if (hash.includes("type=recovery") || hash.includes("type=magiclink") || search.includes("type=recovery") || search.includes("code=")) {
+    const resetRequested = sessionStorage.getItem("setuone_reset_requested") === "true";
+
+    if (resetRequested || hash.includes("access_token") || hash.includes("type=recovery") || hash.includes("type=magiclink") || search.includes("type=recovery") || search.includes("code=")) {
       setShowResetPasswordModal(true);
+      sessionStorage.removeItem("setuone_reset_requested");
     }
 
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {

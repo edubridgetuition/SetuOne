@@ -100,10 +100,11 @@ export default function LoginPage() {
     try {
       const res = await sendPasswordResetOtp(email.trim());
       if (res.success) {
-        setSuccessMsg(`OTP code sent to ${email}. Check your email inbox for the 6-digit code.`);
+        sessionStorage.setItem("setuone_reset_requested", "true");
+        setSuccessMsg(`Reset email sent to ${email}. Check your email inbox and click the reset link.`);
         setForgotStep(2);
       } else {
-        setError(res.message || "Failed to send OTP code.");
+        setError(res.message || "Failed to send reset email.");
       }
     } catch (err) {
       setError("Failed to send OTP email: " + err.message);
