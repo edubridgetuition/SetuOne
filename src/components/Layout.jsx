@@ -514,7 +514,7 @@ function getModuleIcon(key) {
               <div style={s.userRole}>{activeRole}</div>
             </div>
           </div>
-          <button style={s.logoutBtn} onClick={logout}>Sign out</button>
+          <button className="btn-frosted-glass" style={s.logoutBtn} onClick={logout}>Sign out</button>
         </div>
       </header>
 
