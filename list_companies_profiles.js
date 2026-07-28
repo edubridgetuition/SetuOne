@@ -33,7 +33,7 @@ async function run() {
 
   const { data: profiles, error: prError } = await supabase.from('profiles').select('*');
   console.log('Profiles count:', profiles ? profiles.length : 0, prError);
-  console.log('First 5 Profiles:', profiles ? profiles.slice(0, 5) : []);
+  console.log('All Profiles:', profiles);
 
   const { data: roles } = await supabase.from('roles').select('*');
   console.log('Roles:', roles);

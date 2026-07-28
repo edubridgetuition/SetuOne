@@ -314,7 +314,7 @@ function getModuleIcon(key) {
             )}
           </div>
 
-          {activeModule && (
+          {activeModule && activeModule.key !== "dashboard" && (
             <button 
               type="button" 
               style={{ ...s.activeAppPill, cursor: "pointer", border: "1px solid #99f6e4", outline: "none", fontFamily: "inherit" }}
