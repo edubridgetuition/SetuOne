@@ -405,16 +405,21 @@ function getModuleIcon(key) {
           <div style={{ position: "relative" }}>
             <button 
               type="button" 
+              className="bell-btn"
               onClick={() => setNotifDropdownOpen(!notifDropdownOpen)}
               style={{
-                background: "none",
-                border: "none",
-                fontSize: "1.3rem",
-                color: inboxNotifications.filter(n => !n.is_read).length > 0 ? "#0038a8" : "#64748b",
+                background: "rgba(255, 255, 255, 0.08)",
+                border: "1px solid rgba(255, 255, 255, 0.22)",
+                borderRadius: "50%",
+                fontSize: "1.2rem",
+                color: "#ffffff",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
-                padding: "8px",
+                justifyContent: "center",
+                width: "32px",
+                height: "32px",
+                padding: 0,
                 position: "relative"
               }}
             >
@@ -422,11 +427,11 @@ function getModuleIcon(key) {
               {inboxNotifications.filter(n => !n.is_read).length > 0 && (
                 <span style={{
                   position: "absolute",
-                  top: "2px",
-                  right: "2px",
+                  top: "-2px",
+                  right: "-2px",
                   background: "#ef4444",
                   color: "#fff",
-                  fontSize: "9px",
+                  fontSize: "8px",
                   fontWeight: "bold",
                   borderRadius: "50%",
                   width: "14px",
@@ -672,15 +677,15 @@ const s = {
   topbar: { height: "45px", background: "linear-gradient(135deg, #0038a8 0%, #002266 50%, #001133 100%)", borderBottom: "1px solid rgba(255, 255, 255, 0.12)", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 10px 0 14px", flexShrink: 0, position: "relative", zIndex: 50 },
   leftCluster: { display: "flex", alignItems: "center", minWidth: 0, flex: 1, height: "100%", gap: "8px" },
   launcherWrap: { position: "relative", display: "flex", alignItems: "center", height: "100%", flexShrink: 0 },
-  launcherButton: { width: "34px", height: "34px", border: "1px solid rgba(255, 255, 255, 0.22)", borderRadius: "8px", background: "rgba(255, 255, 255, 0.08)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, transition: "all 0.2s ease-in-out" },
-  launcherButtonActive: { background: "rgba(255, 255, 255, 0.2)", borderColor: "rgba(255, 255, 255, 0.4)", boxShadow: "0 0 12px rgba(255, 255, 255, 0.25)" },
+  launcherButton: { width: "34px", height: "34px", border: "1px solid rgba(255, 255, 255, 0.25)", borderRadius: "8px", background: "#ffffff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, transition: "all 0.2s ease-in-out" },
+  launcherButtonActive: { background: "rgba(255, 255, 255, 0.85)", borderColor: "rgba(255, 255, 255, 0.5)", boxShadow: "0 0 12px rgba(255, 255, 255, 0.3)" },
   dotGrid: { display: "grid", gridTemplateColumns: "repeat(3, 4px)", gap: "2px" },
-  gridDot: { width: "4px", height: "4px", borderRadius: "50%", background: "#ffffff", boxShadow: "0 0 4px rgba(255, 255, 255, 0.4)" },
+  gridDot: { width: "4px", height: "4px", borderRadius: "50%", background: "#0038a8" },
   brandTile: { width: "34px", height: "34px", borderRadius: "9px", background: "rgba(255, 255, 255, 0.15)", color: "#ffffff", border: "1px solid rgba(255, 255, 255, 0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 900, flexShrink: 0 },
   activeAppPill: { background: "rgba(255, 255, 255, 0.12)", color: "#93c5fd", border: "1px solid rgba(147, 197, 253, 0.3)", borderRadius: "5px", padding: "5px 5px", fontSize: "10px", fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 },
   subNav: { display: "flex", alignItems: "center", gap: "0px", minWidth: 0, overflow: "visible", height: "100%" },
   subNavButton: { height: "28px", border: "none", background: "transparent", color: "rgba(255, 255, 255, 0.75)", padding: "0 12px", borderRadius: "8px", fontSize: "13px", fontWeight: 650, cursor: "pointer", whiteSpace: "nowrap" },
-  subNavButtonActive: { color: "#ffffff", background: "rgba(255, 255, 255, 0.18)" },
+  subNavButtonActive: { color: "#0038a8", background: "#ffffff" },
   launcherPanel: { position: "absolute", top: "44px", left: "0", width: "220px", maxHeight: "calc(100vh - 82px)", overflowY: "auto", background: "#fff", border: "1px solid #e2e8f0", borderRadius: "10px", boxShadow: "0 16px 40px rgba(15, 23, 42, 0.14)", padding: "10px", zIndex: 1000 },
   launcherTitle: { fontSize: "11px", color: "#94a3b8", fontWeight: 800, margin: "2px 6px 8px" },
   launcherItem: { width: "100%", border: "none", background: "transparent", borderRadius: "8px", display: "flex", alignItems: "center", gap: "10px", padding: "9px 8px", cursor: "pointer", color: "#334155", textAlign: "left" },
