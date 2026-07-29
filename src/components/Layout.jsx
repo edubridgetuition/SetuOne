@@ -294,6 +294,7 @@ function getModuleIcon(key) {
                     <button
                       type="button"
                       key={mod.key}
+                      className="launcher-item-btn"
                       style={{ ...s.launcherItem, ...(active ? s.launcherItemActive : {}) }}
                       onClick={() => selectModule(mod)}
                     >
