@@ -674,7 +674,7 @@ const s = {
   launcherWrap: { position: "relative", display: "flex", alignItems: "center", height: "100%", flexShrink: 0 },
   launcherButton: { width: "34px", height: "34px", border: "1px solid rgba(255, 255, 255, 0.22)", borderRadius: "8px", background: "rgba(255, 255, 255, 0.08)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", flexShrink: 0, transition: "all 0.2s ease-in-out" },
   launcherButtonActive: { background: "rgba(255, 255, 255, 0.2)", borderColor: "rgba(255, 255, 255, 0.4)", boxShadow: "0 0 12px rgba(255, 255, 255, 0.25)" },
-  dotGrid: { width: "12px", display: "grid", gridTemplateColumns: "repeat(3, 4px)", gap: "2.5px" },
+  dotGrid: { display: "grid", gridTemplateColumns: "repeat(3, 4px)", gap: "2px" },
   gridDot: { width: "4px", height: "4px", borderRadius: "50%", background: "#ffffff", boxShadow: "0 0 4px rgba(255, 255, 255, 0.4)" },
   brandTile: { width: "34px", height: "34px", borderRadius: "9px", background: "rgba(255, 255, 255, 0.15)", color: "#ffffff", border: "1px solid rgba(255, 255, 255, 0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 900, flexShrink: 0 },
   activeAppPill: { background: "rgba(255, 255, 255, 0.12)", color: "#93c5fd", border: "1px solid rgba(147, 197, 253, 0.3)", borderRadius: "5px", padding: "5px 5px", fontSize: "10px", fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 },
