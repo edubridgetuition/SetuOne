@@ -92,6 +92,7 @@ function AppContent() {
       case "safety": return <AssetManagement defaultDivision="Facility Assets" defaultCategory="Safety Equipment" />;
       case "others": return <AssetManagement defaultDivision="Facility Assets" defaultCategory="Others" />;
 
+      case "purchase_dashboard": return <PurchaseRequisition viewMode="dashboard" />;
       case "purchasereq_form": return <PurchaseRequisition viewMode="purchasereq_form" />;
       case "purchase": return <PurchaseRequisition viewMode="pr" />;
       case "workorders": return <PurchaseRequisition viewMode="po" />;

@@ -533,6 +533,182 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
   }
   const isManager = activeRole === "Admin Manager" || activeRole === "Super Admin";
 
+  if (viewMode === "dashboard") {
+    const totalSpend = (purchaseRequests || [])
+      .filter(pr => pr.status === "Approved")
+      .reduce((sum, pr) => sum + (pr.amount || 0), 0);
+
+    const pendingPRs = (purchaseRequests || []).filter(pr => pr.status === "Pending Approval").length;
+    const activePOs = (purchaseOrders || []).filter(po => po.status === "Issued").length;
+    const deliveredPOs = (purchaseOrders || []).filter(po => po.status === "Delivered").length;
+    
+    const recentPRs = Array.isArray(purchaseRequests) ? [...purchaseRequests].slice(0, 5) : [];
+    const recentPOs = Array.isArray(purchaseOrders) ? [...purchaseOrders].slice(0, 5) : [];
+
+    return (
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "24px", overflowY: "auto", padding: "10px 5px" }}>
+        {/* Header Block */}
+        <div style={{ background: "#ffffff", padding: "20px", borderRadius: "12px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)" }}>
+          <h2 style={{ fontSize: "20px", fontWeight: 800, color: "#0f172a", margin: 0 }}>Purchase & Procurement Overview</h2>
+          <p style={{ fontSize: "13px", color: "#64748b", marginTop: "4px", margin: "4px 0 0" }}>
+            Control center for requisitions, quotations selection, active purchase orders (PO), and goods receipts.
+          </p>
+        </div>
+
+        {/* Stats Row */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
+          {[
+            { label: "Total Approved Spend", value: `₹${totalSpend.toLocaleString('en-IN')}`, desc: "From approved requisitions", bg: "#f0fdf4", text: "#166534", border: "#bbf7d0" },
+            { label: "Total Requisitions", value: (purchaseRequests || []).length, desc: "Raised by staff", bg: "#f8fafc", text: "#1e293b", border: "#e2e8f0" },
+            { label: "Pending Approval", value: pendingPRs, desc: "Awaiting review", bg: "#fff7ed", text: "#c2410c", border: "#fed7aa" },
+            { label: "Issued POs", value: activePOs, desc: "Purchase orders in progress", bg: "#eef2ff", text: "#3730a3", border: "#c7d2fe" },
+            { label: "Delivered Items", value: deliveredPOs, desc: "GRN registry complete", bg: "#ecfeff", text: "#155e75", border: "#c5f2f7" }
+          ].map((stat, idx) => (
+            <div key={idx} style={{ background: "#ffffff", padding: "20px", borderRadius: "12px", border: `1px solid ${stat.border}`, display: "flex", flexDirection: "column", justifyContent: "space-between", boxShadow: "0 2px 4px rgba(0, 0, 0, 0.02)" }}>
+              <div>
+                <div style={{ fontSize: "12px", fontWeight: 650, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.5px" }}>{stat.label}</div>
+                <div style={{ fontSize: "24px", fontWeight: 900, color: stat.text, marginTop: "8px" }}>{stat.value}</div>
+              </div>
+              <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "8px" }}>{stat.desc}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Quick Actions Shortcuts */}
+        <div style={{ background: "#ffffff", padding: "20px", borderRadius: "12px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)" }}>
+          <div style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a", marginBottom: "14px" }}>Quick Workflows</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px" }}>
+            {[
+              { label: "Raise Requisition", desc: "Fill out a new request form", view: "purchasereq_form", color: "#0038a8", bg: "#eff6ff" },
+              { label: "Approve Requisitions", desc: `Review ${pendingPRs} pending approvals`, view: "purchase", color: "#b45309", bg: "#fffbeb" },
+              { label: "Manage PO / Work Orders", desc: "View and print PO documents", view: "workorders", color: "#4338ca", bg: "#eef2ff" },
+              { label: "Receive Goods (GRN)", desc: "Track delivered orders", view: "grn", color: "#0f766e", bg: "#f0fdfa" }
+            ].map((action, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setActiveView(action.view)}
+                style={{
+                  background: action.bg,
+                  border: `1px solid ${action.color}22`,
+                  borderRadius: "10px",
+                  padding: "14px",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  textAlign: "left",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                  outline: "none"
+                }}
+              >
+                <span style={{ fontSize: "14px", fontWeight: 700, color: action.color }}>{action.label}</span>
+                <span style={{ fontSize: "11px", color: "#64748b", marginTop: "4px" }}>{action.desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Dynamic Lists Section */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+          {/* Recent Requisitions */}
+          <div style={{ background: "#ffffff", padding: "20px", borderRadius: "12px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+              <span style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a" }}>Recent Requisitions</span>
+              <button type="button" onClick={() => setActiveView("purchase")} style={{ border: "none", background: "transparent", color: "#0038a8", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>View All</button>
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                    <th style={{ textAlign: "left", padding: "8px", fontSize: "11px", color: "#64748b", fontWeight: 700 }}>PR Number</th>
+                    <th style={{ textAlign: "left", padding: "8px", fontSize: "11px", color: "#64748b", fontWeight: 700 }}>Raised By</th>
+                    <th style={{ textAlign: "right", padding: "8px", fontSize: "11px", color: "#64748b", fontWeight: 700 }}>Amount</th>
+                    <th style={{ textAlign: "center", padding: "8px", fontSize: "11px", color: "#64748b", fontWeight: 700 }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentPRs.map(pr => (
+                    <tr key={pr.id} style={{ borderBottom: "1px solid #f1f5f9", cursor: "pointer" }} onClick={() => { setSelectedId(pr.id); setActiveView("purchase"); }}>
+                      <td style={{ padding: "10px 8px", fontSize: "12px", fontWeight: 700, color: "#0038a8" }}>{pr.no}</td>
+                      <td style={{ padding: "10px 8px", fontSize: "12px", color: "#334155" }}>{pr.raisedBy}</td>
+                      <td style={{ padding: "10px 8px", fontSize: "12px", textAlign: "right", color: "#334155", fontWeight: 600 }}>₹{pr.amount.toLocaleString('en-IN')}</td>
+                      <td style={{ padding: "10px 8px", textAlign: "center" }}>
+                        <span style={{
+                          display: "inline-block",
+                          padding: "2px 6px",
+                          borderRadius: "4px",
+                          fontSize: "10px",
+                          fontWeight: 700,
+                          background: pr.status === "Approved" ? "#dcfce7" : pr.status === "Pending Approval" ? "#ffedd5" : "#f1f5f9",
+                          color: pr.status === "Approved" ? "#15803d" : pr.status === "Pending Approval" ? "#c2410c" : "#475569"
+                        }}>
+                          {pr.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {recentPRs.length === 0 && (
+                    <tr>
+                      <td colSpan="4" style={{ padding: "20px", color: "#94a3b8", textAlign: "center", fontSize: "12px" }}>No requisitions raised yet.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Recent Purchase Orders */}
+          <div style={{ background: "#ffffff", padding: "20px", borderRadius: "12px", border: "1px solid #e2e8f0", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05)" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+              <span style={{ fontSize: "14px", fontWeight: 800, color: "#0f172a" }}>Recent Purchase Orders</span>
+              <button type="button" onClick={() => setActiveView("workorders")} style={{ border: "none", background: "transparent", color: "#0038a8", fontSize: "12px", fontWeight: 700, cursor: "pointer" }}>View All</button>
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid #e2e8f0" }}>
+                    <th style={{ textAlign: "left", padding: "8px", fontSize: "11px", color: "#64748b", fontWeight: 700 }}>PO Number</th>
+                    <th style={{ textAlign: "left", padding: "8px", fontSize: "11px", color: "#64748b", fontWeight: 700 }}>Vendor</th>
+                    <th style={{ textAlign: "right", padding: "8px", fontSize: "11px", color: "#64748b", fontWeight: 700 }}>Amount</th>
+                    <th style={{ textAlign: "center", padding: "8px", fontSize: "11px", color: "#64748b", fontWeight: 700 }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentPOs.map(po => (
+                    <tr key={po.id} style={{ borderBottom: "1px solid #f1f5f9", cursor: "pointer" }} onClick={() => { setSelectedPOId(po.id); setActiveView("workorders"); }}>
+                      <td style={{ padding: "10px 8px", fontSize: "12px", fontWeight: 700, color: "#0038a8" }}>{po.no}</td>
+                      <td style={{ padding: "10px 8px", fontSize: "12px", color: "#334155" }}>{po.vendorName}</td>
+                      <td style={{ padding: "10px 8px", fontSize: "12px", textAlign: "right", color: "#334155", fontWeight: 600 }}>₹{po.amount.toLocaleString('en-IN')}</td>
+                      <td style={{ padding: "10px 8px", textAlign: "center" }}>
+                        <span style={{
+                          display: "inline-block",
+                          padding: "2px 6px",
+                          borderRadius: "4px",
+                          fontSize: "10px",
+                          fontWeight: 700,
+                          background: po.status === "Delivered" ? "#dcfce7" : "#e0e7ff",
+                          color: po.status === "Delivered" ? "#15803d" : "#4338ca"
+                        }}>
+                          {po.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {recentPOs.length === 0 && (
+                    <tr>
+                      <td colSpan="4" style={{ padding: "20px", color: "#94a3b8", textAlign: "center", fontSize: "12px" }}>No purchase orders issued yet.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={styles.page}>
       {viewMode === "purchasereq_form" ? (
