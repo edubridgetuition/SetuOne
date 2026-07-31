@@ -336,7 +336,8 @@ function getModuleIcon(key) {
           {activeModule && activeModule.key !== "dashboard" && (
             <button 
               type="button" 
-              style={{ ...s.activeAppPill, cursor: "pointer", border: "1px solid #99f6e4", outline: "none", fontFamily: "inherit" }}
+              className="active-app-btn"
+              style={s.activeAppPill}
               onClick={() => {
                 if (activeModule.key === "property_management") {
                   setActiveView("property_dashboard");
@@ -367,6 +368,7 @@ function getModuleIcon(key) {
                 >
                   <button
                     type="button"
+                    className="sub-nav-btn"
                     style={{ ...s.subNavButton, ...(isActive ? s.subNavButtonActive : {}) }}
                     onClick={() => selectSubItem(sub)}
                   >
@@ -700,10 +702,10 @@ const s = {
   dotGrid: { display: "grid", gridTemplateColumns: "repeat(3, 4px)", gap: "2px" },
   gridDot: { width: "4px", height: "4px", borderRadius: "50%", background: "#0038a8" },
   brandTile: { width: "34px", height: "34px", borderRadius: "9px", background: "rgba(255, 255, 255, 0.15)", color: "#ffffff", border: "1px solid rgba(255, 255, 255, 0.2)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "11px", fontWeight: 900, flexShrink: 0 },
-  activeAppPill: { background: "rgba(255, 255, 255, 0.12)", color: "#93c5fd", border: "1px solid rgba(147, 197, 253, 0.3)", borderRadius: "5px", padding: "5px 5px", fontSize: "10px", fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0 },
-  subNav: { display: "flex", alignItems: "center", gap: "0px", minWidth: 0, overflow: "visible", height: "100%" },
-  subNavButton: { height: "28px", border: "none", background: "transparent", color: "rgba(255, 255, 255, 0.75)", padding: "0 12px", borderRadius: "8px", fontSize: "13px", fontWeight: 650, cursor: "pointer", whiteSpace: "nowrap" },
-  subNavButtonActive: { color: "#0038a8", background: "#ffffff" },
+  activeAppPill: { background: "rgba(255, 255, 255, 0.12)", color: "#93c5fd", border: "1px solid rgba(147, 197, 253, 0.25)", borderRadius: "6px", padding: "0 10px", height: "30px", display: "flex", alignItems: "center", fontSize: "11px", fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0, cursor: "pointer", outline: "none", fontFamily: "inherit" },
+  subNav: { display: "flex", alignItems: "center", gap: "6px", minWidth: 0, overflow: "visible", height: "100%" },
+  subNavButton: { height: "30px", border: "none", background: "transparent", color: "rgba(255, 255, 255, 0.75)", padding: "0 14px", borderRadius: "8px", fontSize: "13px", fontWeight: 650, cursor: "pointer", whiteSpace: "nowrap", display: "flex", alignItems: "center", transition: "all 0.15s ease" },
+  subNavButtonActive: { color: "#0038a8", background: "#ffffff", height: "30px", display: "flex", alignItems: "center", borderRadius: "8px", padding: "0 14px" },
   launcherPanel: { position: "absolute", top: "44px", left: "0", width: "300px", maxHeight: "calc(100vh - 82px)", overflowY: "auto", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "14px", boxShadow: "0 20px 48px rgba(15, 23, 42, 0.16)", padding: "12px", zIndex: 1000, display: "flex", flexDirection: "column", gap: "4px" },
   launcherTitle: { fontSize: "11px", color: "#94a3b8", fontWeight: 800, margin: "2px 6px 8px" },
   launcherItem: { width: "100%", border: "none", background: "transparent", borderRadius: "10px", display: "flex", alignItems: "center", gap: "14px", padding: "10px 12px", cursor: "pointer", color: "#334155", textAlign: "left", transition: "all 0.15s ease" },
