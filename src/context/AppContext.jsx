@@ -525,7 +525,7 @@ export function AppProvider({ children }) {
     if (facilityKeys.includes(view)) {
       return canAccessRaw("assets") || canAccessRaw("hvac");
     }
-    if (view === "grn" || view === "purchasereq_form") {
+    if (view === "grn" || view === "purchasereq_form" || view === "purchase_dashboard") {
       return canAccessRaw("purchase") || canAccessRaw("workorders") || canAccessRaw("grn") || canAccessRaw("purchasereq_form");
     }
     return canAccessRaw(view);
