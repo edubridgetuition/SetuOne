@@ -33,6 +33,19 @@ const appIconColors = {
   roles: ["#fff1f2", "#e11d48"],
   property_management: ["#fffbeb", "#d97706"],
 };
+const moduleDescriptions = {
+  dashboard: "Overview & key operational metrics",
+  maintenance: "Work orders, jobs & PPM schedules",
+  asset: "IT, facility & machinery inventory tracking",
+  purchase: "Purchase requisitions & vendor orders",
+  vendors: "Manage supplier databases & directories",
+  visitors: "Visitor logs, gate passes & security",
+  facility: "Amenities booking & cafeteria logs",
+  attendance: "Staff check-ins, leaves & roster shifts",
+  property_management: "Units, tenant details & leases",
+  reports: "Export analytics & customized charts",
+  roles: "System access roles & user permissions",
+};
 
 export default function Layout({ children }) {
   const { 
@@ -286,7 +299,7 @@ function getModuleIcon(key) {
             </button>
 
             {launcherOpen && (
-              <div style={s.launcherPanel}>
+              <div className="launcher-panel-scroll" style={s.launcherPanel}>
                 <div style={s.launcherTitle}>Your Apps</div>
                 {accessibleModules.map((mod) => {
                   const active = activeModule?.key === mod.key;
@@ -299,15 +312,20 @@ function getModuleIcon(key) {
                       onClick={() => selectModule(mod)}
                     >
                       <span
-  style={{
-    ...s.launcherIcon,
-    ...getIcon(mod),
-    ...(active ? s.launcherIconActive : {})
-  }}
->
-  {getModuleIcon(mod.key)}
-</span>
-                      <span style={s.launcherLabel}>{mod.label}</span>
+                        style={{
+                          ...s.launcherIcon,
+                          ...getIcon(mod),
+                          ...(active ? s.launcherIconActive : {})
+                        }}
+                      >
+                        {getModuleIcon(mod.key)}
+                      </span>
+                      <div style={{ display: "flex", flexDirection: "column", minWidth: 0, gap: "2px" }}>
+                        <span style={{ ...s.launcherLabel, ...(active ? { color: "#0038a8" } : {}) }}>{mod.label}</span>
+                        <span style={{ fontSize: "11px", color: "#64748b", fontWeight: 450, lineHeight: "1.2" }}>
+                          {moduleDescriptions[mod.key] || "Manage this section"}
+                        </span>
+                      </div>
                     </button>
                   );
                 })}
@@ -686,13 +704,13 @@ const s = {
   subNav: { display: "flex", alignItems: "center", gap: "0px", minWidth: 0, overflow: "visible", height: "100%" },
   subNavButton: { height: "28px", border: "none", background: "transparent", color: "rgba(255, 255, 255, 0.75)", padding: "0 12px", borderRadius: "8px", fontSize: "13px", fontWeight: 650, cursor: "pointer", whiteSpace: "nowrap" },
   subNavButtonActive: { color: "#0038a8", background: "#ffffff" },
-  launcherPanel: { position: "absolute", top: "44px", left: "0", width: "220px", maxHeight: "calc(100vh - 82px)", overflowY: "auto", background: "#fff", border: "1px solid #e2e8f0", borderRadius: "10px", boxShadow: "0 16px 40px rgba(15, 23, 42, 0.14)", padding: "10px", zIndex: 1000 },
+  launcherPanel: { position: "absolute", top: "44px", left: "0", width: "300px", maxHeight: "calc(100vh - 82px)", overflowY: "auto", background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "14px", boxShadow: "0 20px 48px rgba(15, 23, 42, 0.16)", padding: "12px", zIndex: 1000, display: "flex", flexDirection: "column", gap: "4px" },
   launcherTitle: { fontSize: "11px", color: "#94a3b8", fontWeight: 800, margin: "2px 6px 8px" },
-  launcherItem: { width: "100%", border: "none", background: "transparent", borderRadius: "8px", display: "flex", alignItems: "center", gap: "10px", padding: "9px 8px", cursor: "pointer", color: "#334155", textAlign: "left" },
-  launcherItemActive: { background: "#f1f5f9", color: "#0f172a", fontWeight: 800 },
+  launcherItem: { width: "100%", border: "none", background: "transparent", borderRadius: "10px", display: "flex", alignItems: "center", gap: "14px", padding: "10px 12px", cursor: "pointer", color: "#334155", textAlign: "left", transition: "all 0.15s ease" },
+  launcherItemActive: { background: "#eff6ff" },
   launcherIcon: { width: "34px", height: "34px", borderRadius: "8px", border: "1px solid", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "13px", fontWeight: 900, flexShrink: 0 },
   launcherIconActive: { boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.35)" },
-  launcherLabel: { fontSize: "13px", fontWeight: 700 },
+  launcherLabel: { fontSize: "14px", fontWeight: 700, color: "#1e293b" },
   topRight: { display: "flex", alignItems: "center", gap: "10px", flexShrink: 0, marginLeft: "12px" },
   tenantChip: { display: "flex", alignItems: "center", gap: "5px", background: "rgba(255, 255, 255, 0.12)", border: "1px solid rgba(255, 255, 255, 0.15)", borderRadius: "6px", padding: "5px 9px" },
   tenantDot: { width: "6px", height: "6px", borderRadius: "50%", background: "#38bdf8" },
