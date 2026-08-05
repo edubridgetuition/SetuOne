@@ -495,7 +495,10 @@ export function AppProvider({ children }) {
       "landlord_agreements",
       "admin_setup",
       "permission_manager",
-      "admin_roles"
+      "admin_roles",
+      "roles",
+      "admin_console",
+      "automation"
     ].includes(view)) {
       return true;
     }
