@@ -329,6 +329,15 @@ export function AppProvider({ children }) {
       
       if (profileRes.success && profileRes.data) {
         const profile = profileRes.data;
+        
+        // CRIT-03 Fix: Block deactivated employees from logging in
+        if (profile.is_active === false) {
+          await authLogout();
+          setSession(null);
+          alert("Access Denied: Your account has been deactivated. Please contact your administrator.");
+          return;
+        }
+
         setSession({ 
           id: profile.id,
           email: authSession.user.email, 
@@ -503,20 +512,26 @@ export function AppProvider({ children }) {
       return true;
     }
 
+    // CRIT-02 Fix: Validate localStorage overrides against role permissions to prevent tampering
+    const baseAllowed = rolePermissions[activeRole] || [];
     const saved = localStorage.getItem("setuone_company_permissions");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         const companyKey = activeTenant === "orion" ? "orion" : "greenfield";
         const rolePerms = parsed?.[companyKey]?.[activeRole];
-        if (rolePerms) {
-          return rolePerms.includes(view);
+        if (Array.isArray(rolePerms)) {
+          if (["Super Admin", "Admin Manager"].includes(activeRole)) {
+            return rolePerms.includes(view);
+          }
+          // Non-admin roles cannot grant themselves modules not assigned in rolePermissions
+          return rolePerms.includes(view) && baseAllowed.includes(view);
         }
       } catch (e) {
         console.error("Permission check error:", e);
       }
     }
-    return (rolePermissions[activeRole] || []).includes(view);
+    return baseAllowed.includes(view);
   }
 
   function canAccess(view) {

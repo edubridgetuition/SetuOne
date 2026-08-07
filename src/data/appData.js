@@ -17,13 +17,14 @@ export const tenants = {
   },
 };
 
+// CRIT-04 Fix: Remove plaintext hardcoded passwords from production bundle
 export const demoUsers = {
-  "super@facilityops.test": { password: "demo123", name: "Platform Owner", role: "Super Admin", tenant: "orion" },
-  "manager@orion.test": { password: "demo123", name: "Nisha Facility Manager", role: "Admin Manager", tenant: "orion" },
-  "vendor@orion.test": { password: "demo123", name: "CoolTech Vendor", role: "Vendor", tenant: "orion" },
-  "employee@orion.test": { password: "demo123", name: "Rohit Employee", role: "Employee", tenant: "orion" },
-  "security@orion.test": { password: "demo123", name: "Arun Security Supervisor", role: "Security Supervisor", tenant: "orion" },
-  "housekeeping@orion.test": { password: "demo123", name: "Sunita Housekeeping Supervisor", role: "Housekeeping Supervisor", tenant: "orion" },
+  "super@facilityops.test": { name: "Platform Owner", role: "Super Admin", tenant: "orion" },
+  "manager@orion.test": { name: "Nisha Facility Manager", role: "Admin Manager", tenant: "orion" },
+  "vendor@orion.test": { name: "CoolTech Vendor", role: "Vendor", tenant: "orion" },
+  "employee@orion.test": { name: "Rohit Employee", role: "Employee", tenant: "orion" },
+  "security@orion.test": { name: "Arun Security Supervisor", role: "Security Supervisor", tenant: "orion" },
+  "housekeeping@orion.test": { name: "Sunita Housekeeping Supervisor", role: "Housekeeping Supervisor", tenant: "orion" },
 };
 
 export const rolePermissions = {

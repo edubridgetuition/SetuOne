@@ -109,6 +109,7 @@ export default function AdminConsoleSettings() {
           full_name,
           email,
           created_at,
+          is_active,
           roles (name)
         `)
         .eq("company_id", session.companyId)
@@ -121,6 +122,32 @@ export default function AdminConsoleSettings() {
       console.error("Failed to load team profiles:", err);
     } finally {
       setTeamLoading(false);
+    }
+  }
+
+  // CRIT-03 Fix: Toggle team member active/deactive status
+  async function handleToggleUserStatus(member) {
+    const currentStatus = member.is_active ?? true;
+    const nextStatus = !currentStatus;
+    const actionName = nextStatus ? "activate" : "deactivate";
+
+    if (!confirm(`Are you sure you want to ${actionName} employee "${member.full_name}"?`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ is_active: nextStatus })
+        .eq("id", member.id);
+
+      if (error) throw error;
+
+      alert(`Employee "${member.full_name}" has been ${nextStatus ? "activated" : "deactivated"} successfully.`);
+      await loadTeamMembers();
+    } catch (err) {
+      console.error("Status toggle error:", err);
+      alert(`Failed to ${actionName} employee: ` + err.message);
     }
   }
 
@@ -607,24 +634,60 @@ const resetWidgetForm = () => {
                             <th style={styles.th}>Name</th>
                             <th style={styles.th}>Email</th>
                             <th style={styles.th}>Role</th>
+                            <th style={styles.th}>Status</th>
+                            <th style={{ ...styles.th, textAlign: "right" }}>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {teamMembers.map(member => (
-                            <tr key={member.id} style={styles.tr}>
-                              <td style={styles.td}><strong>{member.full_name}</strong></td>
-                              <td style={styles.td}>{member.email}</td>
-                              <td style={styles.td}>
-                                <span style={{ 
-                                  ...styles.badge, 
-                                  background: member.roles?.name === 'Admin Manager' ? '#eff6ff' : '#f0fdf4',
-                                  color: member.roles?.name === 'Admin Manager' ? '#2563eb' : '#16a34a'
-                                }}>
-                                  {member.roles?.name || "Employee"}
-                                </span>
-                              </td>
-                            </tr>
-                          ))}
+                          {teamMembers.map(member => {
+                            const isActive = member.is_active ?? true;
+                            return (
+                              <tr key={member.id} style={styles.tr}>
+                                <td style={styles.td}><strong>{member.full_name}</strong></td>
+                                <td style={styles.td}>{member.email}</td>
+                                <td style={styles.td}>
+                                  <span style={{ 
+                                    ...styles.badge, 
+                                    background: member.roles?.name === 'Admin Manager' ? '#eff6ff' : '#f0fdf4',
+                                    color: member.roles?.name === 'Admin Manager' ? '#2563eb' : '#16a34a'
+                                  }}>
+                                    {member.roles?.name || "Employee"}
+                                  </span>
+                                </td>
+                                <td style={styles.td}>
+                                  <span style={{
+                                    display: "inline-block",
+                                    padding: "2px 8px",
+                                    borderRadius: "12px",
+                                    fontSize: "11px",
+                                    fontWeight: "bold",
+                                    background: isActive ? "#dcfce7" : "#fee2e2",
+                                    color: isActive ? "#15803d" : "#b91c1c"
+                                  }}>
+                                    {isActive ? "Active" : "Deactivated"}
+                                  </span>
+                                </td>
+                                <td style={{ ...styles.td, textAlign: "right" }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleToggleUserStatus(member)}
+                                    style={{
+                                      border: `1px solid ${isActive ? '#fca5a5' : '#86efac'}`,
+                                      background: isActive ? '#fef2f2' : '#f0fdf4',
+                                      color: isActive ? '#dc2626' : '#16a34a',
+                                      fontSize: "11px",
+                                      fontWeight: 600,
+                                      padding: "4px 10px",
+                                      borderRadius: "6px",
+                                      cursor: "pointer"
+                                    }}
+                                  >
+                                    {isActive ? "Deactivate" : "Activate"}
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>

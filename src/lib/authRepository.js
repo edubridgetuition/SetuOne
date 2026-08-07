@@ -12,6 +12,27 @@ export async function login(email, password) {
 
 export async function register(email, password, fullName, companyName, role = 'Admin Manager') {
   try {
+    const trimmedCompany = (companyName || '').trim();
+    if (!trimmedCompany) {
+      return { success: false, data: null, message: 'Company name is required for registration.', error: new Error('Missing company name') };
+    }
+
+    // CRIT-01 Fix: Check if company name already exists in database
+    const { data: existingCompany } = await supabase
+      .from('companies')
+      .select('id')
+      .ilike('name', trimmedCompany)
+      .maybeSingle();
+
+    if (existingCompany) {
+      return { 
+        success: false, 
+        data: null, 
+        message: `Company "${trimmedCompany}" is already registered. If you are an employee, please ask your company administrator for an invite.`, 
+        error: new Error('Company already exists') 
+      };
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -19,7 +40,7 @@ export async function register(email, password, fullName, companyName, role = 'A
         data: {
           full_name: fullName,
           role: role,
-          company_name: companyName
+          company_name: trimmedCompany
         }
       }
     });
