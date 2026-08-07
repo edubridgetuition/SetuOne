@@ -393,9 +393,13 @@ export function AppProvider({ children }) {
           console.warn("Error resolving fallback company:", e);
         }
 
+        // HIGH-05 Fix: Remove hardcoded UUID fallbacks to prevent accidental privileged cross-company access
         if (!resolvedCompanyId) {
-          resolvedCompanyId = "7e85d57c-2dcd-4943-9066-6467c5bb10e4";
-          resolvedCompanyName = "On2Cook Pvt Ltd";
+          console.error("Critical: Could not resolve valid company for user session.");
+          await authLogout();
+          setSession(null);
+          alert("Account setup incomplete. Please contact system administrator.");
+          return;
         }
 
         let resolvedBranchId = null;
@@ -403,19 +407,18 @@ export function AppProvider({ children }) {
           const { data: brs } = await supabase.from('branches').select('id').eq('company_id', resolvedCompanyId).limit(1);
           if (brs && brs.length > 0) {
             resolvedBranchId = brs[0].id;
-          } else {
-            resolvedBranchId = "fea717ef-95da-443f-a0ac-cab8be2995f5";
           }
         } catch (e) {
-          resolvedBranchId = "fea717ef-95da-443f-a0ac-cab8be2995f5";
+          console.warn("Branch lookup warning:", e);
         }
 
-        const fallbackRoleName = authSession.user.user_metadata?.role || "Admin Manager";
+        const fallbackRoleName = authSession.user.user_metadata?.role || "Employee";
         
         // Try creating/insuring the profile in public.profiles to satisfy foreign keys
         try {
           const { data: rData } = await supabase.from('roles').select('id').eq('name', fallbackRoleName).maybeSingle();
-          const roleId = rData?.id || "d41d8ba7-4d70-4651-9a76-429319eed00a"; // Super Admin default
+          const roleId = rData?.id;
+          if (!roleId) throw new Error("Role ID resolution failed");
           
           const { error: insErr } = await supabase.from('profiles').insert({
             id: authSession.user.id,

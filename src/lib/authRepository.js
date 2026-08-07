@@ -1,4 +1,22 @@
-import { supabase } from './supabase';
+// HIGH-01 Fix: Password strength validation helper
+export function validatePassword(pwd) {
+  if (!pwd || pwd.length < 8) {
+    return 'Password must be at least 8 characters long.';
+  }
+  if (!/[A-Z]/.test(pwd)) {
+    return 'Password must contain at least one uppercase letter (A-Z).';
+  }
+  if (!/[a-z]/.test(pwd)) {
+    return 'Password must contain at least one lowercase letter (a-z).';
+  }
+  if (!/[0-9]/.test(pwd)) {
+    return 'Password must contain at least one number (0-9).';
+  }
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd)) {
+    return 'Password must contain at least one special character (e.g. @, #, $, %).';
+  }
+  return null;
+}
 
 export async function login(email, password) {
   try {
@@ -15,6 +33,12 @@ export async function register(email, password, fullName, companyName, role = 'A
     const trimmedCompany = (companyName || '').trim();
     if (!trimmedCompany) {
       return { success: false, data: null, message: 'Company name is required for registration.', error: new Error('Missing company name') };
+    }
+
+    // HIGH-01 Fix: Enforce password complexity policy
+    const pwdErr = validatePassword(password);
+    if (pwdErr) {
+      return { success: false, data: null, message: pwdErr, error: new Error('Weak password') };
     }
 
     // CRIT-01 Fix: Check if company name already exists in database

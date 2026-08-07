@@ -1,7 +1,12 @@
 import { useState } from "react";
 import { useApp } from "../context/appContextCore";
 import { demoUsers } from "../data/appData";
+import { validatePassword } from "../lib/authRepository";
 import { MdVisibility, MdVisibilityOff, MdArrowBack } from "react-icons/md";
+
+// HIGH-03 Fix: Rate limiting state for brute-force protection
+const FAILED_ATTEMPTS_LIMIT = 5;
+const LOCKOUT_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 
 export default function LoginPage() {
   const { login, signup, sendPasswordResetOtp, verifyOtpAndResetPassword } = useApp();
@@ -31,19 +36,34 @@ export default function LoginPage() {
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Switch Auth Modes
-  function switchMode(newMode) {
-    setAuthMode(newMode);
-    setForgotStep(1);
-    setError("");
-    setSuccessMsg("");
-    setEmail("");
-    setPassword("");
-    setFullName("");
-    setCompanyName("");
-    setOtpCode("");
-    setNewPassword("");
-    setConfirmPassword("");
+  // Rate Limiting helper check
+  function isLockedOut() {
+    try {
+      const lockUntil = sessionStorage.getItem("setuone_lockout_until");
+      if (lockUntil && Date.now() < parseInt(lockUntil, 10)) {
+        const remainingSec = Math.ceil((parseInt(lockUntil, 10) - Date.now()) / 1000);
+        return `Too many failed attempts. Please wait ${remainingSec} seconds before trying again.`;
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  function recordFailedAttempt() {
+    try {
+      const current = parseInt(sessionStorage.getItem("setuone_failed_count") || "0", 10) + 1;
+      sessionStorage.setItem("setuone_failed_count", current.toString());
+      if (current >= FAILED_ATTEMPTS_LIMIT) {
+        sessionStorage.setItem("setuone_lockout_until", (Date.now() + LOCKOUT_DURATION_MS).toString());
+        sessionStorage.setItem("setuone_failed_count", "0");
+      }
+    } catch (e) {}
+  }
+
+  function clearFailedAttempts() {
+    try {
+      sessionStorage.removeItem("setuone_failed_count");
+      sessionStorage.removeItem("setuone_lockout_until");
+    } catch (e) {}
   }
 
   // Handle Login & Signup
@@ -51,12 +71,27 @@ export default function LoginPage() {
     e.preventDefault();
     setError("");
     setSuccessMsg("");
+
+    const lockoutMsg = isLockedOut();
+    if (lockoutMsg) {
+      setError(lockoutMsg);
+      return;
+    }
+
     setLoading(true);
 
     try {
       if (authMode === "signup") {
         if (!companyName || !companyName.trim()) {
           setError("Please enter a company name.");
+          setLoading(false);
+          return;
+        }
+
+        // HIGH-01 Fix: Enforce password policy
+        const pwdErr = validatePassword(password);
+        if (pwdErr) {
+          setError(pwdErr);
           setLoading(false);
           return;
         }
@@ -76,7 +111,12 @@ export default function LoginPage() {
           return;
         }
         const res = await login(email, password, companyName.trim());
-        if (!res.success) setError(res.message);
+        if (!res.success) {
+          recordFailedAttempt();
+          setError(res.message);
+        } else {
+          clearFailedAttempts();
+        }
       }
     } catch (err) {
       setError("An unexpected error occurred. Please try again.");
@@ -123,8 +163,9 @@ export default function LoginPage() {
       setError("Please enter the 6-digit OTP code received in your email.");
       return;
     }
-    if (!newPassword || newPassword.length < 6) {
-      setError("Password must be at least 6 characters long.");
+    const pwdErr = validatePassword(newPassword);
+    if (pwdErr) {
+      setError(pwdErr);
       return;
     }
     if (newPassword !== confirmPassword) {

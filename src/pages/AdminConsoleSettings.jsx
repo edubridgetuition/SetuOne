@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useApp } from "../context/appContextCore";
 import { supabase } from "../lib/supabase";
 import { createClient } from "@supabase/supabase-js";
+import { validatePassword } from "../lib/authRepository";
 
 export default function AdminConsoleSettings() {
   const {
@@ -158,6 +159,13 @@ export default function AdminConsoleSettings() {
       return;
     }
 
+    // HIGH-01 Fix: Enforce password complexity policy
+    const pwdErr = validatePassword(employeeForm.password);
+    if (pwdErr) {
+      alert(pwdErr);
+      return;
+    }
+
     setLoading(true);
     try {
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -170,6 +178,13 @@ export default function AdminConsoleSettings() {
         }
       });
 
+      // HIGH-05 Fix: Dynamically resolve branch ID if missing instead of static hardcoded UUID
+      let targetBranchId = session.branchId || null;
+      if (!targetBranchId && session.companyId) {
+        const { data: br } = await supabase.from('branches').select('id').eq('company_id', session.companyId).limit(1).maybeSingle();
+        if (br) targetBranchId = br.id;
+      }
+
       const { data, error } = await tempClient.auth.signUp({
         email: employeeForm.email.trim(),
         password: employeeForm.password,
@@ -178,7 +193,7 @@ export default function AdminConsoleSettings() {
             full_name: employeeForm.fullName.trim(),
             role: employeeForm.role,
             company_id: session.companyId,
-            branch_id: session.branchId || "fea717ef-95da-443f-a0ac-cab8be2995f5"
+            branch_id: targetBranchId
           }
         }
       });
