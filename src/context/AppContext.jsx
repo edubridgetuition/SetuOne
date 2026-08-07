@@ -321,6 +321,43 @@ export function AppProvider({ children }) {
     loadTicketsData();
   }, [session]);
 
+  // MED-01 Fix: Security Audit Trail Logging helper
+  async function logActivity(actionType, details = {}) {
+    try {
+      await supabase.from("activity_logs").insert({
+        action: actionType,
+        details: typeof details === "object" ? JSON.stringify(details) : details,
+        user_id: session?.id || null,
+        created_at: new Date().toISOString()
+      });
+    } catch (e) {}
+  }
+
+  // MED-02 Fix: Auto session timeout after 30 minutes of idle inactivity
+  useEffect(() => {
+    if (!session) return;
+    const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+    let timeoutId;
+
+    function resetIdleTimer() {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(async () => {
+        logActivity("session_idle_timeout", { email: session.email });
+        alert("Session Expired: You have been logged out due to 30 minutes of inactivity.");
+        await logout();
+      }, IDLE_TIMEOUT_MS);
+    }
+
+    const activityEvents = ["mousemove", "keydown", "click", "scroll", "touchstart"];
+    activityEvents.forEach(evt => window.addEventListener(evt, resetIdleTimer));
+    resetIdleTimer();
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      activityEvents.forEach(evt => window.removeEventListener(evt, resetIdleTimer));
+    };
+  }, [session]);
+
   async function applyUserSession(authSession) {
     if (!authSession || !authSession.user) return;
 
@@ -458,30 +495,46 @@ export function AppProvider({ children }) {
 
   async function login(email, password, enteredCompanyName) {
     sessionStorage.removeItem("password_reset_completed");
+    
+    // MED-04 Fix: Mandatory company name validation
+    const targetCompany = (enteredCompanyName || "").trim();
+    if (!targetCompany) {
+      return { success: false, message: "Company name is required to sign in." };
+    }
+
     const loginRes = await authLogin(email, password);
     if (loginRes.success) {
-      // Validate company if provided
-      if (enteredCompanyName) {
-        const profileRes = await fetchUserProfile(loginRes.data.session.user.id);
-        if (profileRes.success && profileRes.data) {
-          const userCompany = profileRes.data.companies?.name || "";
-          if (userCompany.toLowerCase().trim() !== enteredCompanyName.toLowerCase().trim()) {
-            await authLogout();
-            return { success: false, message: `Access Denied: Your account is not registered under '${enteredCompanyName}'.` };
-          }
+      const profileRes = await fetchUserProfile(loginRes.data.session.user.id);
+      if (profileRes.success && profileRes.data) {
+        const userCompany = profileRes.data.companies?.name || "";
+        if (userCompany.toLowerCase().trim() !== targetCompany.toLowerCase()) {
+          await authLogout();
+          // MED-01 Audit Log: Log company mismatch failure
+          logActivity("login_failed_company_mismatch", { email, attemptedCompany: targetCompany });
+          return { success: false, message: `Access Denied: Your account is not registered under '${targetCompany}'.` };
         }
       }
       await applyUserSession(loginRes.data.session);
+      // MED-01 Audit Log: Log successful authentication
+      logActivity("login_success", { email, company: targetCompany });
       return { success: true };
     }
+    
+    // MED-01 Audit Log: Log failed credentials
+    logActivity("login_failed_credentials", { email });
     return { success: false, message: loginRes.message || "Invalid email or password. Please try again." };
   }
 
   async function signup(email, password, fullName, companyName, role) {
-    return await authRegister(email, password, fullName, companyName, role);
+    const res = await authRegister(email, password, fullName, companyName, role);
+    if (res.success) {
+      logActivity("signup_success", { email, company: companyName });
+    }
+    return res;
   }
 
   async function logout() {
+    logActivity("user_logout", { email: session?.email });
     await authLogout();
     setSession(null);
     setActiveView("dashboard");

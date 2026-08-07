@@ -14,13 +14,16 @@ export async function fetchAssets(filters = {}, page = 1, pageSize = 10) {
         asset_assignments (id, status, profiles (id, full_name))
       `, { count: 'exact' });
 
-    // Search query matches code, asset name, invoice number, or purchase date
+    // MED-03 Fix: Sanitize search input to remove PostgREST special syntax characters
     if (filters.search) {
-      const isDate = /^\d{4}-\d{2}-\d{2}$/.test(filters.search.trim());
-      if (isDate) {
-        query = query.or(`asset_code.ilike.%${filters.search}%,name.ilike.%${filters.search}%,invoice_no.ilike.%${filters.search}%,purchase_date.eq.${filters.search.trim()}`);
-      } else {
-        query = query.or(`asset_code.ilike.%${filters.search}%,name.ilike.%${filters.search}%,invoice_no.ilike.%${filters.search}%`);
+      const cleanSearch = String(filters.search).replace(/[,():%]/g, '').trim();
+      if (cleanSearch) {
+        const isDate = /^\d{4}-\d{2}-\d{2}$/.test(cleanSearch);
+        if (isDate) {
+          query = query.or(`asset_code.ilike.%${cleanSearch}%,name.ilike.%${cleanSearch}%,invoice_no.ilike.%${cleanSearch}%,purchase_date.eq.${cleanSearch}`);
+        } else {
+          query = query.or(`asset_code.ilike.%${cleanSearch}%,name.ilike.%${cleanSearch}%,invoice_no.ilike.%${cleanSearch}%`);
+        }
       }
     }
 
