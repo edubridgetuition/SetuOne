@@ -1,4 +1,5 @@
 import { Component } from "react";
+import logger from "./lib/logger";
 import PermissionManager from "./pages/PermissionManager";
 import { AppProvider } from "./context/AppContext";
 import { useApp } from "./context/appContextCore";
@@ -32,7 +33,7 @@ class ErrorBoundary extends Component {
     return { hasError: true, error };
   }
   componentDidCatch(error, errorInfo) {
-    console.error("ErrorBoundary caught an error:", error, errorInfo);
+    logger.error("ErrorBoundary caught an error:", error, errorInfo);
   }
   render() {
     if (this.state.hasError) {

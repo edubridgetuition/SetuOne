@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useApp } from "../context/appContextCore";
 import { supabase } from "../lib/supabase";
+import logger from "../lib/logger";
 import { MdBuild, MdTimer, MdTaskAlt, MdAssessment, MdSearch } from "react-icons/md";
 
 export default function MaintenanceDashboard() {
@@ -86,7 +87,7 @@ export default function MaintenanceDashboard() {
         setUpcomingPPMs(sortedPPMs);
       }
     } catch (err) {
-      console.error("Error loading Maintenance Dashboard metrics:", err);
+      logger.error("Error loading Maintenance Dashboard metrics:", err);
     } finally {
       setLoading(false);
     }

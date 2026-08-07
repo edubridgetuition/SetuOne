@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useApp } from "../context/appContextCore";
 import { supabase } from "../lib/supabase";
+import logger from "../lib/logger";
 import { MdInventory, MdImportantDevices, MdMemory, MdWarning, MdAddAlert, MdHomeRepairService } from "react-icons/md";
 
 export default function AssetDashboard() {
@@ -101,7 +102,7 @@ export default function AssetDashboard() {
         setLowStockItems(lowStock.slice(0, 5));
       }
     } catch (err) {
-      console.error("Error loading Asset Dashboard metrics:", err);
+      logger.error("Error loading Asset Dashboard metrics:", err);
     } finally {
       setLoading(false);
     }

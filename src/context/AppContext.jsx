@@ -171,6 +171,7 @@ checkDuplicateHash as apiCheckDuplicateHash
 } from "../lib";
 
 import { supabase } from "../lib/supabase";
+import logger from "../lib/logger";
 
 export function AppProvider({ children }) {
   const [session, setSession] = useState(null);
@@ -279,7 +280,7 @@ export function AppProvider({ children }) {
           await applyUserSession(sessionRes.data);
         }
       } catch (err) {
-        console.error("Init session error:", err);
+        logger.error("Init session error:", err);
       } finally {
         setLoading(false);
       }
@@ -301,17 +302,17 @@ export function AppProvider({ children }) {
       try {
         const res = await fetchTickets();
         if (res && res.success) setTickets(res.data);
-      } catch (e) { console.warn("fetchTickets error:", e); }
+      } catch (e) { logger.warn("fetchTickets error:", e); }
 
       try {
         const res = await fetchLocations();
         if (res && res.success) setLocations(res.data);
-      } catch (e) { console.warn("fetchLocations error:", e); }
+      } catch (e) { logger.warn("fetchLocations error:", e); }
 
       try {
         const res = await fetchAssignees();
         if (res && res.success) setAssignees(res.data);
-      } catch (e) { console.warn("fetchAssignees error:", e); }
+      } catch (e) { logger.warn("fetchAssignees error:", e); }
 
       try { if (typeof loadMasterDefinitions === "function") await loadMasterDefinitions(); } catch (e) {}
       try { if (typeof loadCustomFieldDefinitions === "function") await loadCustomFieldDefinitions(); } catch (e) {}
@@ -427,12 +428,12 @@ export function AppProvider({ children }) {
             }
           }
         } catch (e) {
-          console.warn("Error resolving fallback company:", e);
+          logger.warn("Error resolving fallback company:", e);
         }
 
         // HIGH-05 Fix: Remove hardcoded UUID fallbacks to prevent accidental privileged cross-company access
         if (!resolvedCompanyId) {
-          console.error("Critical: Could not resolve valid company for user session.");
+          logger.error("Critical: Could not resolve valid company for user session.");
           await authLogout();
           setSession(null);
           alert("Account setup incomplete. Please contact system administrator.");
@@ -446,7 +447,7 @@ export function AppProvider({ children }) {
             resolvedBranchId = brs[0].id;
           }
         } catch (e) {
-          console.warn("Branch lookup warning:", e);
+          logger.warn("Branch lookup warning:", e);
         }
 
         const fallbackRoleName = authSession.user.user_metadata?.role || "Employee";
@@ -466,11 +467,11 @@ export function AppProvider({ children }) {
             branch_id: resolvedBranchId
           });
           if (insErr) {
-            console.error("Profile insert failed:", insErr);
+            logger.error("Profile insert failed:", insErr);
             alert("Self-healing profile setup error: " + insErr.message);
           }
         } catch (err) {
-          console.warn("Profile setup exception:", err);
+          logger.warn("Profile setup exception:", err);
           alert("Self-healing profile exception: " + err.message);
         }
 
@@ -489,7 +490,7 @@ export function AppProvider({ children }) {
       }
     }
   } catch (err) {
-    console.error("applyUserSession error:", err);
+    logger.error("applyUserSession error:", err);
   }
 }
 
@@ -584,7 +585,7 @@ export function AppProvider({ children }) {
           return rolePerms.includes(view) && baseAllowed.includes(view);
         }
       } catch (e) {
-        console.error("Permission check error:", e);
+        logger.error("Permission check error:", e);
       }
     }
     return baseAllowed.includes(view);
@@ -608,7 +609,7 @@ export function AppProvider({ children }) {
   // API wrappers to raise a ticket
   async function createTicket(ticketData) {
     if (!session) {
-      console.error("createTicket failed: No session available");
+      logger.error("createTicket failed: No session available");
       alert("No active session found. Please sign in again.");
       return null;
     }
@@ -626,7 +627,7 @@ export function AppProvider({ children }) {
       return res.data;
     }
     
-    console.error("apiCreateTicket failed:", res.message, res.error);
+    logger.error("apiCreateTicket failed:", res.message, res.error);
     alert("Database Error raising ticket: " + res.message);
     return null;
   }
@@ -634,7 +635,7 @@ export function AppProvider({ children }) {
   // API wrappers to transition workflows
   async function updateTicket(ticketId, updates, remarks = "") {
     if (!session) {
-      console.error("updateTicket failed: No session available");
+      logger.error("updateTicket failed: No session available");
       alert("No active session found.");
       return null;
     }
@@ -648,7 +649,7 @@ export function AppProvider({ children }) {
       return res.data;
     }
     
-    console.error("apiUpdateTicket failed:", res.message, res.error);
+    logger.error("apiUpdateTicket failed:", res.message, res.error);
     alert("Database Error updating ticket: " + res.message);
     return null;
   }

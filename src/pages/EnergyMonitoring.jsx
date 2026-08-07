@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useApp } from "../context/appContextCore";
+import logger from "../lib/logger";
 import { 
   MdFlashOn, 
   MdPhotoCamera, 
@@ -60,7 +61,7 @@ export default function EnergyMonitoring() {
       const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
       return hashHex;
     } catch (err) {
-      console.error("SHA256 calculation failed:", err);
+      logger.error("SHA256 calculation failed:", err);
       return null;
     }
   };
@@ -443,7 +444,7 @@ export default function EnergyMonitoring() {
             throw new Error("OCR sequence validation failed (detected value out of bounds).");
           }
         } catch (ocrErr) {
-          console.error("Local OCR failed:", ocrErr);
+          logger.error("Local OCR failed:", ocrErr);
           setRawOcrText(`Local OCR scan failed: ${ocrErr.message}. Falling back to simulator...`);
           
           // Try to extract a valid reading from the uploaded file name as a smart backup
@@ -469,7 +470,7 @@ export default function EnergyMonitoring() {
             try {
               await worker.terminate();
             } catch (termErr) {
-              console.warn("Failed to terminate worker:", termErr);
+              logger.warn("Failed to terminate worker:", termErr);
             }
           }
         }
@@ -529,7 +530,7 @@ export default function EnergyMonitoring() {
             try {
               await worker.terminate();
             } catch (termErr) {
-              console.warn("Failed to terminate worker:", termErr);
+              logger.warn("Failed to terminate worker:", termErr);
             }
           }
         }

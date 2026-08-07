@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useApp } from "../context/appContextCore";
 import { supabase } from "../lib/supabase";
+import logger from "../lib/logger";
 import { MdEdit, MdArchive, MdVisibility, MdSearch, MdFilterList, MdHome, MdPeople, MdPayments, MdPercent } from "react-icons/md";
 
 export default function GuestHouseManagement({ defaultFilter = "All" }) {
@@ -67,7 +68,7 @@ export default function GuestHouseManagement({ defaultFilter = "All" }) {
         }
       }
     } catch (err) {
-      console.error("Failed to load Property and Tenant directory:", err);
+      logger.error("Failed to load Property and Tenant directory:", err);
     } finally {
       setLoading(false);
     }
