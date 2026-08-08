@@ -805,7 +805,7 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
             </div>
 
             {/* PR Table List */}
-            <div style={styles.tableWrap}>
+            <div className="responsive-table-wrapper" style={styles.tableWrap}>
               <table style={styles.table}>
                 <thead>
                   <tr>
@@ -855,7 +855,7 @@ export default function PurchaseRequisition({ viewMode = "pr" }) {
                 </div>
               </div>
             </div>
-            <div style={styles.tableWrap}>
+            <div className="responsive-table-wrapper" style={styles.tableWrap}>
               <table style={styles.table}>
                 <thead>
                   <tr>

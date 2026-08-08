@@ -644,7 +644,7 @@ const resetWidgetForm = () => {
                   ) : teamMembers.length === 0 ? (
                     <div style={{ fontSize: "0.8rem", color: "#64748b" }}>No team profiles registered yet.</div>
                   ) : (
-                    <div style={styles.tableWrap}>
+                    <div className="responsive-table-wrapper" style={styles.tableWrap}>
                       <table style={styles.table}>
                         <thead>
                           <tr>

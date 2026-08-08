@@ -16,7 +16,9 @@ import {
   MdSettings,
   MdFolder,
   MdNotifications,
-  MdNotificationsActive
+  MdNotificationsActive,
+  MdMenu,
+  MdClose
 } from "react-icons/md";
 const appIconColors = {
   dashboard: ["#eef2ff", "#4f46e5"],
@@ -63,6 +65,7 @@ export default function Layout({ children }) {
     setShowResetPasswordModal
   } = useApp();
   const [launcherOpen, setLauncherOpen] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [hoveredTab, setHoveredTab] = useState(null);
   const [hoveredItemKey, setHoveredItemKey] = useState(null);
   const [notifDropdownOpen, setNotifDropdownOpen] = useState(false);
@@ -279,8 +282,165 @@ function getModuleIcon(key) {
 }
   return (
     <div style={s.shell} onClick={() => launcherOpen && setLauncherOpen(false)}>
+      {/* Mobile Drawer Navigation Overlay */}
+      {mobileNavOpen && (
+        <div 
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(15, 23, 42, 0.65)",
+            backdropFilter: "blur(4px)",
+            zIndex: 9999,
+            display: "flex"
+          }}
+          onClick={() => setMobileNavOpen(false)}
+        >
+          <div 
+            style={{
+              width: "290px",
+              maxWidth: "85vw",
+              height: "100%",
+              backgroundColor: "#ffffff",
+              boxShadow: "4px 0 24px rgba(0,0,0,0.18)",
+              display: "flex",
+              flexDirection: "column",
+              overflowY: "auto"
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Mobile Drawer Header */}
+            <div style={{ padding: "16px", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0f172a", color: "#ffffff" }}>
+              <div style={{ fontWeight: 800, fontSize: "1.1rem", letterSpacing: "0.5px" }}>SetuOne ERP</div>
+              <button 
+                type="button" 
+                onClick={() => setMobileNavOpen(false)}
+                style={{ background: "transparent", border: "none", color: "#ffffff", fontSize: "1.3rem", cursor: "pointer", display: "flex", alignItems: "center" }}
+              >
+                <MdClose />
+              </button>
+            </div>
+
+            {/* Mobile User Profile info */}
+            <div style={{ padding: "14px 16px", background: "#f8fafc", borderBottom: "1px solid #e2e8f0", display: "flex", alignItems: "center", gap: "10px" }}>
+              <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#2563eb", color: "#ffffff", fontWeight: "bold", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "14px" }}>
+                {(session?.name || "U")[0].toUpperCase()}
+              </div>
+              <div style={{ overflow: "hidden" }}>
+                <div style={{ fontWeight: 700, fontSize: "13px", color: "#1e293b", whiteSpace: "nowrap", textOverflow: "ellipsis", overflow: "hidden" }}>{session?.name || "User"}</div>
+                <div style={{ fontSize: "11px", color: "#64748b" }}>{activeRole} • {session?.companyName || "Orion"}</div>
+              </div>
+            </div>
+
+            {/* Mobile Modules List */}
+            <div style={{ padding: "12px", display: "flex", flexDirection: "column", gap: "6px", flex: 1 }}>
+              <div style={{ fontSize: "11px", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.5px", padding: "4px 8px" }}>Modules Menu</div>
+              {accessibleModules.map((mod) => {
+                const isCurrentMod = activeModule?.key === mod.key;
+                return (
+                  <div key={mod.key} style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                    <div 
+                      style={{ 
+                        padding: "8px 10px", 
+                        borderRadius: "8px", 
+                        background: isCurrentMod ? "#eff6ff" : "transparent",
+                        fontWeight: isCurrentMod ? 700 : 600,
+                        color: isCurrentMod ? "#2563eb" : "#334155",
+                        fontSize: "13px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px"
+                      }}
+                    >
+                      {getModuleIcon(mod.key)}
+                      <span>{mod.label}</span>
+                    </div>
+                    {/* Sub Items */}
+                    <div style={{ paddingLeft: "24px", display: "flex", flexDirection: "column", gap: "2px" }}>
+                      {mod.subItems.map((sub) => {
+                        const isSubActive = activeView === sub.key;
+                        return (
+                          <button
+                            key={sub.key}
+                            type="button"
+                            onClick={() => {
+                              setActiveView(sub.key);
+                              setMobileNavOpen(false);
+                            }}
+                            style={{
+                              textAlign: "left",
+                              padding: "6px 10px",
+                              borderRadius: "6px",
+                              border: "none",
+                              background: isSubActive ? "#2563eb" : "transparent",
+                              color: isSubActive ? "#ffffff" : "#475569",
+                              fontSize: "12px",
+                              fontWeight: isSubActive ? 700 : 500,
+                              cursor: "pointer"
+                            }}
+                          >
+                            {sub.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Mobile Footer Logout */}
+            <div style={{ padding: "12px 16px", borderTop: "1px solid #e2e8f0", background: "#ffffff" }}>
+              <button
+                type="button"
+                onClick={async () => {
+                  setMobileNavOpen(false);
+                  await logout();
+                }}
+                style={{
+                  width: "100%",
+                  padding: "8px 12px",
+                  borderRadius: "8px",
+                  border: "1px solid #fca5a5",
+                  background: "#fef2f2",
+                  color: "#dc2626",
+                  fontWeight: 600,
+                  fontSize: "13px",
+                  cursor: "pointer"
+                }}
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <header style={s.topbar}>
         <div style={s.leftCluster}>
+          {/* Mobile Hamburger Menu Toggle Button */}
+          <button
+            type="button"
+            aria-label="Toggle mobile menu"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "#ffffff",
+              border: "1px solid #cbd5e1",
+              borderRadius: "8px",
+              padding: "6px 8px",
+              fontSize: "1.2rem",
+              color: "#1e293b",
+              cursor: "pointer"
+            }}
+            onClick={() => setMobileNavOpen(true)}
+          >
+            <MdMenu />
+          </button>
+
           <div
             style={s.launcherWrap}
             onMouseEnter={openLauncher}

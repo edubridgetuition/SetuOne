@@ -119,3 +119,96 @@ div[style*="launcherPanel"]::-webkit-scrollbar-thumb:hover,
 .launcher-panel-scroll::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* ==========================================================================
+   MOBILE & TABLET RESPONSIVE SYSTEM OVERHAUL
+   ========================================================================== */
+
+/* Touch scroll container for wide tables */
+.responsive-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  margin-bottom: 16px;
+}
+
+.responsive-table-wrapper table {
+  min-width: 650px;
+}
+
+/* Hide scrollbar visually on mobile touch while preserving swipe functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Media Query: Tablets & Mobile Devices (< 768px) */
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+
+  /* Main App Container padding reduction */
+  .main-app-content {
+    padding: 12px !important;
+  }
+
+  /* Stack grid layouts to single column on mobile */
+  .form-grid-responsive,
+  div[style*="gridTemplateColumns"],
+  div[style*="display: grid"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Flex containers stack vertically on mobile */
+  .flex-stack-mobile {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+
+  /* Modals fit mobile screen nicely */
+  div[style*="position: fixed"][style*="zIndex: 999"],
+  div[style*="position: fixed"][style*="z-index: 999"],
+  .modal-container-responsive {
+    width: 94vw !important;
+    max-width: 94vw !important;
+    margin: 10px auto !important;
+    padding: 16px !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+  }
+
+  /* Ensure button touch target height on mobile */
+  button, input, select {
+    min-height: 38px;
+  }
+
+  /* Table cell text wrapping */
+  td, th {
+    white-space: nowrap;
+    padding: 10px 12px !important;
+    font-size: 13px !important;
+  }
+}
+
+/* Media Query: Small Smartphones (< 480px) */
+@media (max-width: 480px) {
+  .main-app-content {
+    padding: 8px !important;
+  }
+
+  h1, h2, h3 {
+    font-size: 1.15rem !important;
+  }
+
+  .responsive-table-wrapper table {
+    min-width: 550px;
+  }
+}
