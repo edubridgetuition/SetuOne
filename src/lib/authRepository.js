@@ -1,3 +1,5 @@
+import { supabase } from "./supabase";
+
 // HIGH-01 Fix: Password strength validation helper
 export function validatePassword(pwd) {
   if (!pwd || pwd.length < 8) {
