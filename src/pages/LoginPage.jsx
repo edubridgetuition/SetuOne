@@ -66,6 +66,21 @@ export default function LoginPage() {
     } catch (e) {}
   }
 
+  // Switch Auth Modes
+  function switchMode(newMode) {
+    setAuthMode(newMode);
+    setForgotStep(1);
+    setError("");
+    setSuccessMsg("");
+    setEmail("");
+    setPassword("");
+    setFullName("");
+    setCompanyName("");
+    setOtpCode("");
+    setNewPassword("");
+    setConfirmPassword("");
+  }
+
   // Handle Login & Signup
   async function handleSubmit(e) {
     e.preventDefault();
@@ -437,6 +452,7 @@ export default function LoginPage() {
             <div style={{ marginTop: "20px", textAlign: "center" }}>
               <button
                 type="button"
+                className="link-btn"
                 onClick={() => switchMode(authMode === "signup" ? "signin" : "signup")}
                 style={styles.linkBtn}
               >
