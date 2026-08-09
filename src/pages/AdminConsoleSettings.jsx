@@ -75,6 +75,9 @@ export default function AdminConsoleSettings() {
   const [recurringJobForm, setRecurringJobForm] = useState({ jobName: "", jobType: "Report Delivery", cronExpression: "0 0 * * 1" });
   const [locationForm, setLocationForm] = useState({ name: "", locationType: "Floor", buildingId: "" });
   const [buildingsList, setBuildingsList] = useState([]);
+  const [newCatInput, setNewCatInput] = useState("");
+  const [newPriInput, setNewPriInput] = useState("");
+  const [showAdvancedMasters, setShowAdvancedMasters] = useState(false);
   
   // Dashboard Templates clone form
   const [cloneForm, setCloneForm] = useState({ targetRole: "Admin Manager" });
@@ -366,6 +369,52 @@ export default function AdminConsoleSettings() {
     }
   }
 
+  async function handleQuickAddCategory(e) {
+    e.preventDefault();
+    if (!newCatInput.trim()) return;
+    let catDef = masterDefinitionsList?.find(d => d.master_key === "TICKET_CATEGORIES");
+    let defId = catDef?.id;
+
+    if (!defId) {
+      const newDef = await createMasterDefinition({ masterKey: "TICKET_CATEGORIES", masterName: "Ticket Categories" });
+      if (newDef && newDef.data) defId = newDef.data.id;
+    }
+
+    if (!defId) return alert("Failed to initialize Categories.");
+
+    const valCode = newCatInput.trim().toUpperCase().replace(/[^A-Z0-9]/g, "_");
+    const res = await createMasterValue({ definitionId: defId, valueCode: valCode, valueLabel: newCatInput.trim() });
+
+    if (res && res.success) {
+      setNewCatInput("");
+    } else {
+      alert(res?.message || "Failed to add category.");
+    }
+  }
+
+  async function handleQuickAddPriority(e) {
+    e.preventDefault();
+    if (!newPriInput.trim()) return;
+    let priDef = masterDefinitionsList?.find(d => d.master_key === "TICKET_PRIORITIES");
+    let defId = priDef?.id;
+
+    if (!defId) {
+      const newDef = await createMasterDefinition({ masterKey: "TICKET_PRIORITIES", masterName: "Ticket Priorities" });
+      if (newDef && newDef.data) defId = newDef.data.id;
+    }
+
+    if (!defId) return alert("Failed to initialize Priorities.");
+
+    const valCode = newPriInput.trim().toUpperCase().replace(/[^A-Z0-9]/g, "_");
+    const res = await createMasterValue({ definitionId: defId, valueCode: valCode, valueLabel: newPriInput.trim() });
+
+    if (res && res.success) {
+      setNewPriInput("");
+    } else {
+      alert(res?.message || "Failed to add priority.");
+    }
+  }
+
   async function handleSaveSeries(e) {
     e.preventDefault();
     if (!seriesForm.id) return;
@@ -550,7 +599,7 @@ const resetWidgetForm = () => {
               { key: "Company", label: "General & Branding" },
               { key: "Team", label: "Team Management" },
               { key: "Security2FA", label: "Security & 2FA" },
-              { key: "Masters", label: "Dynamic Masters" },
+              { key: "Masters", label: "Dropdown Options" },
               { key: "AssetCategories", label: "Asset Categories" },
               { key: "Series", label: "Number Series" },
               { key: "Approvals", label: "Workflows" },
@@ -906,131 +955,199 @@ const resetWidgetForm = () => {
             </div>
           )}
 
-          {/* TAB 2: DYNAMIC MASTERS */}
+          {/* TAB 2: DROPDOWN OPTIONS MANAGEMENT */}
           {activeTab === "Masters" && (
             <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
-              <div style={styles.grid2}>
-                {/* Definition Form */}
-                <form onSubmit={handleAddMaster} style={styles.form}>
-                  <div style={styles.muted}>Add Masters Definition Category</div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Master Unique Key</label>
-                    <input style={styles.input} required placeholder="FLOORS / DEPARTMENTS / BRANDS" value={masterForm.masterKey} onChange={e => setMasterForm({ ...masterForm, masterKey: e.target.value.toUpperCase() })} />
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Master Label Name</label>
-                    <input style={styles.input} required placeholder="Floors / Departments / Brands" value={masterForm.masterName} onChange={e => setMasterForm({ ...masterForm, masterName: e.target.value })} />
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Parent Master (Lookup Dependency Cascade)</label>
-                    <select style={styles.input} value={masterForm.parentDefinitionId} onChange={e => setMasterForm({ ...masterForm, parentDefinitionId: e.target.value })}>
-                      <option value="">-- No Parent (Top Level) --</option>
-                      {masterDefinitionsList.map(def => <option key={def.id} value={def.id}>{def.master_name}</option>)}
-                    </select>
-                  </div>
-                  <button style={{ ...styles.primaryBtn, marginTop: "10px" }} type="submit">Add Category</button>
-                </form>
 
-                {/* Values Form */}
-                <form onSubmit={handleAddMasterVal} style={styles.form}>
-                  <div style={styles.muted}>Register Dropdown Master Values</div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Target Master Definition</label>
-                    <select style={styles.input} required value={masterValForm.definitionId} onChange={e => setMasterValForm({ ...masterValForm, definitionId: e.target.value })}>
-                      <option value="">-- Choose Definition --</option>
-                      {masterDefinitionsList.map(def => <option key={def.id} value={def.id}>{def.master_name}</option>)}
-                    </select>
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Parent Value (e.g. Map Room 5 to Building A)</label>
-                    <select style={styles.input} value={masterValForm.parentValueId} onChange={e => setMasterValForm({ ...masterValForm, parentValueId: e.target.value })}>
-                      <option value="">-- No Parent (Independent) --</option>
-                      {masterDefinitionsList.flatMap(d => d.master_values || []).map(val => (
-                        <option key={val.id} value={val.id}>{val.value_label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Code Value</label>
-                    <input style={styles.input} required placeholder="5TH_FLOOR / FINANCE_DEPT" value={masterValForm.valueCode} onChange={e => setMasterValForm({ ...masterValForm, valueCode: e.target.value.toUpperCase() })} />
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>UI Display Label</label>
-                    <input style={styles.input} required placeholder="5th Floor / Finance Department" value={masterValForm.valueLabel} onChange={e => setMasterValForm({ ...masterValForm, valueLabel: e.target.value })} />
-                  </div>
-                  <button style={{ ...styles.primaryBtn, marginTop: "10px" }} type="submit">Save Master Value</button>
-                </form>
-              </div>
-
-              {/* Masters catalog tree */}
               <div style={styles.descBox}>
-                <div style={styles.muted} style={{ marginBottom: "12px" }}>Dynamic Masters Catalog Hierarchy</div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" }}>
-                  {masterDefinitionsList.map(def => (
-                    <div key={def.id} style={{ background: "#fff", border: "1px solid #cbd5e1", borderRadius: "4px", padding: "14px" }}>
-                      <div style={styles.panelTitle} style={{ fontSize: "0.85rem", color: "#0038a8" }}>{def.master_name}</div>
-                      <div style={{ fontSize: "0.74rem", color: "#64748b", margin: "4px 0" }}>Key: <code>{def.master_key}</code></div>
-                      <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginBottom: "8px" }}>Parent: {masterDefinitionsList.find(d => d.id === def.parent_definition_id)?.master_name || "None"}</div>
-                      <ul style={{ fontSize: "0.74rem", paddingLeft: "14px" }}>
-                        {def.master_values?.map(val => (
-                          <li key={val.id} style={{ margin: "4px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                            <span>{val.value_label} <code>({val.value_code})</code></span>
-                            <button
-                              onClick={() => handleDeleteMasterVal(val.id, val.value_label)}
-                              style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "0.8rem", padding: "2px 6px", borderRadius: "4px" }}
-                              title={`Delete ${val.value_label}`}
-                            >✕</button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ))}
+                <div style={{ fontSize: "1rem", fontWeight: "bold", color: "#0038a8" }}>📋 Manage Dropdown Options</div>
+                <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: "4px" }}>
+                  Add or delete options for <strong>Location</strong>, <strong>Category</strong>, and <strong>Priority</strong> dropdowns used in Complaints & Tickets.
                 </div>
               </div>
 
-              {/* Location Management Section */}
-              <div style={styles.descBox}>
-                <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#0038a8", marginBottom: "12px" }}>📍 Location Management</div>
-                <div style={styles.grid2}>
-                  <form onSubmit={handleAddLocation} style={styles.form}>
-                    <div style={styles.muted}>Add New Location</div>
-                    <div style={styles.formGroup}>
-                      <label style={styles.label}>Building</label>
-                      <select style={styles.input} required value={locationForm.buildingId} onFocus={handleLoadBuildings} onChange={e => setLocationForm({ ...locationForm, buildingId: e.target.value })}>
-                        <option value="">-- Select Building --</option>
-                        {buildingsList.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                      </select>
+              {/* 3 CARDS GRID */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: "20px" }}>
+
+                {/* CARD 1: LOCATIONS */}
+                <div style={{ background: "#fff", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "18px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.92rem", fontWeight: "bold", color: "#0f172a", marginBottom: "14px" }}>
+                    <span>📍</span> Locations
+                  </div>
+                  
+                  <form onSubmit={handleAddLocation} style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "16px" }}>
+                    <select 
+                      style={styles.input} 
+                      required 
+                      value={locationForm.buildingId} 
+                      onFocus={handleLoadBuildings} 
+                      onChange={e => setLocationForm({ ...locationForm, buildingId: e.target.value })}
+                    >
+                      <option value="">-- Select Building --</option>
+                      {buildingsList.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    </select>
+
+                    <div style={{ display: "flex", gap: "8px" }}>
+                      <input 
+                        style={{ ...styles.input, flex: 1 }} 
+                        required 
+                        placeholder="Location Name (e.g. 3rd Floor)" 
+                        value={locationForm.name} 
+                        onChange={e => setLocationForm({ ...locationForm, name: e.target.value })} 
+                      />
+                      <button style={{ ...styles.primaryBtn, padding: "8px 14px" }} type="submit">+ Add</button>
                     </div>
-                    <div style={styles.formGroup}>
-                      <label style={styles.label}>Location Name</label>
-                      <input style={styles.input} required placeholder="e.g. 3rd Floor, Server Room" value={locationForm.name} onChange={e => setLocationForm({ ...locationForm, name: e.target.value })} />
-                    </div>
-                    <div style={styles.formGroup}>
-                      <label style={styles.label}>Location Type</label>
-                      <select style={styles.input} value={locationForm.locationType} onChange={e => setLocationForm({ ...locationForm, locationType: e.target.value })}>
-                        {["Floor", "Room", "Zone", "Cabin"].map(t => <option key={t}>{t}</option>)}
-                      </select>
-                    </div>
-                    <button style={{ ...styles.primaryBtn, marginTop: "10px" }} type="submit">Add Location</button>
                   </form>
 
-                  <div>
-                    <div style={styles.muted}>Current Locations</div>
-                    <div style={{ maxHeight: "300px", overflowY: "auto", marginTop: "8px" }}>
-                      {(locations || []).length === 0 && <div style={{ fontSize: "0.78rem", color: "#94a3b8" }}>No locations found.</div>}
-                      {(locations || []).map(loc => (
-                        <div key={loc.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderBottom: "1px solid #e2e8f0" }}>
-                          <span style={{ fontSize: "0.78rem" }}>{loc.name} <span style={{ color: "#94a3b8" }}>({loc.location_type})</span></span>
-                          <button
-                            onClick={() => handleDeleteLocation(loc.id, loc.name)}
-                            style={{ background: "none", border: "1px solid #fca5a5", color: "#ef4444", cursor: "pointer", fontSize: "0.72rem", padding: "3px 8px", borderRadius: "4px" }}
-                          >Delete</button>
-                        </div>
-                      ))}
-                    </div>
+                  <div style={{ fontSize: "0.78rem", fontWeight: "bold", color: "#64748b", marginBottom: "8px" }}>Current Locations ({locations?.length || 0}):</div>
+                  <div style={{ maxHeight: "240px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "6px" }}>
+                    {(locations || []).length === 0 && <div style={{ fontSize: "0.78rem", color: "#94a3b8" }}>No locations added yet.</div>}
+                    {(locations || []).map(loc => (
+                      <div key={loc.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8fafc", border: "1px solid #e2e8f0", padding: "8px 12px", borderRadius: "6px" }}>
+                        <span style={{ fontSize: "0.82rem", color: "#1e293b", fontWeight: 500 }}>📍 {loc.name}</span>
+                        <button
+                          onClick={() => handleDeleteLocation(loc.id, loc.name)}
+                          style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "0.85rem" }}
+                          title="Delete location"
+                        >🗑️</button>
+                      </div>
+                    ))}
                   </div>
                 </div>
+
+                {/* CARD 2: TICKET CATEGORIES */}
+                <div style={{ background: "#fff", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "18px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.92rem", fontWeight: "bold", color: "#0f172a", marginBottom: "14px" }}>
+                    <span>🏷️</span> Complaint Categories
+                  </div>
+
+                  <form onSubmit={handleQuickAddCategory} style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+                    <input 
+                      style={{ ...styles.input, flex: 1 }} 
+                      required 
+                      placeholder="Category Name (e.g. Electrical)" 
+                      value={newCatInput} 
+                      onChange={e => setNewCatInput(e.target.value)} 
+                    />
+                    <button style={{ ...styles.primaryBtn, padding: "8px 14px" }} type="submit">+ Add</button>
+                  </form>
+
+                  {(() => {
+                    const catDef = masterDefinitionsList?.find(d => d.master_key === "TICKET_CATEGORIES");
+                    const values = catDef?.master_values || [];
+                    return (
+                      <>
+                        <div style={{ fontSize: "0.78rem", fontWeight: "bold", color: "#64748b", marginBottom: "8px" }}>Current Categories ({values.length}):</div>
+                        <div style={{ maxHeight: "240px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "6px" }}>
+                          {values.length === 0 && <div style={{ fontSize: "0.78rem", color: "#94a3b8" }}>No categories added yet.</div>}
+                          {values.map(val => (
+                            <div key={val.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8fafc", border: "1px solid #e2e8f0", padding: "8px 12px", borderRadius: "6px" }}>
+                              <span style={{ fontSize: "0.82rem", color: "#1e293b", fontWeight: 500 }}>🏷️ {val.value_label}</span>
+                              <button
+                                onClick={() => handleDeleteMasterVal(val.id, val.value_label)}
+                                style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "0.85rem" }}
+                                title="Delete category"
+                              >🗑️</button>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+
+                {/* CARD 3: TICKET PRIORITIES */}
+                <div style={{ background: "#fff", border: "1px solid #cbd5e1", borderRadius: "8px", padding: "18px", boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.92rem", fontWeight: "bold", color: "#0f172a", marginBottom: "14px" }}>
+                    <span>⚡</span> Ticket Priorities
+                  </div>
+
+                  <form onSubmit={handleQuickAddPriority} style={{ display: "flex", gap: "8px", marginBottom: "16px" }}>
+                    <input 
+                      style={{ ...styles.input, flex: 1 }} 
+                      required 
+                      placeholder="Priority Name (e.g. Urgent)" 
+                      value={newPriInput} 
+                      onChange={e => setNewPriInput(e.target.value)} 
+                    />
+                    <button style={{ ...styles.primaryBtn, padding: "8px 14px" }} type="submit">+ Add</button>
+                  </form>
+
+                  {(() => {
+                    const priDef = masterDefinitionsList?.find(d => d.master_key === "TICKET_PRIORITIES");
+                    const values = priDef?.master_values || [];
+                    return (
+                      <>
+                        <div style={{ fontSize: "0.78rem", fontWeight: "bold", color: "#64748b", marginBottom: "8px" }}>Current Priorities ({values.length}):</div>
+                        <div style={{ maxHeight: "240px", overflowY: "auto", display: "flex", flexDirection: "column", gap: "6px" }}>
+                          {values.length === 0 && <div style={{ fontSize: "0.78rem", color: "#94a3b8" }}>No priorities added yet. (Defaults: Low, Medium, High, Critical)</div>}
+                          {values.map(val => (
+                            <div key={val.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8fafc", border: "1px solid #e2e8f0", padding: "8px 12px", borderRadius: "6px" }}>
+                              <span style={{ fontSize: "0.82rem", color: "#1e293b", fontWeight: 500 }}>⚡ {val.value_label}</span>
+                              <button
+                                onClick={() => handleDeleteMasterVal(val.id, val.value_label)}
+                                style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "0.85rem" }}
+                                title="Delete priority"
+                              >🗑️</button>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
+
               </div>
+
+              {/* ADVANCED COLLAPSIBLE FOR DEVELOPERS ONLY */}
+              <div style={{ marginTop: "12px", textAlign: "right" }}>
+                <button 
+                  onClick={() => setShowAdvancedMasters(!showAdvancedMasters)}
+                  style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", fontSize: "0.75rem", textDecoration: "underline" }}
+                >
+                  {showAdvancedMasters ? "▲ Hide Advanced Developer Masters View" : "▼ Show Advanced Developer Masters View"}
+                </button>
+              </div>
+
+              {showAdvancedMasters && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "20px", background: "#f8fafc", padding: "16px", borderRadius: "8px", border: "1px dashed #cbd5e1" }}>
+                  <div style={styles.grid2}>
+                    <form onSubmit={handleAddMaster} style={styles.form}>
+                      <div style={styles.muted}>Add Masters Definition Category</div>
+                      <div style={styles.formGroup}>
+                        <label style={styles.label}>Master Unique Key</label>
+                        <input style={styles.input} required placeholder="FLOORS / DEPARTMENTS" value={masterForm.masterKey} onChange={e => setMasterForm({ ...masterForm, masterKey: e.target.value.toUpperCase() })} />
+                      </div>
+                      <div style={styles.formGroup}>
+                        <label style={styles.label}>Master Label Name</label>
+                        <input style={styles.input} required placeholder="Floors / Departments" value={masterForm.masterName} onChange={e => setMasterForm({ ...masterForm, masterName: e.target.value })} />
+                      </div>
+                      <button style={{ ...styles.primaryBtn, marginTop: "10px" }} type="submit">Add Category</button>
+                    </form>
+
+                    <form onSubmit={handleAddMasterVal} style={styles.form}>
+                      <div style={styles.muted}>Register Raw Master Value</div>
+                      <div style={styles.formGroup}>
+                        <label style={styles.label}>Target Master Definition</label>
+                        <select style={styles.input} required value={masterValForm.definitionId} onChange={e => setMasterValForm({ ...masterValForm, definitionId: e.target.value })}>
+                          <option value="">-- Choose Definition --</option>
+                          {masterDefinitionsList.map(def => <option key={def.id} value={def.id}>{def.master_name}</option>)}
+                        </select>
+                      </div>
+                      <div style={styles.formGroup}>
+                        <label style={styles.label}>Code Value</label>
+                        <input style={styles.input} required placeholder="CODE_KEY" value={masterValForm.valueCode} onChange={e => setMasterValForm({ ...masterValForm, valueCode: e.target.value.toUpperCase() })} />
+                      </div>
+                      <div style={styles.formGroup}>
+                        <label style={styles.label}>UI Display Label</label>
+                        <input style={styles.input} required placeholder="Display Name" value={masterValForm.valueLabel} onChange={e => setMasterValForm({ ...masterValForm, valueLabel: e.target.value })} />
+                      </div>
+                      <button style={{ ...styles.primaryBtn, marginTop: "10px" }} type="submit">Save Value</button>
+                    </form>
+                  </div>
+                </div>
+              )}
+
             </div>
           )}
 
