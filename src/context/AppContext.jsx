@@ -122,6 +122,9 @@ import {
   saveMasterDefinition as apiSaveMasterDefinition,
   saveMasterValue as apiSaveMasterValue,
   deleteMasterValue as apiDeleteMasterValue,
+  createLocation as apiCreateLocation,
+  deleteLocation as apiDeleteLocation,
+  fetchBuildings as apiFetchBuildings,
   fetchNumberSeries as apiFetchNumberSeries,
   saveNumberSeries as apiSaveNumberSeries,
   fetchApprovalWorkflows as apiFetchApprovalWorkflows,
@@ -1481,6 +1484,38 @@ export function AppProvider({ children }) {
     return res;
   }
 
+  async function removeMasterValue(valueId) {
+    const res = await apiDeleteMasterValue(valueId);
+    if (res.success) {
+      await loadMasterDefinitions();
+    }
+    return res;
+  }
+
+  async function addLocation(locationData) {
+    if (!session) return null;
+    const res = await apiCreateLocation(locationData);
+    if (res.success) {
+      const locRes = await fetchLocations();
+      if (locRes && locRes.success) setLocations(locRes.data);
+    }
+    return res;
+  }
+
+  async function removeLocation(locationId) {
+    const res = await apiDeleteLocation(locationId);
+    if (res.success) {
+      const locRes = await fetchLocations();
+      if (locRes && locRes.success) setLocations(locRes.data);
+    }
+    return res;
+  }
+
+  async function loadBuildings() {
+    if (!session) return null;
+    return await apiFetchBuildings(session.companyId);
+  }
+
   async function loadNumberSeries() {
     if (!session) return;
     const res = await apiFetchNumberSeries(session.companyId);
@@ -1922,7 +1957,8 @@ export function AppProvider({ children }) {
 
       // Admin Settings values
       systemSettings, brandingSettings, masterDefinitionsList, numberSeriesList, approvalWorkflowsList, featureFlagsList, holidayCalendarList, workingDaysData, customFieldDefinitionsList, auditLogsList, notificationTemplatesList, recurringSchedulerJobsList,
-      loadSystemSettings, saveSystemSettings, loadBrandingSettings, saveBrandingSettings, loadMasterDefinitions, createMasterDefinition, createMasterValue, loadNumberSeries, saveNumberSeries, loadApprovalWorkflows, saveApprovalWorkflow, loadFeatureFlags, toggleFeatureFlag, loadHolidayCalendar, createHoliday, loadWorkingDays, saveWorkingDays, loadCustomFieldDefinitions, saveCustomField, loadAuditLogs, loadNotificationTemplates, saveNotificationTemplate, loadRecurringSchedulerJobs, saveRecurringSchedulerJob,
+      loadSystemSettings, saveSystemSettings, loadBrandingSettings, saveBrandingSettings, loadMasterDefinitions, createMasterDefinition, createMasterValue, removeMasterValue, loadNumberSeries, saveNumberSeries, loadApprovalWorkflows, saveApprovalWorkflow, loadFeatureFlags, toggleFeatureFlag, loadHolidayCalendar, createHoliday, loadWorkingDays, saveWorkingDays, loadCustomFieldDefinitions, saveCustomField, loadAuditLogs, loadNotificationTemplates, saveNotificationTemplate, loadRecurringSchedulerJobs, saveRecurringSchedulerJob,
+      addLocation, removeLocation, loadBuildings,
 
        // Dashboard Builder values
       dashboardWidgetsList, activeDashboardLayout,

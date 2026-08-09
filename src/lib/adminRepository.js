@@ -630,3 +630,48 @@ export async function deleteMasterValue(valueId) {
     return { success: false, message: error.message, error };
   }
 }
+
+export async function createLocation(locationData) {
+  try {
+    const { data, error } = await supabase
+      .from('locations')
+      .insert([{
+        name: locationData.name,
+        location_type: locationData.locationType,
+        building_id: locationData.buildingId
+      }])
+      .select()
+      .single();
+    if (error) throw error;
+    return { success: true, data, message: 'Location created successfully.', error: null };
+  } catch (error) {
+    return { success: false, data: null, message: error.message, error };
+  }
+}
+
+export async function deleteLocation(locationId) {
+  try {
+    const { error } = await supabase
+      .from('locations')
+      .delete()
+      .eq('id', locationId);
+    if (error) throw error;
+    return { success: true, message: 'Location deleted successfully.', error: null };
+  } catch (error) {
+    return { success: false, message: error.message, error };
+  }
+}
+
+export async function fetchBuildings(companyId) {
+  try {
+    const { data, error } = await supabase
+      .from('buildings')
+      .select('id, name, branches!inner(company_id)')
+      .eq('branches.company_id', companyId)
+      .order('name', { ascending: true });
+    if (error) throw error;
+    return { success: true, data, message: 'Buildings fetched successfully.', error: null };
+  } catch (error) {
+    return { success: false, data: [], message: error.message, error };
+  }
+}

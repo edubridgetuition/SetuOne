@@ -37,6 +37,11 @@ export default function Tickets() {
     ? catDef.master_values.map(val => val.value_label) 
     : ["Electrical Complaint","Plumbing Complaint","HVAC Complaint","Civil Complaint","Housekeeping Complaint","IT Complaint"];
 
+  const priDef = masterDefinitionsList?.find(d => d.master_key === "TICKET_PRIORITIES");
+  const ticketPriorities = priDef 
+    ? priDef.master_values.map(val => val.value_label) 
+    : ["Low","Medium","High","Critical"];
+
   const [actionForm, setActionForm] = useState({ assignedToId:"", status:"Assigned", remarks:"" });
   const [form, setForm] = useState({ category: ticketCategories[0] || "Electrical Complaint", locationId:"", priority:"Medium", description:"" });
 
@@ -153,7 +158,7 @@ export default function Tickets() {
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Priority</label>
                   <select style={styles.input} value={form.priority} onChange={e => setForm({...form, priority:e.target.value})}>
-                    {["Low","Medium","High","Critical"].map(p => <option key={p}>{p}</option>)}
+                    {ticketPriorities.map(p => <option key={p}>{p}</option>)}
                   </select>
                 </div>
               </div>

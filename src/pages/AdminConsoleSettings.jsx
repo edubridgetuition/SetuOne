@@ -18,6 +18,7 @@ export default function AdminConsoleSettings() {
     loadMasterDefinitions,
     createMasterDefinition,
     createMasterValue,
+    removeMasterValue,
     numberSeriesList,
     loadNumberSeries,
     saveNumberSeries,
@@ -44,6 +45,10 @@ export default function AdminConsoleSettings() {
     recurringSchedulerJobsList,
     loadRecurringSchedulerJobs,
     saveRecurringSchedulerJob,
+    locations,
+    addLocation,
+    removeLocation,
+    loadBuildings,
 
     // Dashboard Builder states & actions
     dashboardWidgetsList,
@@ -68,6 +73,8 @@ export default function AdminConsoleSettings() {
   const [customFieldForm, setCustomFieldForm] = useState({ moduleName: "Ticket", fieldName: "", fieldLabel: "", fieldType: "Text", dropdownText: "", isRequired: false, minLen: 0, maxLen: 100 });
   const [notifTempForm, setNotifTempForm] = useState({ templateKey: "", channel: "EMAIL", subject: "", bodyText: "", variablesText: "" });
   const [recurringJobForm, setRecurringJobForm] = useState({ jobName: "", jobType: "Report Delivery", cronExpression: "0 0 * * 1" });
+  const [locationForm, setLocationForm] = useState({ name: "", locationType: "Floor", buildingId: "" });
+  const [buildingsList, setBuildingsList] = useState([]);
   
   // Dashboard Templates clone form
   const [cloneForm, setCloneForm] = useState({ targetRole: "Admin Manager" });
@@ -313,6 +320,50 @@ export default function AdminConsoleSettings() {
     await createMasterValue(masterValForm);
     alert("Master values saved!");
     setMasterValForm({ definitionId: "", parentValueId: "", valueCode: "", valueLabel: "" });
+  }
+
+  async function handleDeleteMasterVal(valId, valLabel) {
+    if (!window.confirm(`Delete master value "${valLabel}"? This action cannot be undone.`)) return;
+    const res = await removeMasterValue(valId);
+    if (res && res.success) {
+      alert("Master value deleted!");
+    } else {
+      alert("Delete failed: " + (res?.message || "Unknown error"));
+    }
+  }
+
+  async function handleAddLocation(e) {
+    e.preventDefault();
+    if (!locationForm.name.trim()) return alert("Location name is required.");
+    if (!locationForm.buildingId) return alert("Please select a building.");
+    const res = await addLocation(locationForm);
+    if (res && res.success) {
+      alert("Location added!");
+      setLocationForm({ name: "", locationType: "Floor", buildingId: locationForm.buildingId });
+    } else {
+      alert("Failed: " + (res?.message || "Unknown error"));
+    }
+  }
+
+  async function handleDeleteLocation(locId, locName) {
+    if (!window.confirm(`Delete location "${locName}"? Tickets linked to this location may be affected.`)) return;
+    const res = await removeLocation(locId);
+    if (res && res.success) {
+      alert("Location deleted!");
+    } else {
+      alert("Delete failed: " + (res?.message || "Unknown error"));
+    }
+  }
+
+  async function handleLoadBuildings() {
+    if (!loadBuildings) return;
+    const res = await loadBuildings();
+    if (res && res.success) {
+      setBuildingsList(res.data || []);
+      if (res.data?.length > 0 && !locationForm.buildingId) {
+        setLocationForm(prev => ({ ...prev, buildingId: res.data[0].id }));
+      }
+    }
   }
 
   async function handleSaveSeries(e) {
@@ -922,13 +973,62 @@ const resetWidgetForm = () => {
                       <div style={{ fontSize: "0.72rem", color: "#94a3b8", marginBottom: "8px" }}>Parent: {masterDefinitionsList.find(d => d.id === def.parent_definition_id)?.master_name || "None"}</div>
                       <ul style={{ fontSize: "0.74rem", paddingLeft: "14px" }}>
                         {def.master_values?.map(val => (
-                          <li key={val.id} style={{ margin: "4px 0" }}>
-                            {val.value_label} <code>({val.value_code})</code>
+                          <li key={val.id} style={{ margin: "4px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                            <span>{val.value_label} <code>({val.value_code})</code></span>
+                            <button
+                              onClick={() => handleDeleteMasterVal(val.id, val.value_label)}
+                              style={{ background: "none", border: "none", color: "#ef4444", cursor: "pointer", fontSize: "0.8rem", padding: "2px 6px", borderRadius: "4px" }}
+                              title={`Delete ${val.value_label}`}
+                            >✕</button>
                           </li>
                         ))}
                       </ul>
                     </div>
                   ))}
+                </div>
+              </div>
+
+              {/* Location Management Section */}
+              <div style={styles.descBox}>
+                <div style={{ fontSize: "0.82rem", fontWeight: 600, color: "#0038a8", marginBottom: "12px" }}>📍 Location Management</div>
+                <div style={styles.grid2}>
+                  <form onSubmit={handleAddLocation} style={styles.form}>
+                    <div style={styles.muted}>Add New Location</div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Building</label>
+                      <select style={styles.input} required value={locationForm.buildingId} onFocus={handleLoadBuildings} onChange={e => setLocationForm({ ...locationForm, buildingId: e.target.value })}>
+                        <option value="">-- Select Building --</option>
+                        {buildingsList.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                      </select>
+                    </div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Location Name</label>
+                      <input style={styles.input} required placeholder="e.g. 3rd Floor, Server Room" value={locationForm.name} onChange={e => setLocationForm({ ...locationForm, name: e.target.value })} />
+                    </div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Location Type</label>
+                      <select style={styles.input} value={locationForm.locationType} onChange={e => setLocationForm({ ...locationForm, locationType: e.target.value })}>
+                        {["Floor", "Room", "Zone", "Cabin"].map(t => <option key={t}>{t}</option>)}
+                      </select>
+                    </div>
+                    <button style={{ ...styles.primaryBtn, marginTop: "10px" }} type="submit">Add Location</button>
+                  </form>
+
+                  <div>
+                    <div style={styles.muted}>Current Locations</div>
+                    <div style={{ maxHeight: "300px", overflowY: "auto", marginTop: "8px" }}>
+                      {(locations || []).length === 0 && <div style={{ fontSize: "0.78rem", color: "#94a3b8" }}>No locations found.</div>}
+                      {(locations || []).map(loc => (
+                        <div key={loc.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 10px", borderBottom: "1px solid #e2e8f0" }}>
+                          <span style={{ fontSize: "0.78rem" }}>{loc.name} <span style={{ color: "#94a3b8" }}>({loc.location_type})</span></span>
+                          <button
+                            onClick={() => handleDeleteLocation(loc.id, loc.name)}
+                            style={{ background: "none", border: "1px solid #fca5a5", color: "#ef4444", cursor: "pointer", fontSize: "0.72rem", padding: "3px 8px", borderRadius: "4px" }}
+                          >Delete</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
