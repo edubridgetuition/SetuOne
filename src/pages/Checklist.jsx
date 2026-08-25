@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useApp } from "../context/appContextCore";
 
 const statusColors = { Pending: "#f59e0b", "In Progress": "#6366f1", Completed: "#22c55e", Escalated: "#ef4444" };
@@ -10,16 +10,35 @@ export default function Checklist() {
     loadChecklistSchedules,
     submitChecklist,
     createTicket,
-    setActiveView
+    setActiveView,
+    locations = [],
+    masterDefinitionsList = []
   } = useApp();
+
+  const catDef = masterDefinitionsList?.find(d => d.master_key === "TICKET_CATEGORIES");
+  const ticketCategories = catDef 
+    ? catDef.master_values.map(val => val.value_label) 
+    : ["Electrical Complaint", "Plumbing Complaint", "HVAC Complaint", "Housekeeping Complaint", "Civil Complaint"];
+
+  const priDef = masterDefinitionsList?.find(d => d.master_key === "TICKET_PRIORITIES");
+  const ticketPriorities = priDef 
+    ? priDef.master_values.map(val => val.value_label) 
+    : ["Low", "Medium", "High", "Critical"];
 
   const [frequency, setFrequency] = useState("All");
   const [ticketForm, setTicketForm] = useState({
     locationId: "",
-    category: "Electrical Complaint",
+    category: ticketCategories[0] || "Electrical Complaint",
     priority: "Medium",
     description: "Inspection item failed during routine rounds."
   });
+
+  // Auto select first valid location when locations load
+  useEffect(() => {
+    if (locations.length > 0 && !ticketForm.locationId) {
+      setTicketForm(prev => ({ ...prev, locationId: locations[0].id }));
+    }
+  }, [locations]);
 
   // Load Schedules
   useEffect(() => {
@@ -139,26 +158,24 @@ export default function Checklist() {
             <div style={styles.formGroup}>
               <label style={styles.label}>Select Location</label>
               <select style={styles.input} required value={ticketForm.locationId} onChange={e => setTicketForm({ ...ticketForm, locationId: e.target.value })}>
-                <option value="">Choose Area</option>
-                {/* Dynamically populated location options from workspace state */}
-                {session && (
-                  <>
-                    <option value="da236471-b0db-40a2-b258-005cf4e81561">Server Room</option>
-                    <option value="541a5472-e1d2-43fa-a67b-1160352a94a2">3rd Floor Washroom</option>
-                  </>
-                )}
+                <option value="">Choose Area / Location</option>
+                {locations.map(loc => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.name} ({loc.location_type || "Area"})
+                  </option>
+                ))}
               </select>
             </div>
             <div style={styles.formGroup}>
               <label style={styles.label}>Complaint Category</label>
               <select style={styles.input} value={ticketForm.category} onChange={e => setTicketForm({ ...ticketForm, category: e.target.value })}>
-                {["Electrical Complaint", "Plumbing Complaint", "HVAC Complaint", "Housekeeping Complaint", "Civil Complaint"].map(c => <option key={c} value={c}>{c}</option>)}
+                {ticketCategories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
             <div style={styles.formGroup}>
               <label style={styles.label}>Priority Level</label>
               <select style={styles.input} value={ticketForm.priority} onChange={e => setTicketForm({ ...ticketForm, priority: e.target.value })}>
-                {["Low", "Medium", "High", "Critical"].map(p => <option key={p} value={p}>{p}</option>)}
+                {ticketPriorities.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
             <div style={styles.formGroup}>
