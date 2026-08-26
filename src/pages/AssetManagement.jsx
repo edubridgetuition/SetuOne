@@ -1072,7 +1072,7 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
               <div style={styles.panelSub}>Track barcodes, internal floor transfers, tax inputs, and depreciation sheets.</div>
             </div>
             {!isReadOnlyView && (
-              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
                 <button style={styles.secondaryBtn} onClick={handleStandardizeExistingAssets} title="Convert all existing assets to [Company]-[Location]-[Dept]-[Category]-[Seq] format">⚡ Standardize Tags</button>
                 <button style={styles.secondaryBtn} onClick={downloadCsvTemplate}>Download CSV Template</button>
                 <label style={styles.secondaryBtn}>
@@ -1852,8 +1852,8 @@ const styles = {
   panelHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "20px", borderBottom: "1px solid #f1f5f9", paddingBottom: "15px" },
   panelTitle: { fontFamily: "'Space Grotesk', sans-serif", fontSize: "1.1rem", fontWeight: 700, color: "#0f172a" },
   panelSub: { fontSize: "0.8rem", color: "#64748b", marginTop: "2px" },
-  primaryBtn: { background: "#0038a8", color: "#fff", border: "none", borderRadius: "4px", padding: "10px 16px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", transition: "background 0.2s" },
-  secondaryBtn: { background: "#fff", color: "#475569", border: "1px solid #cbd5e1", borderRadius: "4px", padding: "8px 14px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", display: "inline-block", textAlign: "center" },
+  primaryBtn: { height: "36px", boxSizing: "border-box", background: "#0038a8", color: "#fff", border: "1px solid #0038a8", borderRadius: "4px", padding: "0 16px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", margin: 0, transition: "background 0.2s" },
+  secondaryBtn: { height: "36px", boxSizing: "border-box", background: "#fff", color: "#475569", border: "1px solid #cbd5e1", borderRadius: "4px", padding: "0 14px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center", textAlign: "center", margin: 0 },
 
   form: { background: "#f8fafc", padding: "20px", borderRadius: "8px", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: "16px", marginBottom: "15px" },
   formGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "16px" },
