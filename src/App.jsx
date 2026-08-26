@@ -74,6 +74,12 @@ function AppContent() {
       case "checklist": return <Checklist />;
       case "tickets": return <Tickets />;
       
+      // Assets Full Registry Views
+      case "assets": return <AssetManagement />;
+      case "asset": return <AssetManagement />;
+      case "asset_management": return <AssetManagement />;
+      case "asset_lifecycle": return <AssetManagement />;
+
       // IT Assets Hierarchical Views
       case "it_assets": return <AssetManagement defaultDivision="IT Assets" />;
       case "laptop": return <AssetManagement defaultDivision="IT Assets" defaultCategory="Laptop" />;
