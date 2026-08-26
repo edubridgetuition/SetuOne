@@ -1158,8 +1158,8 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
                 </div>
 
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Asset Name</label>
-                  <input style={styles.input} required value={addForm.name} onChange={e => setAddForm({ ...addForm, name: e.target.value })} placeholder="Executive Office Laptop" />
+                  <label style={styles.label}>Asset Model Name</label>
+                  <input style={styles.input} required value={addForm.name} onChange={e => setAddForm({ ...addForm, name: e.target.value })} placeholder="e.g. Latitude 5420, ThinkPad E14" />
                 </div>
 
                 <div style={styles.formGroup}>
@@ -1343,7 +1343,7 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
             <table style={styles.table}>
               <thead>
                 <tr>
-                  {["Asset Code", "Asset Name", "Category", "Location", "Serial No", "Custodian", "Status"].map(h => (
+                  {["Asset Code", "Asset Model Name", "Category", "Location", "Serial No", "Custodian", "Status"].map(h => (
                     <th key={h} style={styles.th}>{h}</th>
                   ))}
                 </tr>
@@ -1419,7 +1419,7 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
                   </div>
                   
                   <div style={styles.formGroup}>
-                    <label style={styles.label}>Asset Name</label>
+                    <label style={styles.label}>Asset Model Name</label>
                     <input style={styles.input} required value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
                   </div>
 
@@ -1560,7 +1560,7 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
                   <div style={styles.descBox}>
                     <div style={styles.muted}>Asset Specifications Details</div>
                     <div style={styles.specTable}>
-                      <div><strong>Asset Name:</strong> {assetDetails.basic.name}</div>
+                      <div><strong>Asset Model Name:</strong> {assetDetails.basic.name}</div>
                       <div><strong>Asset Type:</strong> {assetDetails.basic.assetType || "Other"}</div>
                       <div><strong>Make Brand:</strong> {assetDetails.basic.makeBrand || "N/A"}</div>
                       <div><strong>Serial Tag:</strong> {assetDetails.basic.serialNo || "N/A"}</div>
