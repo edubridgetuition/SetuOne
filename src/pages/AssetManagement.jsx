@@ -75,7 +75,7 @@ export function getCategoryPrefix(categoryName) {
   return clean.length >= 3 ? clean.slice(0, 3) : "AST";
 }
 
-// Enterprise 5-Part Asset Code Builder: [Company Code]-[Location]-[Department]-[Category]-[Sequence]
+// Enterprise 4-Part Asset Code Builder: [Company Code]-[Department]-[Category]-[Sequence]
 export function buildEnterpriseAssetTag(companyName, locationName, division, categoryName, customPrefix, seqNum, customCompanyPrefix = "O2C") {
   let co = customCompanyPrefix ? customCompanyPrefix.trim().toUpperCase() : "";
   if (!co) {
@@ -93,19 +93,11 @@ export function buildEnterpriseAssetTag(companyName, locationName, division, cat
   }
   if (!co || co === "ONP") co = "O2C";
 
-  let loc = "";
-  if (locationName && locationName.trim() && !/^(3rd|floor|room|warehouse|pending|unassigned)/i.test(locationName.trim())) {
-    const cleanLoc = locationName.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-    if (cleanLoc.length >= 3) {
-      loc = cleanLoc.slice(0, 3);
-    }
-  }
-
   const dept = division === "Facility Assets" ? "FAC" : "IT";
   const cat = customPrefix || getCategoryPrefix(categoryName);
 
   const seqStr = String(seqNum).padStart(4, "0");
-  return loc ? `${co}-${loc}-${dept}-${cat}-${seqStr}` : `${co}-${dept}-${cat}-${seqStr}`;
+  return `${co}-${dept}-${cat}-${seqStr}`;
 }
 
 export default function AssetManagement({ defaultDivision = "", defaultCategory = "" }) {
@@ -631,9 +623,9 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
     }
   }
 
-  // Standardize existing non-uniform asset codes to 5-part Enterprise Format
+  // Standardize existing non-uniform asset codes to 4-part Enterprise Format
   async function handleStandardizeExistingAssets() {
-    if (!window.confirm("Standardize all existing asset tags to 5-part Enterprise Format [Company]-[Location]-[Dept]-[Category]-[Seq]?")) return;
+    if (!window.confirm("Standardize all existing asset tags to 4-part Enterprise Format [Company]-[Dept]-[Category]-[Seq]?")) return;
     
     let updatedCount = 0;
     const companyName = session?.companyName || "O2C";
@@ -642,13 +634,12 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
     for (let i = 0; i < assets.length; i++) {
       const a = assets[i];
       const categoryName = a.category || "General";
-      const locationName = a.location || "Ahmedabad";
       const division = a.assetType?.includes("Facility") ? "Facility Assets" : "IT Assets";
       
-      const catKey = `${locationName}_${division}_${categoryName}`;
+      const catKey = `${division}_${categoryName}`;
       categoryCounter[catKey] = (categoryCounter[catKey] || 0) + 1;
       
-      const newTag = buildEnterpriseAssetTag(companyName, locationName, division, categoryName, "", categoryCounter[catKey]);
+      const newTag = buildEnterpriseAssetTag(companyName, "", division, categoryName, "", categoryCounter[catKey]);
       
       if (a.code !== newTag) {
         await updateAsset(a.id, { ...a, code: newTag });
@@ -656,7 +647,7 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
       }
     }
     
-    alert(`Successfully standardized ${updatedCount} asset tag(s) to 5-part Enterprise format!`);
+    alert(`Successfully standardized ${updatedCount} asset tag(s) to 4-part Enterprise format!`);
     loadAssets();
   }
 
@@ -1093,14 +1084,14 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
               <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: "6px", padding: "12px", marginBottom: "4px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#1e40af", textTransform: "uppercase", letterSpacing: "1px" }}>
-                    🏷️ Recommended 5-Part Enterprise Asset Tag Preview:
+                    🏷️ Recommended 4-Part Enterprise Asset Tag Preview:
                   </div>
                   <div style={{ fontFamily: "'Space Grotesk', monospace", fontSize: "1.15rem", fontWeight: 700, color: "#1e3a8a", marginTop: "2px" }}>
                     {livePreviewTag}
                   </div>
                 </div>
                 <div style={{ fontSize: "0.72rem", color: "#3b82f6", textAlign: "right" }}>
-                  Format: [Company]-[Location]-[Dept]-[Category]-[Seq]
+                  Format: [Company]-[Dept]-[Category]-[Seq]
                 </div>
               </div>
 
