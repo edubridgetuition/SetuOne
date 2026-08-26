@@ -691,7 +691,8 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
       const sequenceNum = baseNum + q;
       const generatedCode = buildEnterpriseAssetTag(companyName, locationName, addForm.division, categoryName, addForm.customPrefix, sequenceNum, addForm.companyPrefix);
       
-      const barcodeValue = `${generatedCode} | ${locationName} (Floor ${addForm.floorNumber || "N/A"}, Room ${addForm.roomNumber || "N/A"}) | ${addForm.purchaseDate || "N/A"}`;
+      const effectivePurchaseDate = addForm.invoiceDate || addForm.purchaseDate || new Date().toISOString().split("T")[0];
+      const barcodeValue = `${generatedCode} | ${locationName} | ${effectivePurchaseDate}`;
 
       const res = await createAsset({
         code: generatedCode,
@@ -700,8 +701,8 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
         brandId: addForm.brandId || null,
         modelId: addForm.modelId || null,
         locationId: addForm.locationId || assetMetadata?.locations[0]?.id || null,
-        purchaseDate: addForm.purchaseDate || null,
-        warrantyExpiry: addForm.purchaseDate ? new Date(new Date(addForm.purchaseDate).setMonth(new Date(addForm.purchaseDate).getMonth() + Number(addForm.warrantyMonths))).toISOString().split("T")[0] : null,
+        purchaseDate: effectivePurchaseDate,
+        warrantyExpiry: effectivePurchaseDate ? new Date(new Date(effectivePurchaseDate).setMonth(new Date(effectivePurchaseDate).getMonth() + Number(addForm.warrantyMonths))).toISOString().split("T")[0] : null,
         purchaseCost: Number(addForm.purchaseCost || 0),
         purchaseQty: 1,
         invoiceNo: addForm.invoiceNo || null,
@@ -1200,7 +1201,7 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
 
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Invoice Date</label>
-                  <input style={styles.input} type="date" value={addForm.invoiceDate} onChange={e => setAddForm({ ...addForm, invoiceDate: e.target.value })} />
+                  <input style={styles.input} type="date" value={addForm.invoiceDate} onChange={e => setAddForm({ ...addForm, invoiceDate: e.target.value, purchaseDate: e.target.value })} />
                 </div>
 
                 <div style={styles.formGroup}>
