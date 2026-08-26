@@ -1469,20 +1469,20 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
                     <div style={{ overflowX: "auto", marginTop: "10px" }}>
                       <table style={styles.ledgerTable}>
                         <thead>
-                          <tr>
-                            <th>Year</th>
-                            <th>Opening (₹)</th>
-                            <th>Depreciation (₹)</th>
-                            <th>Closing (₹)</th>
+                          <tr style={{ background: "#f1f5f9", borderBottom: "1px solid #cbd5e1" }}>
+                            <th style={styles.ledgerThLeft}>Year</th>
+                            <th style={styles.ledgerThRight}>Opening (₹)</th>
+                            <th style={styles.ledgerThRight}>Depreciation (₹)</th>
+                            <th style={styles.ledgerThRight}>Closing (₹)</th>
                           </tr>
                         </thead>
                         <tbody>
                           {depreciationSchedule.map(row => (
-                            <tr key={row.year}>
-                              <td><strong>{row.year}</strong></td>
-                              <td>{row.opening}</td>
-                              <td style={{ color: "#ef4444" }}>-{row.deduction}</td>
-                              <td><strong>{row.closing}</strong></td>
+                            <tr key={row.year} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                              <td style={styles.ledgerTdLeft}><strong>{row.year}</strong></td>
+                              <td style={styles.ledgerTdRight}>{row.opening}</td>
+                              <td style={{ ...styles.ledgerTdRight, color: "#ef4444", fontWeight: 600 }}>-{row.deduction}</td>
+                              <td style={styles.ledgerTdRight}><strong>{row.closing}</strong></td>
                             </tr>
                           ))}
                         </tbody>
@@ -1741,6 +1741,10 @@ const styles = {
   specTable: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 14px", fontSize: "0.78rem", color: "#334155", marginTop: "5px" },
   
   ledgerTable: { width: "100%", borderCollapse: "collapse", fontSize: "0.76rem" },
+  ledgerThLeft: { textTransform: "uppercase", fontSize: "0.68rem", fontWeight: 700, color: "#475569", padding: "10px 14px", textAlign: "left", letterSpacing: "0.5px" },
+  ledgerThRight: { textTransform: "uppercase", fontSize: "0.68rem", fontWeight: 700, color: "#475569", padding: "10px 14px", textAlign: "right", letterSpacing: "0.5px" },
+  ledgerTdLeft: { padding: "10px 14px", fontSize: "0.8rem", color: "#1e293b", textAlign: "left" },
+  ledgerTdRight: { padding: "10px 14px", fontSize: "0.8rem", color: "#1e293b", textAlign: "right" },
   disposalAlert: { background: "#fef3c7", border: "1px solid #f59e0b", color: "#b45309", padding: "12px", borderRadius: "6px", fontSize: "0.78rem", marginBottom: "20px", display: "flex", flexDirection: "column", gap: "4px" },
 
   timelineBox: { border: "1px solid #e2e8f0", borderRadius: "6px", padding: "16px", marginBottom: "20px", background: "#fcfcfd" },
