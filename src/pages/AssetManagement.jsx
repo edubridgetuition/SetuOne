@@ -428,17 +428,17 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
 
   // Sync default options when metadata loads
   useEffect(() => {
-    if (assetMetadata && !addForm.categoryId) {
+    if (assetMetadata && (!addForm.categoryId || !addForm.locationId)) {
       const firstCat = filteredCategories[0] || assetMetadata.categories[0];
       const defaultTypes = firstCat ? (categoryAssetTypes[firstCat.name] || []) : [];
       setAddForm(prev => ({
         ...prev,
-        categoryId: firstCat?.id || "",
-        brandId: assetMetadata.brands[0]?.id || "",
-        modelId: assetMetadata.models[0]?.id || "",
-        locationId: "",
-        assetType: defaultTypes[0]?.name || "Other",
-        customPrefix: defaultTypes[0]?.prefix || "AST"
+        categoryId: prev.categoryId || firstCat?.id || "",
+        brandId: prev.brandId || assetMetadata.brands[0]?.id || "",
+        modelId: prev.modelId || assetMetadata.models[0]?.id || "",
+        locationId: prev.locationId || assetMetadata.locations[0]?.id || "",
+        assetType: prev.assetType || defaultTypes[0]?.name || "Other",
+        customPrefix: prev.customPrefix || getCategoryPrefix(firstCat?.name)
       }));
     }
   }, [assetMetadata]);
@@ -1210,9 +1210,12 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
 
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Branch Location</label>
-                  <select style={styles.input} value={addForm.locationId} onChange={e => setAddForm({ ...addForm, locationId: e.target.value })}>
-                    <option value="">Warehouse / Pending Allocation</option>
-                    {assetMetadata?.locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                  <select style={styles.input} required value={addForm.locationId} onChange={e => setAddForm({ ...addForm, locationId: e.target.value })}>
+                    {assetMetadata?.locations.length > 0 ? (
+                      assetMetadata.locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)
+                    ) : (
+                      <option value="">Warehouse / Pending Allocation</option>
+                    )}
                   </select>
                 </div>
 

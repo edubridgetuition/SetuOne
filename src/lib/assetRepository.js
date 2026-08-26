@@ -284,6 +284,12 @@ export async function fetchAssetMetadata() {
 // Create new asset dynamically checking schema attributes validation
 export async function createAsset(assetData, tenantId) {
   try {
+    let finalLocationId = assetData.locationId;
+    if (!finalLocationId) {
+      const { data: loc } = await supabase.from('locations').select('id').limit(1).single();
+      finalLocationId = loc?.id;
+    }
+
     const { data, error } = await supabase
       .from('assets')
       .insert({
@@ -291,7 +297,7 @@ export async function createAsset(assetData, tenantId) {
         category_id: assetData.categoryId,
         brand_id: assetData.brandId || null,
         model_id: assetData.modelId || null,
-        location_id: assetData.locationId,
+        location_id: finalLocationId,
         asset_code: assetData.code,
         name: assetData.name,
         attributes: assetData.attributes || {},
