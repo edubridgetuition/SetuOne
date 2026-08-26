@@ -324,7 +324,7 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
     disposeReason: ""
   });
 
-  const [assignForm, setAssignForm] = useState({ employeeId: "", remarks: "" });
+  const [assignForm, setAssignForm] = useState({ employeeId: "", locationId: "", floorNumber: "", roomNumber: "", remarks: "" });
   const [uploadForm, setUploadForm] = useState({ category: "Warranty", fileName: "", fileBlob: null });
 
   useEffect(() => {
@@ -755,10 +755,18 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
     if (!selectedId) return;
     const res = await assignAsset(selectedId, assignForm.employeeId, assignForm.remarks);
     if (res) {
+      if (assignForm.locationId || assignForm.floorNumber || assignForm.roomNumber) {
+        await updateAsset(selectedId, {
+          ...assetDetails?.basic,
+          locationId: assignForm.locationId || assetDetails?.basic?.locationId,
+          floorNumber: assignForm.floorNumber || assetDetails?.basic?.floorNumber,
+          roomNumber: assignForm.roomNumber || assetDetails?.basic?.roomNumber
+        });
+      }
       setSelectedId(null);
       setSelectedId(selectedId);
       setShowAssignForm(false);
-      setAssignForm({ employeeId: "", remarks: "" });
+      setAssignForm({ employeeId: "", locationId: "", floorNumber: "", roomNumber: "", remarks: "" });
     }
   }
 
@@ -1196,8 +1204,8 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
                 </div>
 
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Invoice Vendor Company</label>
-                  <input style={styles.input} value={addForm.invoiceCompany} onChange={e => setAddForm({ ...addForm, invoiceCompany: e.target.value })} placeholder="Godrej Office Furniture" />
+                  <label style={styles.label}>Vendor Name</label>
+                  <input style={styles.input} value={addForm.invoiceCompany} onChange={e => setAddForm({ ...addForm, invoiceCompany: e.target.value })} placeholder="e.g. Dell India, Godrej Solutions" />
                 </div>
 
                 <div style={styles.formGroup}>
@@ -1506,7 +1514,7 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
                   </div>
 
                   <div style={styles.formGroup}>
-                    <label style={styles.label}>Invoice Vendor</label>
+                    <label style={styles.label}>Vendor Name</label>
                     <input style={styles.input} value={editForm.invoiceCompany} onChange={e => setEditForm({ ...editForm, invoiceCompany: e.target.value })} />
                   </div>
 
@@ -1580,7 +1588,7 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
                       <div><strong>Purchase Qty:</strong> {assetDetails.basic.purchaseQty} Unit(s)</div>
                       <div><strong>Warranty:</strong> {assetDetails.basic.warrantyExpiry || "N/A"} ({assetDetails.basic.warrantyMonths || 0} Months)</div>
                       <div><strong>Invoice No:</strong> {assetDetails.basic.invoiceNo || "N/A"}</div>
-                      <div><strong>Invoice Vendor:</strong> {assetDetails.basic.invoiceCompany || "N/A"}</div>
+                      <div><strong>Vendor Name:</strong> {assetDetails.basic.invoiceCompany || "N/A"}</div>
                       <div><strong>GST Type:</strong> {assetDetails.basic.gstType === "IGST" ? "IGST (Interstate)" : "CGST + SGST (Local)"}</div>
                       {assetDetails.basic.gstType === "IGST" ? (
                         <div><strong>IGST Amount:</strong> ₹{Number(assetDetails.basic.igstAmount).toFixed(2)} ({assetDetails.basic.igstRate}%)</div>
@@ -1751,7 +1759,7 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
 
                   {/* Custody Checkout Employee Form */}
                   {showAssignForm && (
-                    <form onSubmit={handleAssignSubmit} style={{ ...styles.form, marginTop: "10px" }}>
+                    <form onSubmit={handleAssignSubmit} style={{ ...styles.form, marginTop: "10px", background: "#f8fafc", padding: "16px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
                       <div style={styles.formGroup}>
                         <label style={styles.label}>Select Custodian Employee</label>
                         <select style={styles.input} required value={assignForm.employeeId} onChange={e => setAssignForm({ ...assignForm, employeeId: e.target.value })}>
@@ -1759,11 +1767,33 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
                           {assetMetadata?.employees.map(emp => <option key={emp.id} value={emp.id}>{emp.full_name}</option>)}
                         </select>
                       </div>
+
+                      {/* 3 Location Placement Fields from Screenshot */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Branch Location</label>
+                          <select style={styles.input} value={assignForm.locationId} onChange={e => setAssignForm({ ...assignForm, locationId: e.target.value })}>
+                            <option value="">Warehouse / Pending Allocation</option>
+                            {assetMetadata?.locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                          </select>
+                        </div>
+
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Floor Number</label>
+                          <input style={styles.input} placeholder="e.g. 2nd Floor" value={assignForm.floorNumber} onChange={e => setAssignForm({ ...assignForm, floorNumber: e.target.value })} />
+                        </div>
+
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Room Number / Desk</label>
+                          <input style={styles.input} placeholder="e.g. Room 205" value={assignForm.roomNumber} onChange={e => setAssignForm({ ...assignForm, roomNumber: e.target.value })} />
+                        </div>
+                      </div>
+
                       <div style={styles.formGroup}>
                         <label style={styles.label}>Issuance Comments</label>
                         <input style={styles.input} placeholder="Laptop issued for client code deployment." value={assignForm.remarks} onChange={e => setAssignForm({ ...assignForm, remarks: e.target.value })} />
                       </div>
-                      <button style={styles.primaryBtn} type="submit">Assign Custodian</button>
+                      <button style={styles.primaryBtn} type="submit">Assign Custodian & Placement</button>
                     </form>
                   )}
 
