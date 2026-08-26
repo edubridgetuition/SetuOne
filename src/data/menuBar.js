@@ -20,6 +20,7 @@ export const menuBar = [
     label: "Asset",
     subItems: [
       { key: "assets", label: "Asset Management" },
+      { key: "assigned_assets", label: "Assigned Assets" },
       { key: "inventory", label: "Inventory" },
       { key: "it_assets", label: "IT Assets" },
       { key: "facility_assets", label: "Facility Assets" }

@@ -730,11 +730,11 @@ export function AppProvider({ children }) {
     const res = await apiReturnAsset(assetId, remarks);
     if (res.success) {
       await loadAssets({}, 1, 10);
-      return res.data;
+      return { success: true, data: res.data, message: res.message || "Asset returned to store." };
     } else {
       alert("Error returning asset: " + res.message);
     }
-    return null;
+    return res || { success: false, message: "Return failed" };
   }
 
   async function transferAsset(assetId, targetProfileId, remarks = "") {

@@ -23,6 +23,7 @@ import VendorManagement from "./pages/VendorManagement";
 import GuestHouseManagement from "./pages/GuestHouseManagement";
 import AssetDashboard from "./pages/AssetDashboard";
 import MaintenanceDashboard from "./pages/MaintenanceDashboard";
+import AssignedAssets from "./pages/AssignedAssets";
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -79,6 +80,7 @@ function AppContent() {
       case "asset": return <AssetManagement />;
       case "asset_management": return <AssetManagement />;
       case "asset_lifecycle": return <AssetManagement />;
+      case "assigned_assets": return <AssignedAssets />;
 
       // IT Assets Hierarchical Views
       case "it_assets": return <AssetManagement defaultDivision="IT Assets" />;
