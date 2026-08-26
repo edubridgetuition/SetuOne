@@ -699,7 +699,7 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
         categoryId: addForm.categoryId,
         brandId: addForm.brandId || null,
         modelId: addForm.modelId || null,
-        locationId: addForm.locationId || null,
+        locationId: addForm.locationId || assetMetadata?.locations[0]?.id || null,
         purchaseDate: addForm.purchaseDate || null,
         warrantyExpiry: addForm.purchaseDate ? new Date(new Date(addForm.purchaseDate).setMonth(new Date(addForm.purchaseDate).getMonth() + Number(addForm.warrantyMonths))).toISOString().split("T")[0] : null,
         purchaseCost: Number(addForm.purchaseCost || 0),
@@ -1206,27 +1206,6 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Vendor Name</label>
                   <input style={styles.input} value={addForm.invoiceCompany} onChange={e => setAddForm({ ...addForm, invoiceCompany: e.target.value })} placeholder="e.g. Dell India, Godrej Solutions" />
-                </div>
-
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Branch Location</label>
-                  <select style={styles.input} required value={addForm.locationId} onChange={e => setAddForm({ ...addForm, locationId: e.target.value })}>
-                    {assetMetadata?.locations.length > 0 ? (
-                      assetMetadata.locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)
-                    ) : (
-                      <option value="">Warehouse / Pending Allocation</option>
-                    )}
-                  </select>
-                </div>
-
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Floor Number</label>
-                  <input style={styles.input} value={addForm.floorNumber} onChange={e => setAddForm({ ...addForm, floorNumber: e.target.value })} placeholder="e.g. 2nd Floor" />
-                </div>
-
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Room Number / Desk</label>
-                  <input style={styles.input} value={addForm.roomNumber} onChange={e => setAddForm({ ...addForm, roomNumber: e.target.value })} placeholder="e.g. Room 205" />
                 </div>
               </div>
 
