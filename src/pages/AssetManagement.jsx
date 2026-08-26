@@ -58,6 +58,23 @@ function BarcodeRenderer({ value }) {
   );
 }
 
+export function getCategoryPrefix(categoryName) {
+  if (!categoryName) return "AST";
+  const lower = categoryName.toLowerCase();
+  if (lower.includes("laptop")) return "LAP";
+  if (lower.includes("desktop") || lower.includes("cpu") || lower.includes("workstation")) return "CPU";
+  if (lower.includes("monitor") || lower.includes("display")) return "MON";
+  if (lower.includes("printer") || lower.includes("scanner")) return "PRN";
+  if (lower.includes("furniture") || lower.includes("chair") || lower.includes("table")) return "FUR";
+  if (lower.includes("air") || lower.includes("ac") || lower.includes("hvac")) return "AC";
+  if (lower.includes("generator") || lower.includes("machinery")) return "MAC";
+  if (lower.includes("electric") || lower.includes("lighting") || lower.includes("ups")) return "ELE";
+  if (lower.includes("vehicle") || lower.includes("car")) return "VEH";
+  
+  const clean = categoryName.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  return clean.length >= 3 ? clean.slice(0, 3) : "AST";
+}
+
 // Enterprise 5-Part Asset Code Builder: [Company Code]-[Location]-[Department]-[Category]-[Sequence]
 export function buildEnterpriseAssetTag(companyName, locationName, division, categoryName, customPrefix, seqNum, customCompanyPrefix = "") {
   let co = customCompanyPrefix ? customCompanyPrefix.trim().toUpperCase() : "";
@@ -85,21 +102,7 @@ export function buildEnterpriseAssetTag(companyName, locationName, division, cat
   }
 
   const dept = division === "Facility Assets" ? "FAC" : "IT";
-
-  let cat = customPrefix || "AST";
-  if (categoryName) {
-    const lower = categoryName.toLowerCase();
-    if (lower.includes("laptop")) cat = "LAP";
-    else if (lower.includes("desktop") || lower.includes("cpu") || lower.includes("workstation")) cat = "CPU";
-    else if (lower.includes("monitor") || lower.includes("display")) cat = "MON";
-    else if (lower.includes("printer") || lower.includes("scanner")) cat = "PRN";
-    else if (lower.includes("furniture") || lower.includes("chair") || lower.includes("table")) cat = "FUR";
-    else if (lower.includes("air") || lower.includes("ac") || lower.includes("hvac")) cat = "AC";
-    else if (lower.includes("generator") || lower.includes("machinery")) cat = "MAC";
-    else if (categoryName.trim().replace(/[^a-zA-Z0-9]/g, "").length >= 3) {
-      cat = categoryName.trim().replace(/[^a-zA-Z0-9]/g, "").slice(0, 3).toUpperCase();
-    }
-  }
+  const cat = customPrefix || getCategoryPrefix(categoryName);
 
   const seqStr = String(seqNum).padStart(4, "0");
   return `${co}-${loc}-${dept}-${cat}-${seqStr}`;
@@ -1112,7 +1115,13 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
 
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Asset Category</label>
-                  <select style={styles.input} value={addForm.categoryId} onChange={e => setAddForm({ ...addForm, categoryId: e.target.value })}>
+                  <select style={styles.input} value={addForm.categoryId} onChange={e => {
+                    const catId = e.target.value;
+                    const catObj = assetMetadata?.categories.find(c => c.id === catId);
+                    const catName = catObj?.name || "";
+                    const autoCatPrefix = getCategoryPrefix(catName);
+                    setAddForm({ ...addForm, categoryId: catId, customPrefix: autoCatPrefix });
+                  }}>
                     {filteredCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
@@ -1135,8 +1144,8 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
                 </div>
 
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Category Prefix Code</label>
-                  <input style={styles.input} required value={addForm.customPrefix} onChange={e => setAddForm({ ...addForm, customPrefix: e.target.value.toUpperCase() })} placeholder="e.g. LAP, SIM, CHR" />
+                  <label style={styles.label}>Category Prefix Code (Auto-driven)</label>
+                  <input style={{ ...styles.input, background: "#f1f5f9", color: "#475569", cursor: "not-allowed" }} readOnly value={addForm.customPrefix || getCategoryPrefix(assetMetadata?.categories.find(c => c.id === addForm.categoryId)?.name)} placeholder="Auto-driven by Category" />
                 </div>
 
                 <div style={styles.formGroup}>
