@@ -106,6 +106,7 @@ export function buildEnterpriseAssetTag(companyName, locationName, division, cat
 
 export default function AssetManagement({ defaultDivision = "", defaultCategory = "" }) {
   const {
+    session,
     assets,
     totalAssetsCount,
     assetMetadata,
