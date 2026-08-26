@@ -76,20 +76,22 @@ export function getCategoryPrefix(categoryName) {
 }
 
 // Enterprise 5-Part Asset Code Builder: [Company Code]-[Location]-[Department]-[Category]-[Sequence]
-export function buildEnterpriseAssetTag(companyName, locationName, division, categoryName, customPrefix, seqNum, customCompanyPrefix = "") {
+export function buildEnterpriseAssetTag(companyName, locationName, division, categoryName, customPrefix, seqNum, customCompanyPrefix = "O2C") {
   let co = customCompanyPrefix ? customCompanyPrefix.trim().toUpperCase() : "";
-  if (!co && companyName && companyName.trim()) {
-    const cleanCo = companyName.trim().replace(/\s+(pvt|ltd|inc|llc|corp|co|private|limited)$/i, "");
-    const words = cleanCo.split(/\s+/).filter(Boolean);
-    if (words.length >= 3) {
-      co = (words[0][0] + words[1][0] + words[2][0]).toUpperCase();
-    } else if (words.length === 2) {
-      co = (words[0].slice(0, 2) + words[1][0]).toUpperCase();
-    } else if (words.length === 1 && words[0].length >= 3) {
-      co = words[0].slice(0, 3).toUpperCase();
+  if (!co) {
+    if (companyName && companyName.trim()) {
+      const cleanCo = companyName.trim().replace(/\s+(pvt|ltd|inc|llc|corp|co|private|limited)$/i, "");
+      const words = cleanCo.split(/\s+/).filter(Boolean);
+      if (words.length >= 3) {
+        co = (words[0][0] + words[1][0] + words[2][0]).toUpperCase();
+      } else if (words.length === 2) {
+        co = (words[0].slice(0, 2) + words[1][0]).toUpperCase();
+      } else if (words.length === 1 && words[0].length >= 3) {
+        co = words[0].slice(0, 3).toUpperCase();
+      }
     }
   }
-  if (!co) co = "O2C";
+  if (!co || co === "ONP") co = "O2C";
 
   let loc = "";
   if (locationName && locationName.trim() && !/^(3rd|floor|room|warehouse|pending|unassigned)/i.test(locationName.trim())) {
@@ -226,7 +228,7 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
   // Forms states
   const [addForm, setAddForm] = useState({
     division: "IT Assets",
-    companyPrefix: "",
+    companyPrefix: "O2C",
     name: "",
     categoryId: "",
     assetType: "",
