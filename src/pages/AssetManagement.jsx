@@ -59,9 +59,9 @@ function BarcodeRenderer({ value }) {
 }
 
 // Enterprise 5-Part Asset Code Builder: [Company Code]-[Location]-[Department]-[Category]-[Sequence]
-export function buildEnterpriseAssetTag(companyName, locationName, division, categoryName, customPrefix, seqNum) {
-  let co = "O2C";
-  if (companyName && companyName.trim()) {
+export function buildEnterpriseAssetTag(companyName, locationName, division, categoryName, customPrefix, seqNum, customCompanyPrefix = "") {
+  let co = customCompanyPrefix ? customCompanyPrefix.trim().toUpperCase() : "";
+  if (!co && companyName && companyName.trim()) {
     const cleanCo = companyName.trim().replace(/\s+(pvt|ltd|inc|llc|corp|co|private|limited)$/i, "");
     const words = cleanCo.split(/\s+/).filter(Boolean);
     if (words.length >= 3) {
@@ -72,6 +72,7 @@ export function buildEnterpriseAssetTag(companyName, locationName, division, cat
       co = words[0].slice(0, 3).toUpperCase();
     }
   }
+  if (!co) co = "O2C";
 
   let loc = "AHM";
   if (locationName && locationName.trim()) {
@@ -224,6 +225,7 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
   // Forms states
   const [addForm, setAddForm] = useState({
     division: "IT Assets",
+    companyPrefix: "",
     name: "",
     categoryId: "",
     assetType: "",
@@ -665,7 +667,7 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
     const categoryObj = assetMetadata?.categories.find(c => c.id === addForm.categoryId);
     const categoryName = categoryObj?.name || "Laptop";
 
-    const sampleTag = buildEnterpriseAssetTag(companyName, locationName, addForm.division, categoryName, addForm.customPrefix, 0);
+    const sampleTag = buildEnterpriseAssetTag(companyName, locationName, addForm.division, categoryName, addForm.customPrefix, 0, addForm.companyPrefix);
     const stem = sampleTag.substring(0, sampleTag.lastIndexOf("-"));
 
     let baseNum = 0;
@@ -684,7 +686,7 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
 
     for (let q = 1; q <= qty; q++) {
       const sequenceNum = baseNum + q;
-      const generatedCode = buildEnterpriseAssetTag(companyName, locationName, addForm.division, categoryName, addForm.customPrefix, sequenceNum);
+      const generatedCode = buildEnterpriseAssetTag(companyName, locationName, addForm.division, categoryName, addForm.customPrefix, sequenceNum, addForm.companyPrefix);
       
       const barcodeValue = `${generatedCode} | ${locationName} (Floor ${addForm.floorNumber || "N/A"}, Room ${addForm.roomNumber || "N/A"}) | ${addForm.purchaseDate || "N/A"}`;
 
@@ -1044,7 +1046,8 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
     addForm.division,
     previewCatName,
     addForm.customPrefix,
-    1
+    1,
+    addForm.companyPrefix
   );
 
   return (
@@ -1127,7 +1130,12 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
                 </div>
 
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Custom Prefix Code</label>
+                  <label style={styles.label}>Company Code Prefix</label>
+                  <input style={styles.input} value={addForm.companyPrefix} onChange={e => setAddForm({ ...addForm, companyPrefix: e.target.value.toUpperCase() })} placeholder="e.g. O2C, ABC (Default: Auto)" />
+                </div>
+
+                <div style={styles.formGroup}>
+                  <label style={styles.label}>Category Prefix Code</label>
                   <input style={styles.input} required value={addForm.customPrefix} onChange={e => setAddForm({ ...addForm, customPrefix: e.target.value.toUpperCase() })} placeholder="e.g. LAP, SIM, CHR" />
                 </div>
 
