@@ -1228,7 +1228,7 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
                 </tr>
               </thead>
               <tbody>
-                {assets.map(asset => (
+                {[...assets].sort((a, b) => (a.code || '').localeCompare(b.code || '', undefined, { numeric: true, sensitivity: 'base' })).map(asset => (
                   <tr key={asset.id} style={{ ...styles.tr, ...(selectedId === asset.id ? styles.trActive : {}) }} onClick={() => setSelectedId(asset.id)}>
                     <td style={styles.td}><strong>{asset.code}</strong></td>
                     <td style={styles.td}>{asset.name}</td>
