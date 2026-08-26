@@ -91,13 +91,11 @@ export function buildEnterpriseAssetTag(companyName, locationName, division, cat
   }
   if (!co) co = "O2C";
 
-  let loc = "AHM";
-  if (locationName && locationName.trim()) {
+  let loc = "";
+  if (locationName && locationName.trim() && !/^(3rd|floor|room|warehouse|pending|unassigned)/i.test(locationName.trim())) {
     const cleanLoc = locationName.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
     if (cleanLoc.length >= 3) {
       loc = cleanLoc.slice(0, 3);
-    } else {
-      loc = cleanLoc.padEnd(3, "X");
     }
   }
 
@@ -105,7 +103,7 @@ export function buildEnterpriseAssetTag(companyName, locationName, division, cat
   const cat = customPrefix || getCategoryPrefix(categoryName);
 
   const seqStr = String(seqNum).padStart(4, "0");
-  return `${co}-${loc}-${dept}-${cat}-${seqStr}`;
+  return loc ? `${co}-${loc}-${dept}-${cat}-${seqStr}` : `${co}-${dept}-${cat}-${seqStr}`;
 }
 
 export default function AssetManagement({ defaultDivision = "", defaultCategory = "" }) {
@@ -1050,7 +1048,7 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
   const isReadOnlyView = !!defaultCategory;
   const showAddFormEffective = showAddForm && !isReadOnlyView;
 
-  const previewLocName = assetMetadata?.locations.find(l => l.id === addForm.locationId)?.name || "Ahmedabad";
+  const previewLocName = "";
   const previewCatName = assetMetadata?.categories.find(c => c.id === addForm.categoryId)?.name || "Laptop";
   const livePreviewTag = buildEnterpriseAssetTag(
     session?.companyName || "O2C",
