@@ -613,13 +613,14 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
       }
     });
 
-    if (res.success) {
+    if (res && res.success !== false) {
       alert("Asset specifications updated successfully.");
       setIsEditing(false);
+      const currentSelected = selectedId;
       setSelectedId(null);
-      setSelectedId(selectedId);
+      setTimeout(() => setSelectedId(currentSelected), 50);
     } else {
-      alert("Failed to update specifications: " + res.message);
+      alert("Failed to update specifications: " + (res?.message || "Unknown error"));
     }
   }
 
@@ -1524,10 +1525,11 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
                       <div style={styles.muted}>Extended Specs</div>
                       <div style={styles.detailNo}>{assetDetails.basic.code}</div>
                     </div>
-                    <div style={{ display: "flex", gap: "6px" }}>
+                    <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
                       <button style={{ ...styles.secondaryBtn, color: "#0038a8", borderColor: "#0038a8" }} onClick={startEditing}>Edit details</button>
                       <button style={{ ...styles.secondaryBtn, color: "#ef4444", borderColor: "#ef4444" }} onClick={() => setShowDisposeForm(!showDisposeForm)}>Dispose/Stolen</button>
                       <button style={{ ...styles.secondaryBtn, color: "#94a3b8", borderColor: "#cbd5e1" }} onClick={handleArchiveSubmit}>Archive</button>
+                      <button style={{ ...styles.secondaryBtn, color: "#475569", borderColor: "#cbd5e1" }} onClick={() => { setSelectedId(null); setIsEditing(false); }} title="Close Panel">✕ Close</button>
                     </div>
                   </div>
 

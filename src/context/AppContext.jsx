@@ -697,11 +697,11 @@ export function AppProvider({ children }) {
     const res = await apiUpdateAsset(assetId, updates);
     if (res.success) {
       await loadAssets({}, 1, 10);
-      return res.data;
+      return { success: true, data: res.data, message: res.message || "Asset updated successfully." };
     } else {
       alert("Error updating asset: " + res.message);
     }
-    return null;
+    return res || { success: false, message: "Update failed" };
   }
 
   async function archiveAsset(assetId) {
