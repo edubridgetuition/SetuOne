@@ -608,15 +608,42 @@ const resetWidgetForm = () => {
               { key: "Jobs", label: "Schedulers" },
               { key: "Dashboards", label: "Dashboard Templates" },
               { key: "Logs", label: "Audit Trails" }
-            ].map(tab => (
-              <button
-                key={tab.key}
-                style={{ ...styles.tabBtn, ...(activeTab === tab.key ? styles.tabBtnActive : {}) }}
-                onClick={() => setActiveTab(tab.key)}
-              >
-                {tab.label}
-              </button>
-            ))}
+            ].map(tab => {
+              const isAct = activeTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  style={isAct ? {
+                    backgroundColor: "#0038a8",
+                    color: "#ffffff",
+                    border: "1.5px solid #0038a8",
+                    borderRadius: "6px",
+                    fontSize: "0.82rem",
+                    fontWeight: 700,
+                    padding: "8px 14px",
+                    cursor: "pointer",
+                    outline: "none",
+                    boxShadow: "0 3px 8px rgba(0, 56, 168, 0.4)",
+                    transform: "translateY(-1px)",
+                    transition: "all 0.15s ease-in-out"
+                  } : {
+                    backgroundColor: "#ffffff",
+                    color: "#475569",
+                    border: "1px solid #cbd5e1",
+                    borderRadius: "6px",
+                    fontSize: "0.82rem",
+                    fontWeight: 600,
+                    padding: "8px 14px",
+                    cursor: "pointer",
+                    outline: "none",
+                    transition: "all 0.15s ease-in-out"
+                  }}
+                  onClick={() => setActiveTab(tab.key)}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
 
           {/* TAB 1: COMPANY & BRANDING */}
