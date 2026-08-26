@@ -58,6 +58,52 @@ function BarcodeRenderer({ value }) {
   );
 }
 
+// Enterprise 5-Part Asset Code Builder: [Company Code]-[Location]-[Department]-[Category]-[Sequence]
+export function buildEnterpriseAssetTag(companyName, locationName, division, categoryName, customPrefix, seqNum) {
+  let co = "O2C";
+  if (companyName && companyName.trim()) {
+    const cleanCo = companyName.trim().replace(/\s+(pvt|ltd|inc|llc|corp|co|private|limited)$/i, "");
+    const words = cleanCo.split(/\s+/).filter(Boolean);
+    if (words.length >= 3) {
+      co = (words[0][0] + words[1][0] + words[2][0]).toUpperCase();
+    } else if (words.length === 2) {
+      co = (words[0].slice(0, 2) + words[1][0]).toUpperCase();
+    } else if (words.length === 1 && words[0].length >= 3) {
+      co = words[0].slice(0, 3).toUpperCase();
+    }
+  }
+
+  let loc = "AHM";
+  if (locationName && locationName.trim()) {
+    const cleanLoc = locationName.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    if (cleanLoc.length >= 3) {
+      loc = cleanLoc.slice(0, 3);
+    } else {
+      loc = cleanLoc.padEnd(3, "X");
+    }
+  }
+
+  const dept = division === "Facility Assets" ? "FAC" : "IT";
+
+  let cat = customPrefix || "AST";
+  if (categoryName) {
+    const lower = categoryName.toLowerCase();
+    if (lower.includes("laptop")) cat = "LAP";
+    else if (lower.includes("desktop") || lower.includes("cpu") || lower.includes("workstation")) cat = "CPU";
+    else if (lower.includes("monitor") || lower.includes("display")) cat = "MON";
+    else if (lower.includes("printer") || lower.includes("scanner")) cat = "PRN";
+    else if (lower.includes("furniture") || lower.includes("chair") || lower.includes("table")) cat = "FUR";
+    else if (lower.includes("air") || lower.includes("ac") || lower.includes("hvac")) cat = "AC";
+    else if (lower.includes("generator") || lower.includes("machinery")) cat = "MAC";
+    else if (categoryName.trim().replace(/[^a-zA-Z0-9]/g, "").length >= 3) {
+      cat = categoryName.trim().replace(/[^a-zA-Z0-9]/g, "").slice(0, 3).toUpperCase();
+    }
+  }
+
+  const seqStr = String(seqNum).padStart(4, "0");
+  return `${co}-${loc}-${dept}-${cat}-${seqStr}`;
+}
+
 export default function AssetManagement({ defaultDivision = "", defaultCategory = "" }) {
   const {
     assets,
@@ -579,16 +625,53 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
     }
   }
 
+  // Standardize existing non-uniform asset codes to 5-part Enterprise Format
+  async function handleStandardizeExistingAssets() {
+    if (!window.confirm("Standardize all existing asset tags to 5-part Enterprise Format [Company]-[Location]-[Dept]-[Category]-[Seq]?")) return;
+    
+    let updatedCount = 0;
+    const companyName = session?.companyName || "O2C";
+    const categoryCounter = {};
+
+    for (let i = 0; i < assets.length; i++) {
+      const a = assets[i];
+      const categoryName = a.category || "General";
+      const locationName = a.location || "Ahmedabad";
+      const division = a.assetType?.includes("Facility") ? "Facility Assets" : "IT Assets";
+      
+      const catKey = `${locationName}_${division}_${categoryName}`;
+      categoryCounter[catKey] = (categoryCounter[catKey] || 0) + 1;
+      
+      const newTag = buildEnterpriseAssetTag(companyName, locationName, division, categoryName, "", categoryCounter[catKey]);
+      
+      if (a.code !== newTag) {
+        await updateAsset(a.id, { ...a, code: newTag });
+        updatedCount++;
+      }
+    }
+    
+    alert(`Successfully standardized ${updatedCount} asset tag(s) to 5-part Enterprise format!`);
+    loadAssets();
+  }
+
   // Submit Handler for New Asset Creation (Supports Qty batch insertion)
   async function handleAddSubmit(e) {
     e.preventDefault();
     
-    const prefix = addForm.customPrefix || "AST";
+    const companyName = session?.companyName || "O2C";
+    const locationObj = assetMetadata?.locations.find(l => l.id === addForm.locationId);
+    const locationName = locationObj?.name || "Ahmedabad";
+    const categoryObj = assetMetadata?.categories.find(c => c.id === addForm.categoryId);
+    const categoryName = categoryObj?.name || "Laptop";
+
+    const sampleTag = buildEnterpriseAssetTag(companyName, locationName, addForm.division, categoryName, addForm.customPrefix, 0);
+    const stem = sampleTag.substring(0, sampleTag.lastIndexOf("-"));
+
     let baseNum = 0;
     assets.forEach(a => {
-      if (a.code && a.code.startsWith(prefix + "-")) {
+      if (a.code && a.code.startsWith(stem + "-")) {
         const parts = a.code.split("-");
-        const suffix = parseInt(parts[1], 10);
+        const suffix = parseInt(parts[parts.length - 1], 10);
         if (!isNaN(suffix) && suffix > baseNum) {
           baseNum = suffix;
         }
@@ -596,13 +679,11 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
     });
 
     const qty = Number(addForm.purchaseQty || 1);
-    const locationName = assetMetadata?.locations.find(l => l.id === addForm.locationId)?.name || "Warehouse/Pending Allocation";
-
     let successCount = 0;
 
     for (let q = 1; q <= qty; q++) {
       const sequenceNum = baseNum + q;
-      const generatedCode = `${prefix}-${String(sequenceNum).padStart(4, "0")}`;
+      const generatedCode = buildEnterpriseAssetTag(companyName, locationName, addForm.division, categoryName, addForm.customPrefix, sequenceNum);
       
       const barcodeValue = `${generatedCode} | ${locationName} (Floor ${addForm.floorNumber || "N/A"}, Room ${addForm.roomNumber || "N/A"}) | ${addForm.purchaseDate || "N/A"}`;
 
@@ -954,6 +1035,17 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
   const isReadOnlyView = !!defaultCategory;
   const showAddFormEffective = showAddForm && !isReadOnlyView;
 
+  const previewLocName = assetMetadata?.locations.find(l => l.id === addForm.locationId)?.name || "Ahmedabad";
+  const previewCatName = assetMetadata?.categories.find(c => c.id === addForm.categoryId)?.name || "Laptop";
+  const livePreviewTag = buildEnterpriseAssetTag(
+    session?.companyName || "O2C",
+    previewLocName,
+    addForm.division,
+    previewCatName,
+    addForm.customPrefix,
+    1
+  );
+
   return (
     <div style={styles.page}>
       <div style={styles.left}>
@@ -965,6 +1057,7 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
             </div>
             {!isReadOnlyView && (
               <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                <button style={styles.secondaryBtn} onClick={handleStandardizeExistingAssets} title="Convert all existing assets to [Company]-[Location]-[Dept]-[Category]-[Seq] format">⚡ Standardize Tags</button>
                 <button style={styles.secondaryBtn} onClick={downloadCsvTemplate}>Download CSV Template</button>
                 <label style={styles.secondaryBtn}>
                   Import CSV
@@ -980,6 +1073,21 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
           {/* Extended Asset Registration Form */}
           {showAddFormEffective && (
             <form onSubmit={handleAddSubmit} style={styles.form}>
+              {/* Live Enterprise Tag Preview Badge */}
+              <div style={{ background: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: "6px", padding: "12px", marginBottom: "4px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: "0.68rem", fontWeight: 700, color: "#1e40af", textTransform: "uppercase", letterSpacing: "1px" }}>
+                    🏷️ Recommended 5-Part Enterprise Asset Tag Preview:
+                  </div>
+                  <div style={{ fontFamily: "'Space Grotesk', monospace", fontSize: "1.15rem", fontWeight: 700, color: "#1e3a8a", marginTop: "2px" }}>
+                    {livePreviewTag}
+                  </div>
+                </div>
+                <div style={{ fontSize: "0.72rem", color: "#3b82f6", textAlign: "right" }}>
+                  Format: [Company]-[Location]-[Dept]-[Category]-[Seq]
+                </div>
+              </div>
+
               <div style={{ ...styles.panelTitle, fontSize: "0.85rem", borderBottom: "1px dashed #e2e8f0", paddingBottom: "8px" }}>
                 Basic Specifications
               </div>
