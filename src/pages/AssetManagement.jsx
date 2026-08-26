@@ -1433,8 +1433,8 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
                   </div>
 
                   <div style={styles.formGroup}>
-                    <label style={styles.label}>Asset Code</label>
-                    <input style={styles.input} required value={editForm.code} onChange={e => setEditForm({ ...editForm, code: e.target.value })} />
+                    <label style={styles.label}>Asset Code (Locked)</label>
+                    <input style={{ ...styles.input, background: "#f1f5f9", color: "#475569", cursor: "not-allowed" }} readOnly disabled value={editForm.code} />
                   </div>
 
                   <div style={styles.formGroup}>
