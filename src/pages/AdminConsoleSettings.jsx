@@ -1680,9 +1680,9 @@ const styles = {
   primaryBtn: { background: "#0038a8", color: "#fff", border: "none", borderRadius: "4px", padding: "10px 16px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" },
   secondaryBtn: { background: "#fff", color: "#64748b", border: "1px solid #cbd5e1", borderRadius: "4px", padding: "8px 14px", fontSize: "0.82rem", fontWeight: 600, cursor: "pointer" },
 
-  tabHeader: { display: "flex", gap: "6px", borderBottom: "2px solid #e2e8f0", paddingBottom: "10px", flexWrap: "wrap" },
-  tabBtn: { background: "none", border: "none", color: "#64748b", fontSize: "0.8rem", fontWeight: 600, padding: "8px 12px", cursor: "pointer", outline: "none" },
-  tabBtnActive: { color: "#0038a8", borderBottom: "2px solid #0038a8" },
+  tabHeader: { display: "flex", gap: "8px", borderBottom: "2px solid #e2e8f0", paddingBottom: "12px", flexWrap: "wrap", alignItems: "center" },
+  tabBtn: { background: "#f8fafc", color: "#475569", border: "1px solid #cbd5e1", borderRadius: "6px", fontSize: "0.82rem", fontWeight: 600, padding: "8px 14px", cursor: "pointer", outline: "none", transition: "all 0.2s ease-in-out", display: "inline-flex", alignItems: "center", justifyContent: "center", boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)" },
+  tabBtnActive: { background: "#0038a8", color: "#ffffff", borderColor: "#0038a8", fontWeight: 700, boxShadow: "0 3px 8px rgba(0, 56, 168, 0.35)", transform: "translateY(-1px)" },
 
   form: { background: "#f8fafc", padding: "20px", borderRadius: "4px", border: "1px solid #e2e8f0", display: "flex", flexDirection: "column", gap: "10px" },
   formGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "16px" },
