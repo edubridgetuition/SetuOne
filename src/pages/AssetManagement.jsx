@@ -180,7 +180,7 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
     name: "",
     categoryId: "",
     assetType: "",
-    customPrefix: "LAP",
+    customPrefix: "AST",
     brandId: "",
     modelId: "",
     locationId: "",
@@ -988,7 +988,11 @@ export default function AssetManagement({ defaultDivision = "", defaultCategory 
               <div style={styles.formGrid}>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Asset Division</label>
-                  <select style={styles.input} value={addForm.division} onChange={e => setAddForm({ ...addForm, division: e.target.value })}>
+                  <select style={styles.input} value={addForm.division} onChange={e => {
+                    const div = e.target.value;
+                    const defaultPref = div === "IT Assets" ? "IT" : "FA";
+                    setAddForm({ ...addForm, division: div, customPrefix: defaultPref });
+                  }}>
                     <option value="IT Assets">IT Assets</option>
                     <option value="Facility Assets">Facility Assets</option>
                   </select>
